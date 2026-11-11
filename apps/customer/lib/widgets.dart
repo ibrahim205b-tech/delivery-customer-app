@@ -29,9 +29,11 @@ class MerchantMeta extends StatelessWidget {
         Text(m.ratingAvg.toStringAsFixed(1), style: style.copyWith(fontWeight: FontWeight.w600, color: light ? WColors.white : WColors.ink)),
         dot(),
       ],
-      Text('${m.etaMinutes(d ?? 2)} دقيقة', style: style),
+      Text('${m.etaMinutes(d ?? 2)} د', style: style),
       dot(),
-      Text(m.deliveryFee == 0 ? 'توصيل مجاني' : 'توصيل ${iqd(m.deliveryFee)}', style: style),
+      Icon(Icons.delivery_dining_rounded, size: 15, color: color),
+      const SizedBox(width: 2),
+      Text(m.deliveryFee == 0 ? 'مجاني' : iqd(m.deliveryFee), style: style),
       if (d != null) ...[dot(), Text(kmAr(d), style: style)],
     ]);
   }
@@ -141,6 +143,10 @@ class CartBar extends StatelessWidget {
                       child: InkWell(
                         borderRadius: WRadius.all(WRadius.lg),
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
+                        child: Semantics(
+                          container: true,
+                          button: true,
+                          label: 'عرض السلة',
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           child: Row(children: [
@@ -160,6 +166,7 @@ class CartBar extends StatelessWidget {
                             ),
                             Text(iqd(app.cartSubtotal), style: WText.price.copyWith(color: WColors.white)),
                           ]),
+                        ),
                         ),
                       ),
                     ),
@@ -198,7 +205,7 @@ class QtyStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (qty == 0) {
-      return Material(
+      return Semantics(container: true, button: true, label: 'أضف للسلة', excludeSemantics: true, child: Material(
         color: WColors.white,
         shape: const StadiumBorder(side: BorderSide(color: WColors.navy, width: 1.5)),
         child: InkWell(
@@ -212,16 +219,22 @@ class QtyStepper extends StatelessWidget {
             ]),
           ),
         ),
-      );
+      ));
     }
-    Widget btn(IconData i, VoidCallback f) => InkResponse(onTap: f, radius: 20, child: Padding(padding: const EdgeInsets.all(6), child: Icon(i, size: 18, color: WColors.white)));
+    Widget btn(IconData i, VoidCallback f, String label) => Semantics(
+          container: true,
+          button: true,
+          label: label,
+          excludeSemantics: true,
+          child: InkResponse(onTap: f, radius: 20, child: Padding(padding: const EdgeInsets.all(6), child: Icon(i, size: 18, color: WColors.white))),
+        );
     return Container(
       decoration: const ShapeDecoration(color: WColors.navy, shape: StadiumBorder()),
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        btn(qty == 1 ? Icons.delete_outline_rounded : Icons.remove_rounded, onRemove),
+        btn(qty == 1 ? Icons.delete_outline_rounded : Icons.remove_rounded, onRemove, 'نقّص'),
         SizedBox(width: 22, child: Text('$qty', textAlign: TextAlign.center, style: WText.bodyStrong.copyWith(color: WColors.white))),
-        btn(Icons.add_rounded, onAdd),
+        btn(Icons.add_rounded, onAdd, 'زيد'),
       ]),
     );
   }
@@ -251,7 +264,7 @@ Future<void> pickAddressSheet(BuildContext context, {required VoidCallback onAdd
                   contentPadding: EdgeInsets.zero,
                   activeColor: WColors.coral,
                   title: Text(a.label, style: WText.bodyStrong),
-                  subtitle: Text([a.details, if (a.landmark.isNotEmpty) 'قرب ${a.landmark}'].join(' · '), style: WText.small),
+                  subtitle: Text([a.details, if (a.landmark.isNotEmpty) landmarkAr(a.landmark)].join(' · '), style: WText.small),
                 ),
               const SizedBox(height: 8),
               WButton('إضافة عنوان جديد', icon: Icons.add_location_alt_outlined, kind: WButtonKind.secondary, onPressed: () {

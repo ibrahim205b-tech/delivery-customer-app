@@ -39,3 +39,10 @@ String relativeAr(DateTime t) {
 }
 
 String kmAr(double km) => km < 1 ? '${(km * 1000).round()} م' : '${km.toStringAsFixed(1)} كم';
+
+/// "الجامع" -> "قرب الجامع"، و"مقابل الصيدلية" تبقى كما هي (بدون تكرار "قرب")
+String landmarkAr(String landmark) {
+  final l = landmark.trim();
+  if (l.isEmpty) return '';
+  return RegExp(r'^(قرب|مقابل|جنب|خلف|بجانب|يم) ').hasMatch(l) ? l : 'قرب $l';
+}

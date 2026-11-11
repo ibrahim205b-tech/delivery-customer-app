@@ -20,6 +20,13 @@ void main() {
     });
   });
 
+  test('أقرب نقطة دالة بدون تكرار "قرب"', () {
+    expect(landmarkAr('الجامع'), 'قرب الجامع');
+    expect(landmarkAr('قرب الجامع'), 'قرب الجامع');
+    expect(landmarkAr('مقابل الصيدلية'), 'مقابل الصيدلية');
+    expect(landmarkAr('  '), '');
+  });
+
   test('تنسيق الدينار', () {
     expect(iqd(12500), '12,500 د.ع');
     expect(iqd(0), '0 د.ع');

@@ -89,7 +89,7 @@ class _CartScreenState extends State<CartScreen> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('التوصيل إلى', style: WText.caption),
                           Text(a?.oneLine ?? 'اختار أو أضف عنوان', style: WText.bodyStrong),
-                          if (a != null && a.landmark.isNotEmpty) Text('قرب ${a.landmark}', style: WText.small),
+                          if (a != null && a.landmark.isNotEmpty) Text(landmarkAr(a.landmark), style: WText.small),
                         ]),
                       ),
                       const Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),

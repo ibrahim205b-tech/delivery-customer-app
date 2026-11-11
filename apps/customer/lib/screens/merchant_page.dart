@@ -67,7 +67,7 @@ class _MerchantPageState extends State<MerchantPage> {
         ],
         flexibleSpace: FlexibleSpaceBar(
           background: Stack(fit: StackFit.expand, children: [
-            WImage(m.coverUrl, radius: 0, fallbackIcon: categoryIcon(m.categoryId), fallbackColor: categoryTint(m.categoryId).withValues(alpha: 0.14)),
+            WImage(m.coverUrl, radius: 0, height: 260, fallbackIcon: categoryIcon(m.categoryId), fallbackColor: categoryTint(m.categoryId).withValues(alpha: 0.14)),
             const DecoratedBox(
               decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x55172E3B), Colors.transparent])),
             ),
@@ -162,7 +162,8 @@ class _MerchantPageState extends State<MerchantPage> {
     final groups = <(String, List<Product>)>[
       for (final c in usedCats)
         if (list.any((p) => p.categoryId == c.id)) (c.name, list.where((p) => p.categoryId == c.id).toList()),
-      if (list.any((p) => !usedCats.any((c) => c.id == p.categoryId))) ('أخرى', list.where((p) => !usedCats.any((c) => c.id == p.categoryId)).toList()),
+      if (list.any((p) => !usedCats.any((c) => c.id == p.categoryId)))
+        (usedCats.isEmpty ? 'القائمة' : 'أخرى', list.where((p) => !usedCats.any((c) => c.id == p.categoryId)).toList()),
     ];
 
     return [

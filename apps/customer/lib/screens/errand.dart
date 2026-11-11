@@ -35,7 +35,7 @@ class PointField extends StatelessWidget {
     if (!context.mounted || choice == null) return;
     if (choice is Address) {
       value.point = LatLng(choice.lat, choice.lng);
-      value.label = [choice.label, choice.details, if (choice.landmark.isNotEmpty) 'قرب ${choice.landmark}'].join(' - ');
+      value.label = [choice.label, choice.details, if (choice.landmark.isNotEmpty) landmarkAr(choice.landmark)].join(' - ');
       onChanged();
       return;
     }

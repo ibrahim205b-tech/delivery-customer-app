@@ -199,7 +199,10 @@ begin
   insert into orders (client_ref, customer_id, merchant_id, area_id, customer_name, customer_phone,
                       address_text, address_lat, address_lng, subtotal, delivery_fee, total, customer_note)
   values (p_client_ref, uid, m.id, m.area_id, u.full_name, coalesce(u.phone, ''),
-          trim(a.label || ' - ' || a.details || case when a.landmark <> '' then ' (قرب ' || a.landmark || ')' else '' end),
+          trim(a.label || ' - ' || a.details || case
+            when a.landmark = '' then ''
+            when a.landmark ~ '^(قرب|مقابل|جنب|خلف|بجانب|يم) ' then ' (' || a.landmark || ')'
+            else ' (قرب ' || a.landmark || ')' end),
           a.lat, a.lng, 0, v_fee, 0, coalesce(left(p_note, 500), ''))
   returning * into o;
 

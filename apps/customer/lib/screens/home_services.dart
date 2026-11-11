@@ -108,7 +108,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     if (a != null) {
       _place
         ..point = LatLng(a.lat, a.lng)
-        ..label = [a.label, a.details, if (a.landmark.isNotEmpty) 'قرب ${a.landmark}'].join(' - ');
+        ..label = [a.label, a.details, if (a.landmark.isNotEmpty) landmarkAr(a.landmark)].join(' - ');
     }
   }
 

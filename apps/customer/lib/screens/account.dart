@@ -120,7 +120,7 @@ class AddressesScreen extends StatelessWidget {
                               if (a.isDefault) ...[const SizedBox(width: 8), const StatusPill('الافتراضي', tone: PillTone.success)],
                             ]),
                             Text(a.details, style: WText.small),
-                            if (a.landmark.isNotEmpty) Text('قرب ${a.landmark}', style: WText.caption),
+                            if (a.landmark.isNotEmpty) Text(landmarkAr(a.landmark), style: WText.caption),
                           ]),
                         ),
                         IconButton(
