@@ -101,7 +101,7 @@ class NotConfiguredScreen extends StatelessWidget {
         body: EmptyView(
           icon: Icons.settings_suggest_outlined,
           title: 'التطبيق غير مربوط بالخادم',
-          message: 'هذه النسخة انبنت بدون SUPABASE_URL و SUPABASE_ANON_KEY.\nراجع ملف README لإعداد GitHub Secrets ثم أعد البناء.',
+          message: 'هذه النسخة انبنت بدون SUPABASE_URL و SUPABASE_PUBLISHABLE_KEY.\nراجع ملف README لإعداد GitHub Secrets ثم أعد البناء.',
         ),
       );
 }

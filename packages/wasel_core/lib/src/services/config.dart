@@ -4,11 +4,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// إعدادات الاتصال. تُمرَّر وقت البناء ولا تُحفظ بالمستودع:
-///   flutter build apk --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
-/// مفتاح anon عام بطبيعته (الحماية الفعلية عبر RLS)، لكن نبقيه خارج الكود.
+///   flutter build apk --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+/// المفتاح العام (publishable) آمن داخل التطبيق لأن الحماية الفعلية عبر RLS، لكن نبقيه خارج الكود.
+/// مفتاح anon القديم (SUPABASE_ANON_KEY) ما زال مدعوماً إذا ما انحط المفتاح الجديد.
 abstract final class WaselConfig {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const _publishable = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  static const _legacyAnon = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const supabaseAnonKey = _publishable != '' ? _publishable : _legacyAnon;
 
   /// نطاق البريد الداخلي المستخدم لتحويل رقم الهاتف إلى حساب (لا تُرسل له رسائل).
   static const authEmailDomain = 'phone.wasel.app';
@@ -31,7 +34,7 @@ Future<bool> bootstrapWasel() async {
   if (!WaselConfig.isConfigured) return false;
   await Supabase.initialize(
     url: WaselConfig.supabaseUrl,
-    anonKey: WaselConfig.supabaseAnonKey,
+    publishableKey: WaselConfig.supabaseAnonKey,
     debug: kDebugMode,
   );
   return true;

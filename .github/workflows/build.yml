@@ -79,15 +79,17 @@ jobs:
         env:
           WASEL_KEYSTORE_PASSWORD: ${{ secrets.WASEL_KEYSTORE_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::warning::SUPABASE_URL / SUPABASE_ANON_KEY غير مضبوطة: التطبيق راح يعرض شاشة (غير مربوط بالخادم)."
+          if [ -z "$SUPABASE_URL" ] || { [ -z "$SUPABASE_PUBLISHABLE_KEY" ] && [ -z "$SUPABASE_ANON_KEY" ]; }; then
+            echo "::warning::SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY غير مضبوطة: التطبيق راح يعرض شاشة (غير مربوط بالخادم)."
           fi
           flutter pub get
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/out/wasel-${{ matrix.app }}.apk"

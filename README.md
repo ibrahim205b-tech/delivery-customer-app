@@ -59,20 +59,20 @@ supabase/migrations/0005_seed.sql
 تأكد من **Database ← Publications ← supabase_realtime** إنه يحتوي: `orders, delivery_tasks, rides, service_bookings, notifications, merchants, products` (الملف 0003 يضيفهم).
 
 ### 4) ربط التطبيقات بالخادم (GitHub Secrets)
-من Supabase: **Project Settings ← API** انسخ:
-- **Project URL**
-- **anon public key**
+من Supabase: **Project Settings ← API Keys** انسخ:
+- **Project URL** (بالشكل `https://<project-id>.supabase.co`)
+- **Publishable key** (يبدأ بـ `sb_publishable_`)
 
 بالمستودع: **Settings ← Secrets and variables ← Actions ← New repository secret**:
 
 | الاسم | القيمة |
 |---|---|
 | `SUPABASE_URL` | Project URL |
-| `SUPABASE_ANON_KEY` | anon public key |
+| `SUPABASE_PUBLISHABLE_KEY` | Publishable key (`sb_publishable_...`) |
 | `WASEL_KEYSTORE_BASE64` *(اختياري، مستحسن)* | مفتاح التوقيع بصيغة base64 |
 | `WASEL_KEYSTORE_PASSWORD` *(اختياري)* | كلمة مرور المفتاح |
 
-مفتاح الـ anon عام بطبيعته (الحماية الفعلية بـ RLS)، لكنه ما ينحفظ بالكود. **لا تضع أبداً مفتاح `service_role` بأي تطبيق أو Secret للبناء.**
+المفتاح العام آمن داخل التطبيق (الحماية الفعلية بـ RLS)، لكنه ما ينحفظ بالكود. مفتاح anon القديم يشتغل أيضاً كـ `SUPABASE_ANON_KEY` لكن Supabase راح يوقفه بداية 2027. **لا تضع أبداً المفتاح السري (`sb_secret_` / `service_role`) بأي تطبيق أو Secret للبناء.**
 
 **مفتاح التوقيع** (حتى تنثبّت التحديثات فوق النسخة القديمة بدون حذف):
 ```bash
@@ -85,7 +85,7 @@ base64 -w0 wasel.jks   # الناتج ← WASEL_KEYSTORE_BASE64
 **Actions ← Build Wasel APKs ← Run workflow** (أو أي دفع للفرع `main`).
 بعد النجاح تظهر الملفات الثلاثة في **Releases** (`build-<رقم>`).
 
-> بدون `SUPABASE_URL` / `SUPABASE_ANON_KEY` التطبيق يفتح على شاشة "التطبيق غير مربوط بالخادم".
+> بدون `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` التطبيق يفتح على شاشة "التطبيق غير مربوط بالخادم".
 
 ### 6) التثبيت
 حمّل الـ APK على الموبايل ← افتحه ← اسمح بـ "التثبيت من مصادر غير معروفة".
