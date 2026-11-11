@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- مسار منقّط يوصل لدبوس موقع -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#66F6F3ED"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M30,74 C38,74 40,64 48,64" />
+    <path
+        android:fillColor="#FFE9A23B"
+        android:pathData="M58,30 C47,30 39,38.5 39,49 C39,62 58,78 58,78 C58,78 77,62 77,49 C77,38.5 69,30 58,30 Z" />
+    <path
+        android:fillColor="#FF12302D"
+        android:pathData="M58,42 a7,7 0 1,0 0.01,0 Z" />
+</vector>
