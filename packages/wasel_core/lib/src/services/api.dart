@@ -511,32 +511,37 @@ class AdminApi {
       .limit(300)
       .map((rows) => rows.map(Order.fromJson).toList());
 
-  Future<List<Order>> orders({String? status, String? categoryId, int limit = 200}) async {
+  Future<List<Order>> orders({String? status, List<String>? statuses, String? categoryId, String? customerId, int limit = 200}) async {
     var q = db.from('orders').select('*, order_items(*), merchants!inner(name, logo_url, lat, lng, category_id)');
     if (status != null) q = q.eq('status', status);
+    if (statuses != null) q = q.inFilter('status', statuses);
+    if (customerId != null) q = q.eq('customer_id', customerId);
     if (categoryId != null) q = q.eq('merchants.category_id', categoryId);
     final r = await q.order('created_at', ascending: false).limit(limit);
     return r.map(Order.fromJson).toList();
   }
 
-  Future<List<Ride>> rides({String? vehicle, String? status}) async {
+  Future<List<Ride>> rides({String? vehicle, String? status, List<String>? statuses}) async {
     var q = db.from('rides').select();
     if (vehicle != null) q = q.eq('vehicle', vehicle);
     if (status != null) q = q.eq('status', status);
+    if (statuses != null) q = q.inFilter('status', statuses);
     final r = await q.order('created_at', ascending: false).limit(200);
     return r.map(Ride.fromJson).toList();
   }
 
-  Future<List<DeliveryTask>> errands({String? status}) async {
+  Future<List<DeliveryTask>> errands({String? status, List<String>? statuses}) async {
     var q = db.from('delivery_tasks').select().neq('kind', 'order');
     if (status != null) q = q.eq('status', status);
+    if (statuses != null) q = q.inFilter('status', statuses);
     final r = await q.order('created_at', ascending: false).limit(200);
     return r.map(DeliveryTask.fromJson).toList();
   }
 
-  Future<List<ServiceBooking>> bookings({String? status}) async {
+  Future<List<ServiceBooking>> bookings({String? status, List<String>? statuses}) async {
     var q = db.from('service_bookings').select(CustomerApi.bookingSelect);
     if (status != null) q = q.eq('status', status);
+    if (statuses != null) q = q.inFilter('status', statuses);
     final r = await q.order('created_at', ascending: false).limit(200);
     return r.map(ServiceBooking.fromJson).toList();
   }
