@@ -1,0 +1,122 @@
+name: Build Wasel APKs
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.50.0'
+
+jobs:
+  # اختبارات قاعدة البيانات (60 فحص للصلاحيات ودورة العمل) على PostgreSQL 16
+  database:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Database tests
+        run: |
+          sudo apt-get install -y -q postgresql-16 >/dev/null
+          bash supabase/tests/run.sh | tee db.log
+          grep -q "ALL TESTS PASSED" db.log
+          echo "passed checks: $(grep -c 'PASS:' db.log)"
+
+  # تحليل الكود واختبارات الوحدة للحزمة المشتركة
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Analyze & test wasel_core
+        working-directory: packages/wasel_core
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test test/core_test.dart
+      - name: Analyze apps
+        run: |
+          for app in customer merchant admin; do
+            (cd apps/$app && flutter pub get && flutter analyze)
+          done
+
+  apk:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer, merchant, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Restore signing key (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.WASEL_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/wasel.jks"
+            echo "WASEL_KEYSTORE_PATH=$RUNNER_TEMP/wasel.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::WASEL_KEYSTORE_BASE64 غير مضبوط: الـ APK موقّع بمفتاح مؤقت (احذف النسخة القديمة قبل التثبيت)."
+          fi
+
+      - name: Build APK
+        working-directory: apps/${{ matrix.app }}
+        env:
+          WASEL_KEYSTORE_PASSWORD: ${{ secrets.WASEL_KEYSTORE_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL / SUPABASE_ANON_KEY غير مضبوطة: التطبيق راح يعرض شاشة (غير مربوط بالخادم)."
+          fi
+          flutter pub get
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/out/wasel-${{ matrix.app }}.apk"
+          ls -la "$GITHUB_WORKSPACE/out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasel-${{ matrix.app }}
+          path: out/wasel-${{ matrix.app }}.apk
+          if-no-files-found: error
+
+  # نشر الملفات الثلاثة كإصدار بروابط تحميل مباشرة (فقط من الفرع main)
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: [apk, database]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: واصل — نسخة ${{ github.run_number }}
+          body: |
+            ملفات APK للتطبيقات الثلاثة:
+            - wasel-customer.apk — تطبيق المستهلك
+            - wasel-merchant.apk — تطبيق التجار والسائقين
+            - wasel-admin.apk — تطبيق الإدارة
+          files: out/*.apk
+          make_latest: true
