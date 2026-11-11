@@ -44,6 +44,12 @@ android {
         }
     }
 
+    // فحص lint أثناء بناء الإصدار يتعطل مع بعض المكتبات؛ الكود يُفحص بـ flutter analyze بالـ CI
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     buildTypes {
         release {
             signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
