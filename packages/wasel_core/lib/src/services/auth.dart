@@ -42,6 +42,12 @@ class AuthController extends ChangeNotifier {
   Set<AppRole> _roles = {};
   bool _loading = false;
   String? _loadError;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
 
   bool get isSignedIn => db.auth.currentSession != null;
   bool get loading => _loading;
@@ -99,6 +105,7 @@ class AuthController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _sub.cancel();
     super.dispose();
   }

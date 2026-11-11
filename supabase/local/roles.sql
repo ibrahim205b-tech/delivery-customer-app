@@ -1,0 +1,27 @@
+-- أدوار Supabase الأساسية (مثل صورة supabase/postgres) لبيئة محلية
+create role anon nologin noinherit;
+create role authenticated nologin noinherit;
+create role service_role nologin noinherit bypassrls;
+create role authenticator login noinherit password 'localpw';
+grant anon, authenticated, service_role to authenticator;
+create role supabase_admin login superuser createrole createdb replication bypassrls password 'localpw';
+create role supabase_auth_admin login createrole noinherit password 'localpw';
+create schema auth authorization supabase_auth_admin;
+grant usage on schema auth to anon, authenticated, service_role;
+alter role supabase_auth_admin set search_path = auth;
+create role supabase_storage_admin login createrole noinherit password 'localpw';
+create schema storage authorization supabase_storage_admin;
+grant usage on schema storage to anon, authenticated, service_role;
+grant anon, authenticated, service_role to supabase_storage_admin;
+alter role supabase_storage_admin set search_path = storage;
+create schema extensions;
+grant usage on schema public to anon, authenticated, service_role;
+grant usage on schema extensions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+grant all on schema public to supabase_admin;
+grant create on database postgres to supabase_auth_admin, supabase_storage_admin;
+create schema _realtime authorization supabase_admin;
+create schema realtime authorization supabase_admin;
+grant usage on schema realtime to anon, authenticated, service_role;

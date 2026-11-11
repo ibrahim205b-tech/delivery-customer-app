@@ -16,7 +16,13 @@ abstract final class WaselConfig {
   static bool get isConfigured => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }
 
-SupabaseClient get db => Supabase.instance.client;
+SupabaseClient? _clientOverride;
+
+/// عميل Supabase الحالي. الاختبارات تگدر تبدله بعميل مستقل لكل مستخدم.
+SupabaseClient get db => _clientOverride ?? Supabase.instance.client;
+
+@visibleForTesting
+void useClientForTesting(SupabaseClient? client) => _clientOverride = client;
 
 /// تهيئة مشتركة لكل التطبيقات. ترجع false إذا الإعدادات ناقصة.
 Future<bool> bootstrapWasel() async {

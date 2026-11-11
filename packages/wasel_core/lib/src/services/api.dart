@@ -18,12 +18,12 @@ class CatalogApi {
   const CatalogApi();
 
   Future<List<MerchantCategory>> categories() async {
-    final r = await db.from('merchant_categories').select().eq('is_active', true).order('sort');
+    final r = await db.from('merchant_categories').select().eq('is_active', true).order('sort', ascending: true);
     return r.map(MerchantCategory.fromJson).toList();
   }
 
   Future<List<ServiceArea>> areas() async {
-    final r = await db.from('service_areas').select().order('name');
+    final r = await db.from('service_areas').select().order('name', ascending: true);
     return r.map(ServiceArea.fromJson).toList();
   }
 
@@ -42,14 +42,14 @@ class CatalogApi {
   }
 
   Future<List<ProductCategory>> productCategories(String merchantId) async {
-    final r = await db.from('product_categories').select().eq('merchant_id', merchantId).order('sort').order('name');
+    final r = await db.from('product_categories').select().eq('merchant_id', merchantId).order('sort', ascending: true).order('name', ascending: true);
     return r.map(ProductCategory.fromJson).toList();
   }
 
   Future<List<Product>> products(String merchantId, {bool onlyAvailable = false}) async {
     var q = db.from('products').select('*, product_images(url, sort)').eq('merchant_id', merchantId);
     if (onlyAvailable) q = q.eq('is_available', true);
-    final r = await q.order('sort').order('name');
+    final r = await q.order('sort', ascending: true).order('name', ascending: true);
     return r.map(Product.fromJson).toList();
   }
 
@@ -78,7 +78,7 @@ class CatalogApi {
   }
 
   Future<List<HomeService>> homeServices() async {
-    final r = await db.from('home_services').select().eq('is_active', true).order('sort');
+    final r = await db.from('home_services').select().eq('is_active', true).order('sort', ascending: true);
     return r.map(HomeService.fromJson).toList();
   }
 
@@ -101,7 +101,7 @@ class CustomerApi {
 
   // ---------- العناوين ----------
   Future<List<Address>> addresses() async {
-    final r = await db.from('addresses').select().eq('user_id', _uid).order('is_default', ascending: false).order('created_at');
+    final r = await db.from('addresses').select().eq('user_id', _uid).order('is_default', ascending: false).order('created_at', ascending: true);
     return r.map(Address.fromJson).toList();
   }
 
@@ -161,7 +161,7 @@ class CustomerApi {
       db.from('orders').stream(primaryKey: ['id']).eq('id', id).map((rows) => rows.isEmpty ? null : rows.first);
 
   Future<List<OrderStatusEvent>> orderHistory(String id) async {
-    final r = await db.from('order_status_history').select().eq('order_id', id).order('created_at');
+    final r = await db.from('order_status_history').select().eq('order_id', id).order('created_at', ascending: true);
     return r.map(OrderStatusEvent.fromJson).toList();
   }
 
@@ -291,7 +291,7 @@ class MerchantApi {
   const MerchantApi();
 
   Future<List<Merchant>> myMerchants() async {
-    final r = await db.from('merchants').select().eq('owner_id', _uid).order('name');
+    final r = await db.from('merchants').select().eq('owner_id', _uid).order('name', ascending: true);
     return r.map(Merchant.fromJson).toList();
   }
 
@@ -572,7 +572,7 @@ class AdminApi {
 
   // ---------- الخدمات المنزلية والأقسام ----------
   Future<List<HomeService>> allHomeServices() async {
-    final r = await db.from('home_services').select().order('sort');
+    final r = await db.from('home_services').select().order('sort', ascending: true);
     return r.map(HomeService.fromJson).toList();
   }
 
@@ -587,7 +587,7 @@ class AdminApi {
   }
 
   Future<List<MerchantCategory>> allCategories() async {
-    final r = await db.from('merchant_categories').select().order('sort');
+    final r = await db.from('merchant_categories').select().order('sort', ascending: true);
     return r.map(MerchantCategory.fromJson).toList();
   }
 

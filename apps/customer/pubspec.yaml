@@ -1,0 +1,41 @@
+name: wasel_customer
+description: تطبيق واصل للمستهلك
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  wasel_core:
+    path: ../../packages/wasel_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon/full.png
+  adaptive_icon_background: "#172E3B"
+  adaptive_icon_foreground: assets/icon/foreground.png
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#172E3B"
+  image: assets/icon/splash.png
+  android_12:
+    color: "#172E3B"
+    image: assets/icon/foreground.png
+    icon_background_color: "#172E3B"
+  ios: false
+  web: false

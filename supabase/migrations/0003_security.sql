@@ -170,6 +170,11 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
+-- مفتاح الخدمة (للسكربتات الإدارية فقط، لا يوضع بالتطبيقات)
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
 
 -- دوال داخلية ما تنستدعى مباشرة من التطبيق
 revoke execute on function notify_user(uuid, text, text, jsonb) from authenticated;
