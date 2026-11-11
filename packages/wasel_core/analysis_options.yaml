@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Flutter 3.50 نقل Material لحزمة material_ui؛ الواجهات القديمة ما زالت مدعومة.
+    deprecated_member_use: ignore
+  exclude:
+    - build/**

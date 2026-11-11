@@ -3,3 +3,15 @@
 build/
 local.properties
 .idea/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec_overrides.yaml
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/release/
+*.jks
+*.keystore
+key.properties
+.env
