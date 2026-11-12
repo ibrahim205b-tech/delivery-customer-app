@@ -131,17 +131,17 @@ class _ThreadCard extends StatelessWidget {
     final unread = t.unreadForAdmin > 0;
     return WCard(
       padding: const EdgeInsets.all(14),
-      borderColor: unread ? WColors.ink : WColors.line,
+      borderColor: unread ? WColors.fg : WColors.line,
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _AdminChat(thread: t))),
       child: Row(children: [
         Container(
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: unread ? WColors.ink : WColors.paper, borderRadius: WRadius.all(12)),
+          decoration: BoxDecoration(color: unread ? WColors.night : WColors.paper, borderRadius: WRadius.all(12)),
           child: Icon(
             switch (t.app) { SupportApp.customer => Icons.person_outline_rounded, SupportApp.merchant => Icons.storefront_outlined, SupportApp.driver => Icons.two_wheeler_outlined },
-            color: unread ? WColors.lime : WColors.ink,
+            color: unread ? WColors.lime : WColors.fg,
           ),
         ),
         const SizedBox(width: 12),
@@ -155,7 +155,7 @@ class _ThreadCard extends StatelessWidget {
             Row(children: [
               StatusPill(t.app.label, tone: t.app == SupportApp.customer ? PillTone.info : PillTone.neutral),
               const SizedBox(width: 8),
-              Expanded(child: Text(t.lastMessage, style: WText.small.copyWith(color: unread ? WColors.ink : WColors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(t.lastMessage, style: WText.small.copyWith(color: unread ? WColors.fg : WColors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
               if (unread) ...[
                 const SizedBox(width: 8),
                 Container(

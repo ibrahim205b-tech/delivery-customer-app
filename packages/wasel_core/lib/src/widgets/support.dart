@@ -84,20 +84,20 @@ class _SupportSheet extends StatelessWidget {
 
   Widget _option({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, bool dark = false}) => WCard(
         onTap: onTap,
-        color: dark ? WColors.ink : WColors.white,
-        borderColor: dark ? WColors.ink : WColors.line,
+        color: dark ? WColors.night : WColors.surface,
+        borderColor: dark ? WColors.night : WColors.line,
         padding: const EdgeInsets.all(14),
         child: Row(children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(color: dark ? WColors.lime : WColors.paper, borderRadius: WRadius.all(12)),
-            child: Icon(icon, color: WColors.ink),
+            child: Icon(icon, color: dark ? WColors.ink : WColors.fg),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: WText.bodyStrong.copyWith(color: dark ? WColors.white : WColors.ink)),
+              Text(title, style: WText.bodyStrong.copyWith(color: dark ? WColors.white : WColors.fg)),
               Text(subtitle, style: WText.caption.copyWith(color: dark ? WColors.inkFaint : WColors.inkMuted)),
             ]),
           ),
@@ -284,7 +284,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          decoration: const BoxDecoration(color: WColors.white, border: Border(top: BorderSide(color: WColors.line))),
+          decoration: BoxDecoration(color: WColors.surface, border: Border(top: BorderSide(color: WColors.line))),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (_orderCode != null)
               Padding(
@@ -318,7 +318,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                       width: 48,
                       height: 48,
                       child: _sending
-                          ? const Padding(padding: EdgeInsets.all(14), child: CircularProgressIndicator(strokeWidth: 2, color: WColors.ink))
+                          ? Padding(padding: EdgeInsets.all(14), child: CircularProgressIndicator(strokeWidth: 2, color: WColors.ink))
                           : const Icon(Icons.send_rounded, color: WColors.ink, textDirection: TextDirection.rtl),
                     ),
                   ),
@@ -346,7 +346,7 @@ class _Bubble extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 3),
           padding: const EdgeInsets.fromLTRB(12, 9, 12, 7),
           decoration: BoxDecoration(
-            color: mine ? WColors.ink : WColors.white,
+            color: mine ? WColors.night : WColors.surface,
             border: mine ? null : Border.all(color: WColors.line),
             borderRadius: BorderRadiusDirectional.only(
               topStart: const Radius.circular(16),
@@ -356,13 +356,13 @@ class _Bubble extends StatelessWidget {
             ),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            if (!mine && m.fromAdmin) Text('دعم واصل', style: WText.label.copyWith(color: WColors.blue)),
+            if (!mine && m.fromAdmin) Text('دعم واصل', style: WText.label.copyWith(color: WColors.link)),
             if (m.orderCode != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text('الطلب ${m.orderCode}', style: WText.label.copyWith(color: mine ? WColors.lime : WColors.blue)),
+                child: Text('الطلب ${m.orderCode}', style: WText.label.copyWith(color: mine ? WColors.lime : WColors.link)),
               ),
-            Text(m.body, style: WText.body.copyWith(color: mine ? WColors.white : WColors.ink)),
+            Text(m.body, style: WText.body.copyWith(color: mine ? WColors.white : WColors.fg)),
             const SizedBox(height: 2),
             Text(timeAr(m.createdAt), style: WText.caption.copyWith(fontSize: 11, color: mine ? WColors.inkFaint : WColors.inkMuted)),
           ]),
@@ -421,9 +421,9 @@ class SupportContactButtons extends StatelessWidget {
 /// زر الدعم بشريط العنوان مع شارة الردود غير المقروءة.
 /// يشغّل إشعار بصوت عند وصول رد جديد من الدعم (للتاجر والسائق).
 class SupportIconButton extends StatefulWidget {
-  const SupportIconButton({super.key, required this.app, this.color = WColors.ink});
+  const SupportIconButton({super.key, required this.app, this.color});
   final SupportApp app;
-  final Color color;
+  final Color? color;
   @override
   State<SupportIconButton> createState() => _SupportIconButtonState();
 }
@@ -459,7 +459,7 @@ class _SupportIconButtonState extends State<SupportIconButton> {
           label: Text('$_unread'),
           backgroundColor: WColors.lime,
           textColor: WColors.ink,
-          child: Icon(Icons.support_agent_rounded, color: widget.color),
+          child: Icon(Icons.support_agent_rounded, color: widget.color ?? WColors.fg),
         ),
       );
 }

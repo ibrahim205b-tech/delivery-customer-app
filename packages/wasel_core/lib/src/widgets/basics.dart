@@ -62,9 +62,9 @@ class _WButtonState extends State<WButton> {
     final enabled = widget.onPressed != null && !widget.loading;
     final (bg, fg, border) = switch (widget.kind) {
       WButtonKind.primary => (WColors.lime, WColors.ink, null),
-      WButtonKind.dark => (WColors.ink, WColors.white, null),
-      WButtonKind.secondary => (Colors.transparent, WColors.ink, WColors.ink),
-      WButtonKind.ghost => (Colors.transparent, WColors.ink, null),
+      WButtonKind.dark => (WColors.night, WColors.white, null),
+      WButtonKind.secondary => (Colors.transparent, WColors.fg, WColors.fg),
+      WButtonKind.ghost => (Colors.transparent, WColors.fg, null),
       WButtonKind.danger => (WColors.dangerSoft, WColors.danger, null),
     };
     final disabled = !enabled && !widget.loading;
@@ -141,12 +141,12 @@ class _WButtonState extends State<WButton> {
 
 /// زر أيقونة (مربع بزوايا ناعمة، مو دائرة)
 class WIconButton extends StatelessWidget {
-  const WIconButton(this.icon, {super.key, required this.onPressed, this.tooltip, this.background = WColors.white, this.color = WColors.ink, this.size = 44, this.bordered = false});
+  const WIconButton(this.icon, {super.key, required this.onPressed, this.tooltip, this.background, this.color, this.size = 44, this.bordered = false});
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
-  final Color background;
-  final Color color;
+  final Color? background;
+  final Color? color;
   final double size;
   final bool bordered;
 
@@ -157,10 +157,10 @@ class WIconButton extends StatelessWidget {
           button: true,
           label: tooltip,
           child: Material(
-            color: background,
+            color: background ?? WColors.surface,
             shape: RoundedRectangleBorder(
               borderRadius: WRadius.all(size * 0.32),
-              side: bordered ? const BorderSide(color: WColors.line) : BorderSide.none,
+              side: bordered ? BorderSide(color: WColors.line) : BorderSide.none,
             ),
             child: InkWell(
               borderRadius: WRadius.all(size * 0.32),
@@ -170,7 +170,7 @@ class WIconButton extends StatelessWidget {
                       HapticFeedback.selectionClick();
                       onPressed!();
                     },
-              child: SizedBox(width: size, height: size, child: Icon(icon, color: color, size: size * 0.48)),
+              child: SizedBox(width: size, height: size, child: Icon(icon, color: color ?? WColors.fg, size: size * 0.48)),
             ),
           ),
         ),
@@ -207,8 +207,8 @@ class EmptyView extends StatelessWidget {
             Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(22), border: Border.all(color: WColors.line)),
-              child: Icon(icon, size: 30, color: WColors.ink),
+              decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(22), border: Border.all(color: WColors.line)),
+              child: Icon(icon, size: 30, color: WColors.fg),
             ),
             const SizedBox(height: 16),
             Text(title, style: WText.h3, textAlign: TextAlign.center),
@@ -349,7 +349,7 @@ Future<bool> confirmDialog(BuildContext context, {required String title, String?
       actions: [
         TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('تراجع')),
         FilledButton(
-          style: danger ? FilledButton.styleFrom(backgroundColor: WColors.danger, foregroundColor: WColors.white) : FilledButton.styleFrom(backgroundColor: WColors.ink, foregroundColor: WColors.white),
+          style: danger ? FilledButton.styleFrom(backgroundColor: WColors.danger, foregroundColor: WColors.white) : FilledButton.styleFrom(backgroundColor: WColors.night, foregroundColor: WColors.white),
           onPressed: () => Navigator.pop(c, true),
           child: Text(confirm),
         ),
@@ -396,7 +396,7 @@ class SectionTitle extends StatelessWidget {
               borderRadius: WRadius.all(WRadius.sm),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(action!, style: WText.label.copyWith(color: WColors.blue, fontWeight: FontWeight.w600)),
+                child: Text(action!, style: WText.label.copyWith(color: WColors.link, fontWeight: FontWeight.w600)),
               ),
             ),
         ]),
@@ -436,18 +436,18 @@ enum PillTone { neutral, success, warning, danger, info, accent, dark }
 
 /// بطاقة بيضاء بحد ناعم
 class WCard extends StatelessWidget {
-  const WCard({super.key, required this.child, this.padding = const EdgeInsets.all(WSpace.lg), this.onTap, this.color = WColors.white, this.borderColor = WColors.line, this.radius = WRadius.lg});
+  const WCard({super.key, required this.child, this.padding = const EdgeInsets.all(WSpace.lg), this.onTap, this.color, this.borderColor, this.radius = WRadius.lg});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
-  final Color color;
-  final Color borderColor;
+  final Color? color;
+  final Color? borderColor;
   final double radius;
 
   @override
   Widget build(BuildContext context) => Material(
-        color: color,
-        shape: RoundedRectangleBorder(borderRadius: WRadius.all(radius), side: BorderSide(color: borderColor)),
+        color: color ?? WColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: WRadius.all(radius), side: BorderSide(color: borderColor ?? WColors.line)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
       );
@@ -455,13 +455,13 @@ class WCard extends StatelessWidget {
 
 /// صورة من الشبكة مع بديل أنيق إذا ما موجودة أو فشل التحميل
 class WImage extends StatelessWidget {
-  const WImage(this.url, {super.key, this.width, this.height, this.radius = WRadius.md, this.fallbackIcon = Icons.image_outlined, this.fallbackColor = WColors.surfaceAlt, this.fit = BoxFit.cover});
+  const WImage(this.url, {super.key, this.width, this.height, this.radius = WRadius.md, this.fallbackIcon = Icons.image_outlined, this.fallbackColor, this.fit = BoxFit.cover});
   final String? url;
   final double? width;
   final double? height;
   final double radius;
   final IconData fallbackIcon;
-  final Color fallbackColor;
+  final Color? fallbackColor;
   final BoxFit fit;
 
   @override
@@ -515,15 +515,15 @@ class MerchantLogo extends StatelessWidget {
 }
 
 class InfoRow extends StatelessWidget {
-  const InfoRow({super.key, required this.icon, required this.text, this.color = WColors.inkMuted});
+  const InfoRow({super.key, required this.icon, required this.text, this.color});
   final IconData icon;
   final String text;
-  final Color color;
+  final Color? color;
   @override
   Widget build(BuildContext context) => Row(children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 16, color: color ?? WColors.inkMuted),
         const SizedBox(width: 6),
-        Expanded(child: Text(text, style: WText.small.copyWith(color: color))),
+        Expanded(child: Text(text, style: WText.small.copyWith(color: color ?? WColors.inkMuted))),
       ]);
 }
 
@@ -543,7 +543,7 @@ class StepProgress extends StatelessWidget {
                 duration: WDurations.slow,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i <= current ? (onDark ? WColors.lime : WColors.ink) : (onDark ? WColors.white.withValues(alpha: 0.16) : WColors.line),
+                  color: i <= current ? (onDark ? WColors.lime : WColors.fg) : (onDark ? WColors.white.withValues(alpha: 0.16) : WColors.line),
                   borderRadius: WRadius.all(WRadius.pill),
                 ),
               ),
@@ -562,7 +562,7 @@ class StepProgress extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: WText.caption.copyWith(
                   fontSize: 11,
-                  color: onDark ? WColors.white.withValues(alpha: i <= current ? 1 : 0.55) : (i <= current ? WColors.ink : WColors.inkFaint),
+                  color: onDark ? WColors.white.withValues(alpha: i <= current ? 1 : 0.55) : (i <= current ? WColors.fg : WColors.inkFaint),
                   fontWeight: i == current ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
@@ -578,17 +578,17 @@ class WaselWordmark extends StatelessWidget {
   final bool onDark;
   @override
   Widget build(BuildContext context) =>
-      Image.asset(onDark ? 'assets/brand/logo-ar-white.png' : 'assets/brand/logo-ar-ink.png', package: 'wasel_core', height: height);
+      Image.asset(onDark || WColors.isDark ? 'assets/brand/logo-ar-white.png' : 'assets/brand/logo-ar-ink.png', package: 'wasel_core', height: height);
 }
 
 /// العلامة مرسومة بالكود: مسار متموّج (W) ينتهي بحلقة وصول. نفس هندسة brand/tools/build_brand.py
 class WaselMark extends StatelessWidget {
-  const WaselMark({super.key, this.size = 48, this.route = WColors.ink, this.ring = WColors.blue});
+  const WaselMark({super.key, this.size = 48, this.route, this.ring = WColors.blue});
   final double size;
-  final Color route;
+  final Color? route;
   final Color ring;
   @override
-  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route, ring));
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route ?? WColors.fg, ring));
 }
 
 class _MarkPainter extends CustomPainter {

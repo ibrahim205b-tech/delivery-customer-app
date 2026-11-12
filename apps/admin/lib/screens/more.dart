@@ -12,7 +12,7 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     void open(Widget w) => Navigator.push(context, MaterialPageRoute(builder: (_) => w));
     Widget tile(IconData i, String t, String s, Widget page) => ListTile(
-          leading: CircleAvatar(backgroundColor: WColors.surfaceAlt, child: Icon(i, color: WColors.ink)),
+          leading: CircleAvatar(backgroundColor: WColors.surfaceAlt, child: Icon(i, color: WColors.fg)),
           title: Text(t),
           subtitle: Text(s),
           trailing: const Icon(Icons.chevron_left_rounded),
@@ -37,6 +37,8 @@ class MoreScreen extends StatelessWidget {
             tile(Icons.tune_rounded, 'إعدادات المنصة', 'أجور التوصيل والرحلات، الحد الأدنى، العمولات', const PlatformSettingsScreen()),
           ]),
         ),
+        const SizedBox(height: 12),
+        const WCard(padding: EdgeInsets.zero, child: ThemeModeTile()),
         const SizedBox(height: 16),
         WButton('تسجيل الخروج', kind: WButtonKind.ghost, icon: Icons.logout_rounded, onPressed: () async {
           if (await confirmDialog(context, title: 'تسجيل الخروج؟', confirm: 'خروج')) await auth.signOut();
@@ -256,7 +258,7 @@ class _AreasScreenState extends State<AreasScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('المناطق')),
-        floatingActionButton: FloatingActionButton(backgroundColor: WColors.ink, foregroundColor: WColors.white, onPressed: _edit, child: const Icon(Icons.add_rounded)),
+        floatingActionButton: FloatingActionButton(backgroundColor: WColors.night, foregroundColor: WColors.white, onPressed: _edit, child: const Icon(Icons.add_rounded)),
         body: AsyncView<List<ServiceArea>>(
           key: ValueKey(_key),
           load: catalogApi.areas,
@@ -274,7 +276,7 @@ class _AreasScreenState extends State<AreasScreen> {
                   for (final a in list)
                     ListTile(
                       onTap: () => _edit(a),
-                      leading: Icon(Icons.place_rounded, color: a.isActive ? WColors.blue : WColors.inkFaint),
+                      leading: Icon(Icons.place_rounded, color: a.isActive ? WColors.link : WColors.inkFaint),
                       title: Text('${a.name} · ${a.city}'),
                       subtitle: Text('نصف القطر ${a.radiusKm} كم${a.isActive ? '' : ' · معطّلة'}'),
                       trailing: const Icon(Icons.edit_outlined),
@@ -302,7 +304,7 @@ class _PromotionsScreenState extends State<PromotionsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('العروض')),
-        floatingActionButton: FloatingActionButton(backgroundColor: WColors.ink, foregroundColor: WColors.white, onPressed: _edit, child: const Icon(Icons.add_rounded)),
+        floatingActionButton: FloatingActionButton(backgroundColor: WColors.night, foregroundColor: WColors.white, onPressed: _edit, child: const Icon(Icons.add_rounded)),
         body: AsyncView<List<Promotion>>(
           key: ValueKey(_key),
           load: adminApi.promotions,

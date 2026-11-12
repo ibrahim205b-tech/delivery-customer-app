@@ -57,7 +57,7 @@ class _CustomerShellState extends State<CustomerShell> {
           const AccountScreen(),
         ]),
         bottomNavigationBar: DecoratedBox(
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: WColors.line))),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: WColors.line))),
           child: NavigationBar(
             selectedIndex: _tab,
             onDestinationSelected: (i) => setState(() => _tab = i),

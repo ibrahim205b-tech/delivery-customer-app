@@ -83,7 +83,7 @@ class _CartScreenState extends State<CartScreen> {
                   WCard(
                     onTap: () => pickAddressSheet(context, onAddNew: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen()))),
                     child: Row(children: [
-                      const CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.location_on_rounded, color: WColors.blue)),
+                      CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.location_on_rounded, color: WColors.link)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -92,13 +92,13 @@ class _CartScreenState extends State<CartScreen> {
                           if (a != null && a.landmark.isNotEmpty) Text(landmarkAr(a.landmark), style: WText.small),
                         ]),
                       ),
-                      const Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),
+                      Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),
                     ]),
                   ),
                   const SizedBox(height: 12),
                   WCard(
                     child: Row(children: [
-                      const CircleAvatar(backgroundColor: WColors.successSoft, child: Icon(Icons.payments_outlined, color: WColors.success)),
+                      CircleAvatar(backgroundColor: WColors.successSoft, child: Icon(Icons.payments_outlined, color: WColors.success)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -134,12 +134,12 @@ class _CartScreenState extends State<CartScreen> {
                 top: false,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  decoration: const BoxDecoration(color: WColors.white, border: Border(top: BorderSide(color: WColors.line))),
+                  decoration: BoxDecoration(color: WColors.surface, border: Border(top: BorderSide(color: WColors.line))),
                   child: WButton(
                     'تأكيد الطلب',
                     onPressed: belowMin || a == null || !m.isOpenNow ? null : _place,
                     loading: _placing,
-                    trailing: Text(iqd(total), style: WText.price.copyWith(color: WColors.white)),
+                    trailing: Text(iqd(total), style: WText.price.copyWith(color: WColors.ink)),
                   ),
                 ),
               ),
@@ -167,7 +167,7 @@ class _CartScreenState extends State<CartScreen> {
             },
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(l.note.isEmpty ? '+ ملاحظة' : '✎ ${l.note}', style: WText.caption.copyWith(color: WColors.blue)),
+              child: Text(l.note.isEmpty ? '+ ملاحظة' : '✎ ${l.note}', style: WText.caption.copyWith(color: WColors.link)),
             ),
           ),
         ]),

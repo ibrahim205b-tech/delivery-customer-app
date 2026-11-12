@@ -71,7 +71,7 @@ class _ProvidersScreen extends StatelessWidget {
                             if (m.description.isNotEmpty) Text(m.description, style: WText.small, maxLines: 2),
                             if (m.ratingCount > 0)
                               Row(children: [
-                                const Icon(Icons.star_rounded, size: 15, color: WColors.blue),
+                                Icon(Icons.star_rounded, size: 15, color: WColors.link),
                                 Text(' ${m.ratingAvg.toStringAsFixed(1)}', style: WText.caption),
                               ]),
                           ]),
@@ -177,7 +177,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
           WCard(
             onTap: _pickTime,
             child: Row(children: [
-              const Icon(Icons.event_rounded, color: WColors.ink),
+              Icon(Icons.event_rounded, color: WColors.fg),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -198,7 +198,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
                 PositionedDirectional(
                   top: 2,
                   end: 2,
-                  child: InkWell(onTap: () => setState(() => _photos.remove(p)), child: const CircleAvatar(radius: 12, backgroundColor: WColors.ink, child: Icon(Icons.close, size: 14, color: WColors.white))),
+                  child: InkWell(onTap: () => setState(() => _photos.remove(p)), child: CircleAvatar(radius: 12, backgroundColor: WColors.night, child: Icon(Icons.close, size: 14, color: WColors.white))),
                 ),
               ]),
             InkWell(
@@ -207,8 +207,8 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
               child: Container(
                 width: 84,
                 height: 84,
-                decoration: BoxDecoration(borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line, width: 1.5), color: WColors.white),
-                child: _uploading ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))) : const Icon(Icons.add_a_photo_outlined, color: WColors.inkMuted),
+                decoration: BoxDecoration(borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line, width: 1.5), color: WColors.surface),
+                child: _uploading ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))) : Icon(Icons.add_a_photo_outlined, color: WColors.inkMuted),
               ),
             ),
           ]),

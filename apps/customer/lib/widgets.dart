@@ -26,9 +26,9 @@ class MerchantMeta extends StatelessWidget {
     Widget sep() => Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Container(width: 3, height: 3, decoration: BoxDecoration(color: color, shape: BoxShape.circle)));
     return Row(children: [
       if (m.ratingCount > 0) ...[
-        Icon(Icons.star_rounded, size: 14, color: light ? WColors.lime : WColors.ink),
+        Icon(Icons.star_rounded, size: 14, color: light ? WColors.lime : WColors.fg),
         const SizedBox(width: 2),
-        Text(m.ratingAvg.toStringAsFixed(1), style: style.copyWith(color: light ? WColors.white : WColors.ink, fontWeight: FontWeight.w600)),
+        Text(m.ratingAvg.toStringAsFixed(1), style: style.copyWith(color: light ? WColors.white : WColors.fg, fontWeight: FontWeight.w600)),
         sep(),
       ],
       Text('${m.etaMinutes(d ?? 2)} د', style: style),
@@ -93,7 +93,7 @@ class MerchantRow extends StatelessWidget {
             if (rank != null)
               SizedBox(
                 width: 34,
-                child: Text('$rank', style: WText.number.copyWith(fontSize: 26, color: rank! <= 3 ? WColors.ink : WColors.inkFaint, height: 1)),
+                child: Text('$rank', style: WText.number.copyWith(fontSize: 26, color: rank! <= 3 ? WColors.fg : WColors.inkFaint, height: 1)),
               ),
             MerchantLogo(name: m.name, url: m.logoUrl, size: 56),
             const SizedBox(width: 14),
@@ -121,7 +121,7 @@ class MerchantRow extends StatelessWidget {
                   icon: AnimatedSwitcher(
                     duration: WDurations.base,
                     transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-                    child: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(fav), color: fav ? WColors.ink : WColors.inkFaint),
+                    child: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(fav), color: fav ? WColors.fg : WColors.inkFaint),
                   ),
                 );
               },
@@ -185,7 +185,7 @@ class CartBar extends StatelessWidget {
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
                         child: Container(
                           padding: const EdgeInsets.fromLTRB(10, 10, 18, 10),
-                          decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(WRadius.lg), boxShadow: WShadow.lifted),
+                          decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(WRadius.lg), boxShadow: WShadow.lifted),
                           child: Row(children: [
                             Container(
                               width: 40,
@@ -261,7 +261,7 @@ class QtyStepper extends StatelessWidget {
                 onTap: onAdd,
                 excludeSemantics: true,
                 child: Material(
-                  color: WColors.ink,
+                  color: WColors.night,
                   borderRadius: WRadius.all(12),
                   child: InkWell(
                     borderRadius: WRadius.all(12),
@@ -301,7 +301,7 @@ class QtyStepper extends StatelessWidget {
             f();
           },
           radius: 20,
-          child: Padding(padding: const EdgeInsets.all(8), child: Icon(i, size: 18, color: WColors.ink)),
+          child: Padding(padding: const EdgeInsets.all(8), child: Icon(i, size: 18, color: WColors.fg)),
         ),
       );
 }
@@ -324,13 +324,13 @@ Future<void> pickAddressSheet(BuildContext context, {required VoidCallback onAdd
                   padding: const EdgeInsets.only(bottom: 8),
                   child: WCard(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    borderColor: app.selectedAddress?.id == a.id ? WColors.ink : WColors.line,
+                    borderColor: app.selectedAddress?.id == a.id ? WColors.fg : WColors.line,
                     onTap: () {
                       app.selectAddress(a.id);
                       Navigator.pop(c);
                     },
                     child: Row(children: [
-                      Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.ink),
+                      Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.fg),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -338,7 +338,7 @@ Future<void> pickAddressSheet(BuildContext context, {required VoidCallback onAdd
                           Text([a.details, if (a.landmark.isNotEmpty) landmarkAr(a.landmark)].join(' · '), style: WText.small, maxLines: 2),
                         ]),
                       ),
-                      if (app.selectedAddress?.id == a.id) const Icon(Icons.check_circle_rounded, color: WColors.blue),
+                      if (app.selectedAddress?.id == a.id) Icon(Icons.check_circle_rounded, color: WColors.link),
                     ]),
                   ),
                 ),

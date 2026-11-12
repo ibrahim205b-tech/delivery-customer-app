@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../theme/mode.dart';
 import 'notifier.dart';
 
 /// إعدادات الاتصال. تُمرَّر وقت البناء ولا تُحفظ بالمستودع:
@@ -33,6 +34,7 @@ void useClientForTesting(SupabaseClient? client) => _clientOverride = client;
 Future<bool> bootstrapWasel() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ar');
+  await WaselThemeController.instance.load();
   if (!WaselConfig.isConfigured) return false;
   await Supabase.initialize(
     url: WaselConfig.supabaseUrl,

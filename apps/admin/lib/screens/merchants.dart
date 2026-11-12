@@ -23,7 +23,7 @@ class _MerchantsScreenState extends State<MerchantsScreen> {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('المحلات ومقدّمو الخدمات')),
         floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: WColors.ink,
+          backgroundColor: WColors.night,
           foregroundColor: WColors.white,
           onPressed: () => _open(),
           icon: const Icon(Icons.add_business_outlined),
@@ -272,7 +272,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
                   if (p != null) setState(() => _point = p);
                 },
                 child: Row(children: [
-                  const Icon(Icons.place_outlined, color: WColors.blue),
+                  Icon(Icons.place_outlined, color: WColors.link),
                   const SizedBox(width: 10),
                   Expanded(child: Text(_point == null ? 'حدّد الموقع على الخريطة' : '${_point!.latitude.toStringAsFixed(5)}, ${_point!.longitude.toStringAsFixed(5)}', style: WText.bodyStrong, textDirection: TextDirection.ltr, textAlign: TextAlign.right)),
                   const Icon(Icons.map_outlined),

@@ -149,14 +149,14 @@ class _OrderCardState extends State<_OrderCard> {
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                      decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(6)),
+                      decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(6)),
                       child: Text('${it.qty}', style: WText.caption.copyWith(color: WColors.white, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(it.name, style: WText.bodyStrong),
-                        if (it.note.isNotEmpty) Text(it.note, style: WText.caption.copyWith(color: WColors.blue)),
+                        if (it.note.isNotEmpty) Text(it.note, style: WText.caption.copyWith(color: WColors.link)),
                       ]),
                     ),
                     Text(iqd(it.unitPrice * it.qty), style: WText.small),
@@ -171,7 +171,7 @@ class _OrderCardState extends State<_OrderCard> {
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: WColors.warningSoft, borderRadius: WRadius.all(WRadius.sm)),
-            child: Text('ملاحظة الزبون: ${o.customerNote}', style: WText.small.copyWith(color: WColors.ink)),
+            child: Text('ملاحظة الزبون: ${o.customerNote}', style: WText.small.copyWith(color: WColors.fg)),
           ),
         ],
         const Divider(height: 22),
@@ -197,7 +197,7 @@ class _OrderCardState extends State<_OrderCard> {
         ],
         if (o.driverName != null && o.status.isActive) ...[
           const SizedBox(height: 8),
-          InfoRow(icon: Icons.two_wheeler_rounded, text: 'المندوب: ${o.driverName}${(o.driverPhone ?? '').isEmpty ? '' : ' · ${o.driverPhone}'}', color: WColors.ink),
+          InfoRow(icon: Icons.two_wheeler_rounded, text: 'المندوب: ${o.driverName}${(o.driverPhone ?? '').isEmpty ? '' : ' · ${o.driverPhone}'}', color: WColors.fg),
         ],
         const SizedBox(height: 12),
         ..._actions(o),

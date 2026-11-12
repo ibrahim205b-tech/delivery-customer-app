@@ -66,7 +66,7 @@ class DailyBarsChart extends StatelessWidget {
         final th = total == 0 ? 3.0 : math.max(6.0, h * total / maxV);
         final dh = total == 0 ? 0.0 : th * delivered / total;
         return Stack(alignment: Alignment.bottomCenter, children: [
-          AnimatedContainer(duration: WDurations.slow, curve: WDurations.curve, height: th, decoration: BoxDecoration(color: total == 0 ? WColors.line : WColors.ink, borderRadius: WRadius.all(4))),
+          AnimatedContainer(duration: WDurations.slow, curve: WDurations.curve, height: th, decoration: BoxDecoration(color: total == 0 ? WColors.line : WColors.fg, borderRadius: WRadius.all(4))),
           AnimatedContainer(duration: WDurations.slow, curve: WDurations.curve, height: dh, decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(4))),
         ]);
       });
@@ -74,9 +74,9 @@ class DailyBarsChart extends StatelessWidget {
 
 /// أعمدة أفقية لقائمة (قسم → عدد)
 class HorizontalBars extends StatelessWidget {
-  const HorizontalBars({super.key, required this.items, this.color = WColors.ink});
+  const HorizontalBars({super.key, required this.items, this.color});
   final List<(String, int)> items;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +87,7 @@ class HorizontalBars extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(children: [
-            SizedBox(width: 110, child: Text(it.$1, style: WText.small.copyWith(color: WColors.ink), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            SizedBox(width: 110, child: Text(it.$1, style: WText.small.copyWith(color: WColors.fg), maxLines: 1, overflow: TextOverflow.ellipsis)),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, c) => Align(
@@ -96,7 +96,7 @@ class HorizontalBars extends StatelessWidget {
                     duration: WDurations.slow,
                     height: 12,
                     width: math.max(4, c.maxWidth * it.$2 / maxV),
-                    decoration: BoxDecoration(color: color, borderRadius: WRadius.all(4)),
+                    decoration: BoxDecoration(color: color ?? WColors.fg, borderRadius: WRadius.all(4)),
                   ),
                 ),
               ),
@@ -134,7 +134,7 @@ class StackedShareBar extends StatelessWidget {
           Row(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 10, height: 10, decoration: BoxDecoration(color: p.$3, borderRadius: WRadius.all(3))),
             const SizedBox(width: 6),
-            Text('${p.$1} ${p.$2}', style: WText.caption.copyWith(color: WColors.ink)),
+            Text('${p.$1} ${p.$2}', style: WText.caption.copyWith(color: WColors.fg)),
           ]),
       ]),
     ]);

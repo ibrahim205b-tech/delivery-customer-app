@@ -125,7 +125,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(12)),
+              decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(12)),
               child: Text('طلب ${o.code}', style: WText.label.copyWith(color: WColors.white)),
             ),
           ]),
@@ -136,7 +136,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           maxChildSize: 0.92,
           snap: true,
           builder: (context, scroll) => Container(
-            decoration: const BoxDecoration(color: WColors.paper, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl)), boxShadow: WShadow.lifted),
+            decoration: BoxDecoration(color: WColors.paper, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl)), boxShadow: WShadow.lifted),
             child: ListView(controller: scroll, padding: EdgeInsets.zero, children: [
               Center(child: Container(margin: const EdgeInsets.only(top: 10), width: 40, height: 4, decoration: BoxDecoration(color: WColors.line, borderRadius: WRadius.all(2)))),
               _statusBlock(o),
@@ -172,7 +172,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(WSpace.page, 14, WSpace.page, 14),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: cancelled ? WColors.dangerSoft : WColors.ink, borderRadius: WRadius.all(WRadius.lg)),
+      decoration: BoxDecoration(color: cancelled ? WColors.dangerSoft : WColors.night, borderRadius: WRadius.all(WRadius.lg)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
@@ -188,7 +188,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(10)),
               child: Column(children: [
                 Text(_eta!, style: WText.number.copyWith(fontSize: 18, color: WColors.ink, height: 1.1)),
-                Text(_route!.isEstimate ? 'تقريباً' : 'للوصول', style: WText.caption.copyWith(fontSize: 10, color: WColors.ink)),
+                Text(_route!.isEstimate ? 'تقريباً' : 'للوصول', style: WText.caption.copyWith(fontSize: 10, color: WColors.fg)),
               ]),
             ),
         ]),
@@ -211,7 +211,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           Container(
             width: 46,
             height: 46,
-            decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(14)),
+            decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(14)),
             child: const Icon(Icons.two_wheeler_rounded, color: WColors.lime),
           ),
           const SizedBox(width: 12),
@@ -304,7 +304,7 @@ class _RateCardState extends State<_RateCard> {
                 icon: AnimatedScale(
                   scale: i <= _stars ? 1.1 : 1,
                   duration: WDurations.fast,
-                  child: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: i <= _stars ? WColors.ink : WColors.inkFaint, size: 34),
+                  child: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: i <= _stars ? WColors.fg : WColors.inkFaint, size: 34),
                 ),
               ),
           ]),
@@ -337,7 +337,7 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? WColors.danger : (done ? WColors.ink : WColors.line);
+    final color = danger ? WColors.danger : (done ? WColors.fg : WColors.line);
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
@@ -349,12 +349,12 @@ class _TimelineRow extends StatelessWidget {
               height: current ? 18 : 14,
               margin: const EdgeInsets.only(top: 3),
               decoration: BoxDecoration(
-                color: current && !danger ? WColors.lime : (done ? color : WColors.white),
+                color: current && !danger ? WColors.lime : (done ? color : WColors.surface),
                 borderRadius: WRadius.all(5),
                 border: Border.all(color: color, width: 2),
               ),
             ),
-            if (!last) Expanded(child: Container(width: 2, color: done ? WColors.ink : WColors.line)),
+            if (!last) Expanded(child: Container(width: 2, color: done ? WColors.fg : WColors.line)),
           ]),
         ),
         const SizedBox(width: 10),
@@ -362,7 +362,7 @@ class _TimelineRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Row(children: [
-              Expanded(child: Text(label, style: (current ? WText.bodyStrong.copyWith(fontWeight: FontWeight.w600) : WText.body).copyWith(color: done ? (danger ? WColors.danger : WColors.ink) : WColors.inkFaint))),
+              Expanded(child: Text(label, style: (current ? WText.bodyStrong.copyWith(fontWeight: FontWeight.w600) : WText.body).copyWith(color: done ? (danger ? WColors.danger : WColors.fg) : WColors.inkFaint))),
               if (at != null) Text(timeAr(at!), style: WText.caption),
             ]),
           ),

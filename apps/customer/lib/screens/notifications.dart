@@ -56,7 +56,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       'task' => Icons.inventory_2_rounded,
                       'booking' => Icons.home_repair_service_rounded,
                       _ => Icons.receipt_long_rounded,
-                    }, color: n.isRead ? WColors.inkMuted : WColors.blue, size: 20),
+                    }, color: n.isRead ? WColors.inkMuted : WColors.link, size: 20),
                   ),
                   title: Text(n.title, style: n.isRead ? WText.body : WText.bodyStrong),
                   subtitle: Text([if (n.body.isNotEmpty) n.body, relativeAr(n.createdAt)].join(' · ')),

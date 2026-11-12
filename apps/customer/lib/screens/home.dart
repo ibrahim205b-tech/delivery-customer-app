@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, _) {
             if (app.loadError != null && !app.loaded) return SafeArea(child: ErrorView(error: app.loadError!, onRetry: _refresh));
             return RefreshIndicator(
-              color: WColors.ink,
+              color: WColors.fg,
               onRefresh: _refresh,
               child: FutureBuilder<_HomeData>(
                 future: _data,
@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final first = (auth.profile?.fullName ?? '').split(' ').first;
     final mobility = app.categories.where((c) => c.kind == CategoryKind.ride || c.kind == CategoryKind.courier || c.kind == CategoryKind.parcel).toList();
     return Container(
-      decoration: const BoxDecoration(color: WColors.ink, borderRadius: BorderRadius.vertical(bottom: Radius.circular(WRadius.xl))),
+      decoration: BoxDecoration(color: WColors.night, borderRadius: BorderRadius.vertical(bottom: Radius.circular(WRadius.xl))),
       padding: EdgeInsets.fromLTRB(WSpace.page, MediaQuery.paddingOf(context).top + 10, WSpace.page, 22),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Flexible(
                       child: Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.bodyStrong.copyWith(color: WColors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
-                    const Icon(Icons.expand_more_rounded, color: WColors.inkFaint, size: 20),
+                    Icon(Icons.expand_more_rounded, color: WColors.inkFaint, size: 20),
                   ]),
                 ),
               ),
@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(8), border: Border.all(color: WColors.ink, width: 2)),
-                  child: Text('${widget.unread > 9 ? '9+' : widget.unread}', style: WText.number.copyWith(fontSize: 10.5, color: WColors.ink)),
+                  child: Text('${widget.unread > 9 ? '9+' : widget.unread}', style: WText.number.copyWith(fontSize: 10.5, color: WColors.fg)),
                 ),
               ),
           ]),
@@ -152,15 +152,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               height: 52,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(WRadius.md)),
+              decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.md)),
               child: Row(children: [
-                const Icon(Icons.search_rounded, color: WColors.ink),
+                Icon(Icons.search_rounded, color: WColors.fg),
                 const SizedBox(width: 10),
                 Expanded(child: Text('مطعم، منتج، أو محل…', style: WText.body.copyWith(color: WColors.inkFaint))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(color: WColors.paper, borderRadius: WRadius.all(8)),
-                  child: Text('بحث', style: WText.label.copyWith(color: WColors.ink)),
+                  child: Text('بحث', style: WText.label.copyWith(color: WColors.fg)),
                 ),
               ]),
             ),
@@ -305,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: height ?? (big ? small * 2 + gap : small),
               padding: EdgeInsets.all(big ? 14 : 11),
               decoration: BoxDecoration(
-                color: big ? WColors.ink : WColors.white,
+                color: big ? WColors.night : WColors.surface,
                 borderRadius: WRadius.all(WRadius.lg),
                 border: big ? null : Border.all(color: WColors.line),
               ),
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: big ? 48 : 36,
                   height: big ? 48 : 36,
                   decoration: BoxDecoration(color: big ? WColors.lime : WColors.paper, borderRadius: WRadius.all(big ? 14 : 11)),
-                  child: Icon(categoryIcon(c.icon), color: WColors.ink, size: big ? 26 : 20),
+                  child: Icon(categoryIcon(c.icon), color: big ? WColors.ink : WColors.fg, size: big ? 26 : 20),
                 ),
                 if (big)
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -330,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       alignment: AlignmentDirectional.bottomStart,
                       child: Text(
                         c.name.trim().split(RegExp(r'\s+')).join('\n'),
-                        style: WText.bodyStrong.copyWith(color: WColors.ink, fontWeight: FontWeight.w600, height: 1.2),
+                        style: WText.bodyStrong.copyWith(color: WColors.fg, fontWeight: FontWeight.w600, height: 1.2),
                       ),
                     ),
                   ),
@@ -444,20 +444,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                   child: Container(
                     clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(color: i.isEven ? WColors.lime : WColors.white, borderRadius: WRadius.all(WRadius.lg), border: i.isEven ? null : Border.all(color: WColors.line)),
+                    decoration: BoxDecoration(color: i.isEven ? WColors.lime : WColors.surface, borderRadius: WRadius.all(WRadius.lg), border: i.isEven ? null : Border.all(color: WColors.line)),
                     child: Row(children: [
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Text('عرض', style: WText.overline.copyWith(color: WColors.ink)),
+                            // البطاقة الليمونية نصها حبر بالوضعين، والبيضاء نصها يتبع الوضع
+                            Text('عرض', style: WText.overline.copyWith(color: i.isEven ? WColors.ink : WColors.fg)),
                             const SizedBox(height: 4),
-                            Text(p.title, style: WText.h3.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
-                            if (p.description.isNotEmpty) Text(p.description, style: WText.caption.copyWith(color: WColors.graphite), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(p.title, style: WText.h3.copyWith(fontWeight: FontWeight.w700, color: i.isEven ? WColors.ink : WColors.fg), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            if (p.description.isNotEmpty) Text(p.description, style: WText.caption.copyWith(color: i.isEven ? WColors.graphite : WColors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ]),
                         ),
                       ),
-                      if (p.imageUrl != null) WImage(p.imageUrl, width: 120, height: 128, radius: 0) else const Padding(padding: EdgeInsets.all(16), child: WaselMark(size: 64)),
+                      if (p.imageUrl != null) WImage(p.imageUrl, width: 120, height: 128, radius: 0) else Padding(padding: const EdgeInsets.all(16), child: WaselMark(size: 64, route: i.isEven ? WColors.ink : null)),
                     ]),
                   ),
                 ),

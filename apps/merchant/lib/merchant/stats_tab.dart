@@ -15,8 +15,8 @@ class StatsTab extends StatelessWidget {
             onRefresh: reload,
             child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
               WCard(
-                color: WColors.ink,
-                borderColor: WColors.ink,
+                color: WColors.night,
+                borderColor: WColors.night,
                 padding: const EdgeInsets.all(20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('مبيعات اليوم', style: WText.small.copyWith(color: WColors.lime)),
@@ -28,7 +28,7 @@ class StatsTab extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: _tile('طلبات اليوم', n('today_orders'), Icons.receipt_long_rounded, WColors.ink)),
+                Expanded(child: _tile('طلبات اليوم', n('today_orders'), Icons.receipt_long_rounded, WColors.fg)),
                 const SizedBox(width: 10),
                 Expanded(child: _tile('قيد العمل', n('active'), Icons.timelapse_rounded, WColors.blue)),
               ]),
@@ -43,7 +43,7 @@ class StatsTab extends StatelessWidget {
               const SizedBox(height: 16),
               WCard(
                 child: Row(children: [
-                  const Icon(Icons.star_rounded, color: WColors.blue),
+                  Icon(Icons.star_rounded, color: WColors.link),
                   const SizedBox(width: 8),
                   Expanded(child: Text('تقييم المحل', style: WText.bodyStrong)),
                   Text(merchant.ratingCount == 0 ? 'لا يوجد بعد' : '${merchant.ratingAvg.toStringAsFixed(1)} من ${merchant.ratingCount} تقييم', style: WText.small),

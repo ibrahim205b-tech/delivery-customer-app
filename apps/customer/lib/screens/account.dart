@@ -15,7 +15,7 @@ class AccountScreen extends StatelessWidget {
             final p = auth.profile;
             return ListView(padding: EdgeInsets.zero, children: [
               Container(
-                color: WColors.ink,
+                color: WColors.night,
                 padding: EdgeInsets.fromLTRB(WSpace.page, MediaQuery.paddingOf(context).top + 24, WSpace.page, 28),
                 child: Row(children: [
                   CircleAvatar(
@@ -47,6 +47,7 @@ class AccountScreen extends StatelessWidget {
                 }),
               ]),
               _group([
+                const ThemeModeTile(),
                 _tile(context, Icons.lock_outline_rounded, 'تغيير كلمة المرور', null, () async {
                   final pw = await promptText(context, title: 'كلمة مرور جديدة', hint: '6 أحرف على الأقل');
                   if (pw == null || !context.mounted) return;
@@ -80,8 +81,8 @@ class AccountScreen extends StatelessWidget {
 
   Widget _tile(BuildContext context, IconData icon, String title, String? sub, VoidCallback onTap, {bool danger = false}) => ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: danger ? WColors.danger : WColors.ink),
-        title: Text(title, style: WText.bodyStrong.copyWith(color: danger ? WColors.danger : WColors.ink)),
+        leading: Icon(icon, color: danger ? WColors.danger : WColors.fg),
+        title: Text(title, style: WText.bodyStrong.copyWith(color: danger ? WColors.danger : WColors.fg)),
         subtitle: sub == null ? null : Text(sub),
         trailing: danger ? null : const Icon(Icons.chevron_left_rounded),
       );
@@ -93,7 +94,7 @@ class AddressesScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('عناويني')),
         floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: WColors.ink,
+          backgroundColor: WColors.night,
           foregroundColor: WColors.white,
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen())),
           icon: const Icon(Icons.add_location_alt_outlined),
@@ -112,7 +113,7 @@ class AddressesScreen extends StatelessWidget {
                     return WCard(
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddressFormScreen(existing: a))),
                       child: Row(children: [
-                        Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.ink),
+                        Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.fg),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -211,7 +212,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                           color: WColors.surfaceAlt,
                           alignment: Alignment.center,
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.add_location_alt_rounded, size: 36, color: WColors.blue),
+                            Icon(Icons.add_location_alt_rounded, size: 36, color: WColors.link),
                             const SizedBox(height: 8),
                             Text('اضغط وحدّد الموقع على الخريطة', style: WText.bodyStrong),
                           ]),

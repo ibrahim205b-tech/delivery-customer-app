@@ -78,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     WCard(
                       color: WColors.warningSoft,
                       borderColor: Colors.transparent,
-                      child: Text('الرسوم البيانية تحتاج تحديث قاعدة البيانات: شغّل الملف supabase/migrations/0006_admin_reports.sql بـ SQL Editor.', style: WText.small.copyWith(color: WColors.ink)),
+                      child: Text('الرسوم البيانية تحتاج تحديث قاعدة البيانات: شغّل الملف supabase/migrations/0006_admin_reports.sql بـ SQL Editor.', style: WText.small.copyWith(color: WColors.fg)),
                     )
                   else if (wide)
                     Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -109,14 +109,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Row(children: [
           const Icon(Icons.pending_actions_rounded, color: WColors.ink),
           const SizedBox(width: 10),
-          Expanded(child: Text('$count محل بانتظار الاعتماد', style: WText.h3)),
+          Expanded(child: Text('$count محل بانتظار الاعتماد', style: WText.h3.copyWith(color: WColors.ink))),
           const Icon(Icons.arrow_back_rounded, color: WColors.ink),
         ]),
       );
 
   Widget _liveHero(int Function(String) n) => WCard(
-        color: WColors.ink,
-        borderColor: WColors.ink,
+        color: WColors.night,
+        borderColor: WColors.night,
         onTap: widget.onOpenOrders,
         padding: const EdgeInsets.all(20),
         child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -210,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         DailyBarsChart(days: daily),
         const SizedBox(height: 8),
         Row(children: [
-          _legend(WColors.ink, 'كل الطلبات'),
+          _legend(WColors.fg, 'كل الطلبات'),
           const SizedBox(width: 14),
           _legend(WColors.lime, 'مسلّمة'),
         ]),
@@ -245,7 +245,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(children: [
-              SizedBox(width: 22, child: Text('${i + 1}', style: WText.number.copyWith(color: i == 0 ? WColors.ink : WColors.inkFaint))),
+              SizedBox(width: 22, child: Text('${i + 1}', style: WText.number.copyWith(color: i == 0 ? WColors.fg : WColors.inkFaint))),
               Expanded(child: Text(top[i]['name'] as String, style: WText.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
               Text('${top[i]['delivered']} طلب', style: WText.caption),
               const SizedBox(width: 10),
@@ -263,7 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             width: 96,
             height: 96,
-            decoration: const BoxDecoration(color: WColors.ink, borderRadius: BorderRadiusDirectional.horizontal(start: Radius.circular(WRadius.lg))),
+            decoration: BoxDecoration(color: WColors.night, borderRadius: BorderRadiusDirectional.horizontal(start: Radius.circular(WRadius.lg))),
             child: const Icon(Icons.map_rounded, color: WColors.lime, size: 36),
           ),
           const SizedBox(width: 14),

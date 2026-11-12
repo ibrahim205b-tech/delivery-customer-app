@@ -118,8 +118,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
             const SizedBox(height: 16),
             if (p != null && d != null)
               WCard(
-                color: WColors.ink,
-                borderColor: WColors.ink,
+                color: WColors.night,
+                borderColor: WColors.night,
                 child: _estimateError != null
                     ? Text(friendlyError(_estimateError!), style: WText.body.copyWith(color: WColors.white))
                     : _estimate == null
@@ -201,7 +201,7 @@ class RideTrackingScreen extends StatelessWidget {
                   if (r.driverName != null)
                     WCard(
                       child: Row(children: [
-                        const CircleAvatar(radius: 24, backgroundColor: WColors.limeSoft, child: Icon(Icons.person_rounded, color: WColors.blue)),
+                        CircleAvatar(radius: 24, backgroundColor: WColors.limeSoft, child: Icon(Icons.person_rounded, color: WColors.link)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -216,7 +216,7 @@ class RideTrackingScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   WCard(
                     child: Column(children: [
-                      InfoRow(icon: Icons.trip_origin_rounded, text: r.pickupText, color: WColors.ink),
+                      InfoRow(icon: Icons.trip_origin_rounded, text: r.pickupText, color: WColors.fg),
                       const SizedBox(height: 8),
                       InfoRow(icon: Icons.flag_rounded, text: r.dropoffText, color: WColors.blue),
                       const Divider(height: 22),

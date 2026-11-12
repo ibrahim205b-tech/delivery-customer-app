@@ -45,7 +45,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: WColors.ink,
+        backgroundColor: WColors.night,
         body: SafeArea(
           bottom: false,
           child: LayoutBuilder(
@@ -78,7 +78,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     Container(
                       width: double.infinity,
-                      decoration: const BoxDecoration(color: WColors.paper, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl))),
+                      decoration: BoxDecoration(color: WColors.paper, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl))),
                       padding: EdgeInsets.fromLTRB(24, 28, 24, 24 + MediaQuery.paddingOf(context).bottom),
                       child: Form(
                         key: _form,
@@ -224,5 +224,5 @@ IconData homeServiceIcon(String key) => switch (key) {
 /// كل الأقسام بلونين فقط (حبر/أزرق) حتى تبقى الواجهة هادئة؛ الليموني للتمييز اللحظي.
 Color categoryTint(String key) => switch (key) {
       'mobile' || 'mobiles' || 'home_repair' || 'home_services' || 'taxi' || 'tuktuk' => WColors.blue,
-      _ => WColors.ink,
+      _ => WColors.fg,
     };

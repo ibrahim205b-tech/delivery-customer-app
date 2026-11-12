@@ -53,7 +53,7 @@ class PointField extends StatelessWidget {
         onTap: () => _edit(context),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(children: [
-          Icon(kind == WMarkerKind.dropoff ? Icons.flag_rounded : Icons.trip_origin_rounded, color: kind == WMarkerKind.dropoff ? WColors.blue : WColors.ink),
+          Icon(kind == WMarkerKind.dropoff ? Icons.flag_rounded : Icons.trip_origin_rounded, color: kind == WMarkerKind.dropoff ? WColors.link : WColors.fg),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -66,7 +66,7 @@ class PointField extends StatelessWidget {
               ),
             ]),
           ),
-          trailing ?? const Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),
+          trailing ?? Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),
         ]),
       );
 }
@@ -147,10 +147,10 @@ class _ErrandRequestScreenState extends State<ErrandRequestScreen> {
           key: _form,
           child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
             WCard(
-              color: WColors.ink,
-              borderColor: WColors.ink,
+              color: WColors.night,
+              borderColor: WColors.night,
               child: Row(children: [
-                Icon(_courier ? Icons.delivery_dining_rounded : Icons.inventory_2_rounded, color: WColors.blue, size: 32),
+                Icon(_courier ? Icons.delivery_dining_rounded : Icons.inventory_2_rounded, color: WColors.link, size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -253,7 +253,7 @@ class ErrandTrackingScreen extends StatelessWidget {
                   if (t.driverName != null)
                     WCard(
                       child: Row(children: [
-                        const CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.two_wheeler_rounded, color: WColors.blue)),
+                        CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.two_wheeler_rounded, color: WColors.link)),
                         const SizedBox(width: 12),
                         Expanded(child: Text(t.driverName!, style: WText.bodyStrong)),
                         if ((t.driverPhone ?? '').isNotEmpty && t.status.isActive)
@@ -266,7 +266,7 @@ class ErrandTrackingScreen extends StatelessWidget {
                       Text(t.itemType, style: WText.bodyStrong),
                       Text(t.description, style: WText.small),
                       const Divider(height: 22),
-                      InfoRow(icon: Icons.trip_origin_rounded, text: t.pickupText.isEmpty ? 'مكان الاستلام' : t.pickupText, color: WColors.ink),
+                      InfoRow(icon: Icons.trip_origin_rounded, text: t.pickupText.isEmpty ? 'مكان الاستلام' : t.pickupText, color: WColors.fg),
                       const SizedBox(height: 6),
                       InfoRow(icon: Icons.flag_rounded, text: t.dropoffText.isEmpty ? 'مكان التسليم' : t.dropoffText, color: WColors.blue),
                       const SizedBox(height: 6),

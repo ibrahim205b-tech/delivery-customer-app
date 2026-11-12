@@ -8,23 +8,54 @@ import 'package:image_picker/image_picker.dart';
 
 import '../services/config.dart';
 import '../services/errors.dart';
+import '../theme/mode.dart';
 import '../theme/theme.dart';
 import '../theme/tokens.dart';
 import 'basics.dart';
 
-/// غلاف MaterialApp موحّد: عربي RTL، الثيم، وشريط انقطاع الإنترنت.
-class WaselApp extends StatelessWidget {
+/// غلاف MaterialApp موحّد: عربي RTL، الثيم (نهاري/ليلي)، وشريط انقطاع الإنترنت.
+class WaselApp extends StatefulWidget {
   const WaselApp({super.key, required this.title, required this.home, this.navigatorKey});
   final String title;
   final Widget home;
   final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
+  State<WaselApp> createState() => _WaselAppState();
+}
+
+class _WaselAppState extends State<WaselApp> {
+  @override
+  void initState() {
+    super.initState();
+    themeController.addListener(_onTheme);
+  }
+
+  @override
+  void dispose() {
+    themeController.removeListener(_onTheme);
+    super.dispose();
+  }
+
+  /// الألوان تُقرأ من [WColors] مباشرة بكل الشاشات، فعند تغيير الوضع نعيد بناء كل العناصر
+  /// (بدون ما نفقد الحالة أو الشاشة المفتوحة).
+  void _onTheme() {
+    setState(() {});
+    void rebuild(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(rebuild);
+    }
+
+    (context as Element).visitChildren(rebuild);
+  }
+
+  @override
   Widget build(BuildContext context) => MaterialApp(
-        title: title,
-        navigatorKey: navigatorKey,
+        title: widget.title,
+        navigatorKey: widget.navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: buildWaselTheme(),
+        themeAnimationDuration: Duration.zero,
         locale: const Locale('ar', 'IQ'),
         supportedLocales: const [Locale('ar', 'IQ'), Locale('ar'), Locale('en')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -32,7 +63,7 @@ class WaselApp extends StatelessWidget {
           textDirection: TextDirection.rtl,
           child: ConnectivityBanner(child: child ?? const SizedBox()),
         ),
-        home: home,
+        home: widget.home,
       );
 }
 
@@ -72,7 +103,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
           duration: WDurations.base,
           child: _offline
               ? Material(
-                  color: WColors.ink,
+                  color: WColors.night,
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
@@ -110,7 +141,7 @@ class SplashView extends StatelessWidget {
   final String? caption;
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: WColors.ink,
+        backgroundColor: WColors.night,
         body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Image.asset('assets/brand/splash-lockup.png', package: 'wasel_core', width: 180),

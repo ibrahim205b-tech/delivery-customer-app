@@ -78,7 +78,7 @@ class _PendingAccess extends StatelessWidget {
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line)),
+                  decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line)),
                   child: Text(auth.profile?.phone ?? '', style: WText.h2, textDirection: TextDirection.ltr),
                 ),
               ),
@@ -139,7 +139,7 @@ class _RoleChooser extends StatelessWidget {
         onTap: f,
         padding: const EdgeInsets.all(20),
         child: Row(children: [
-          CircleAvatar(radius: 26, backgroundColor: WColors.limeSoft, child: Icon(i, color: WColors.blue)),
+          CircleAvatar(radius: 26, backgroundColor: WColors.limeSoft, child: Icon(i, color: WColors.link)),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t, style: WText.h3), Text(s, style: WText.small)])),
           const Icon(Icons.chevron_left_rounded),

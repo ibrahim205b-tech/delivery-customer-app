@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "iq.wasel.wasel_merchant"
-    compileSdk = flutter.compileSdkVersion
+    // 37: مطلوب لمكتبة الإشعارات (androidx.core 1.19). ما يغيّر أقل إصدار أندرويد مدعوم (minSdk).
+    compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

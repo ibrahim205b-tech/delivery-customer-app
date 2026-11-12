@@ -160,6 +160,8 @@ class _StoreTabState extends State<StoreTab> {
             WButton('حفظ أوقات العمل', onPressed: () => _update(hours: true), loading: _busy),
           ],
           const SizedBox(height: 24),
+          const WCard(padding: EdgeInsets.zero, child: ThemeModeTile()),
+          const SizedBox(height: 12),
           WButton('تسجيل الخروج', kind: WButtonKind.ghost, icon: Icons.logout_rounded, onPressed: () => signOutFlow(context)),
           Center(child: Text(auth.profile?.phone ?? '', style: WText.caption, textDirection: TextDirection.ltr)),
         ]),

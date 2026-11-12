@@ -47,13 +47,13 @@ class _MerchantPageState extends State<MerchantPage> {
   Widget _hero() => SliverAppBar(
         expandedHeight: 200,
         pinned: true,
-        backgroundColor: WColors.ink,
+        backgroundColor: WColors.night,
         foregroundColor: WColors.white,
         automaticallyImplyLeading: false,
         title: LayoutBuilder(builder: (context, c) => Text(m.name, style: WText.h3.copyWith(color: WColors.white))),
         leading: Padding(
           padding: const EdgeInsets.all(8),
-          child: WIconButton(Icons.arrow_forward_rounded, tooltip: 'رجوع', onPressed: () => Navigator.pop(context), size: 40, background: WColors.white),
+          child: WIconButton(Icons.arrow_forward_rounded, tooltip: 'رجوع', onPressed: () => Navigator.pop(context), size: 40, background: WColors.surface),
         ),
         actions: [
           ListenableBuilder(
@@ -65,7 +65,8 @@ class _MerchantPageState extends State<MerchantPage> {
                 child: WIconButton(
                   fav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   tooltip: fav ? 'شيل من المفضلة' : 'أضف للمفضلة',
-                  background: fav ? WColors.lime : WColors.white,
+                  background: fav ? WColors.lime : WColors.surface,
+                  color: fav ? WColors.ink : null,
                   size: 40,
                   onPressed: () => runAction(context, () => app.toggleFavorite(m.id)),
                 ),
@@ -80,7 +81,7 @@ class _MerchantPageState extends State<MerchantPage> {
               WImage(m.coverUrl, radius: 0, height: 260)
             else
               Container(
-                color: WColors.ink,
+                color: WColors.night,
                 child: Align(
                   alignment: AlignmentDirectional.bottomStart,
                   child: Padding(
@@ -113,7 +114,7 @@ class _MerchantPageState extends State<MerchantPage> {
           // شريط مقاييس: 3 أعمدة بأرقام واضحة
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(WRadius.lg), border: Border.all(color: WColors.line)),
+            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.lg), border: Border.all(color: WColors.line)),
             child: IntrinsicHeight(
               child: Row(children: [
                 _metric(m.ratingCount > 0 ? m.ratingAvg.toStringAsFixed(1) : '—', m.ratingCount > 0 ? '${m.ratingCount} تقييم' : 'بدون تقييم', Icons.star_rounded),
@@ -142,7 +143,7 @@ class _MerchantPageState extends State<MerchantPage> {
   Widget _metric(String value, String label, IconData icon) => Expanded(
         child: Column(children: [
           Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 15, color: WColors.ink),
+            Icon(icon, size: 15, color: WColors.fg),
             const SizedBox(width: 4),
             Text(value, style: WText.number.copyWith(fontSize: 16)),
           ]),
@@ -209,7 +210,7 @@ class _MerchantPageState extends State<MerchantPage> {
 
     Widget chip(String label, bool sel, VoidCallback f) => Padding(
           padding: const EdgeInsetsDirectional.only(end: 8),
-          child: ChoiceChip(label: Text(label), selected: sel, onSelected: (_) => f(), labelStyle: WText.label.copyWith(color: sel ? WColors.white : WColors.ink)),
+          child: ChoiceChip(label: Text(label), selected: sel, onSelected: (_) => f(), labelStyle: WText.label.copyWith(color: sel ? WColors.white : WColors.fg)),
         );
 
     return [
@@ -258,7 +259,7 @@ class _ChipsHeader extends SliverPersistentHeaderDelegate {
   double get maxExtent => 56;
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      Container(decoration: BoxDecoration(color: WColors.paper, border: overlapsContent ? const Border(bottom: BorderSide(color: WColors.line)) : null), child: child);
+      Container(decoration: BoxDecoration(color: WColors.paper, border: overlapsContent ? Border(bottom: BorderSide(color: WColors.line)) : null), child: child);
   @override
   bool shouldRebuild(covariant _ChipsHeader old) => true;
 }
@@ -353,7 +354,7 @@ class _ProductSheetState extends State<_ProductSheet> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Text(p.name, style: WText.h1),
                 const SizedBox(height: 4),
-                Text(iqd(p.price), style: WText.price.copyWith(fontSize: 20, color: WColors.blue)),
+                Text(iqd(p.price), style: WText.price.copyWith(fontSize: 20, color: WColors.link)),
                 if (p.description.isNotEmpty) ...[const SizedBox(height: 10), Text(p.description, style: WText.body.copyWith(color: WColors.graphite))],
                 const SizedBox(height: 16),
                 TextField(controller: _note, decoration: const InputDecoration(labelText: 'ملاحظة (اختياري)', hintText: 'مثلاً: حار، بدون بصل')),
@@ -362,7 +363,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                   Row(children: [
                     Container(
                       height: 54,
-                      decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line)),
+                      decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.md), border: Border.all(color: WColors.line)),
                       child: Row(children: [
                         IconButton(tooltip: 'نقّص', onPressed: _qty > 1 ? () => setState(() => _qty--) : null, icon: const Icon(Icons.remove_rounded)),
                         SizedBox(width: 28, child: Text('$_qty', textAlign: TextAlign.center, style: WText.number.copyWith(fontSize: 18))),

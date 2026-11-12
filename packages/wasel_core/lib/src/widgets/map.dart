@@ -422,7 +422,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               Material(
                 elevation: 0,
                 color: WColors.white,
-                shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md), side: const BorderSide(color: WColors.line)),
+                shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md), side: BorderSide(color: WColors.line)),
                 child: TextField(
                   controller: _search,
                   onChanged: _onSearch,
@@ -491,7 +491,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             bottom: 0,
             child: Container(
               padding: EdgeInsets.fromLTRB(20, 18, 20, 16 + MediaQuery.paddingOf(context).bottom),
-              decoration: const BoxDecoration(color: WColors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl)), boxShadow: WShadow.lifted),
+              decoration: BoxDecoration(color: WColors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.xl)), boxShadow: WShadow.lifted),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Text('الموقع المحدد', style: WText.overline),
                 const SizedBox(height: 4),
