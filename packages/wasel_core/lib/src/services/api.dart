@@ -426,6 +426,25 @@ class AdminApi {
 
   Future<Map<String, dynamic>> stats() async => (await db.rpc('admin_stats')) as Json;
 
+  /// تقارير الرسوم البيانية (يحتاج migration 0006)
+  Future<Map<String, dynamic>> reports({int days = 14}) async => (await db.rpc('admin_reports', params: {'p_days': days})) as Json;
+
+  /// بيانات خريطة العمليات: سائقين بآخر موقع، طلبات جارية، محلات معتمدة، مناطق
+  Future<({List<Driver> drivers, List<Order> activeOrders, List<Merchant> merchants, List<ServiceArea> areas})> opsMap() async {
+    final r = await Future.wait([
+      db.from('drivers').select('*, vehicles(*), users(full_name, phone)').not('last_lat', 'is', null),
+      db.from('orders').select('*, merchants(name, logo_url, lat, lng)').not('status', 'in', '(delivered,cancelled)').limit(200),
+      db.from('merchants').select().eq('status', 'approved'),
+      db.from('service_areas').select(),
+    ]);
+    return (
+      drivers: r[0].map(Driver.fromJson).toList(),
+      activeOrders: r[1].map(Order.fromJson).toList(),
+      merchants: r[2].map(Merchant.fromJson).toList(),
+      areas: r[3].map(ServiceArea.fromJson).toList(),
+    );
+  }
+
   // ---------- المحلات ----------
   Future<List<Merchant>> merchants({String? status, String? categoryId, String? search}) async {
     var q = db.from('merchants').select();

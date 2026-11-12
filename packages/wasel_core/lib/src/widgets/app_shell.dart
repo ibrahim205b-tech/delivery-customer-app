@@ -14,11 +14,9 @@ import 'basics.dart';
 
 /// غلاف MaterialApp موحّد: عربي RTL، الثيم، وشريط انقطاع الإنترنت.
 class WaselApp extends StatelessWidget {
-  const WaselApp({super.key, required this.title, required this.home, this.accent = WColors.coral, this.onAccent = WColors.white, this.navigatorKey});
+  const WaselApp({super.key, required this.title, required this.home, this.navigatorKey});
   final String title;
   final Widget home;
-  final Color accent;
-  final Color onAccent;
   final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
@@ -26,7 +24,7 @@ class WaselApp extends StatelessWidget {
         title: title,
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        theme: buildWaselTheme(accent: accent, onAccent: onAccent),
+        theme: buildWaselTheme(),
         locale: const Locale('ar', 'IQ'),
         supportedLocales: const [Locale('ar', 'IQ'), Locale('ar'), Locale('en')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -74,13 +72,13 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
           duration: WDurations.base,
           child: _offline
               ? Material(
-                  color: WColors.navy,
+                  color: WColors.ink,
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(children: [
-                        const Icon(Icons.wifi_off_rounded, color: WColors.coral, size: 18),
+                        const Icon(Icons.wifi_off_rounded, color: WColors.lime, size: 18),
                         const SizedBox(width: 8),
                         Expanded(child: Text('ما اكو إنترنت. راح نكمّل تلقائياً لما يرجع الاتصال.', style: WText.caption.copyWith(color: WColors.white))),
                       ]),
@@ -112,13 +110,13 @@ class SplashView extends StatelessWidget {
   final String? caption;
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: WColors.navy,
+        backgroundColor: WColors.ink,
         body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Image.asset('assets/brand/splash-lockup.png', package: 'wasel_core', width: 190),
-            const SizedBox(height: 28),
-            const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: WColors.mint)),
-            if (caption != null) ...[const SizedBox(height: 12), Text(caption!, style: WText.caption.copyWith(color: WColors.mint))],
+            Image.asset('assets/brand/splash-lockup.png', package: 'wasel_core', width: 180),
+            const SizedBox(height: 36),
+            const SizedBox(width: 120, child: LinearProgressIndicator(minHeight: 3, color: WColors.lime, backgroundColor: WColors.inkSurface)),
+            if (caption != null) ...[const SizedBox(height: 12), Text(caption!, style: WText.caption.copyWith(color: WColors.inkFaint))],
           ]),
         ),
       );

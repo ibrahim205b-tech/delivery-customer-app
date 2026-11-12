@@ -68,10 +68,10 @@ class _StoreTabState extends State<StoreTab> {
         child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
           // الإيقاف المؤقت: أهم زر للتاجر
           WCard(
-            color: m.isAcceptingOrders ? WColors.mintSoft : WColors.dangerSoft,
+            color: m.isAcceptingOrders ? WColors.successSoft : WColors.dangerSoft,
             borderColor: Colors.transparent,
             child: Row(children: [
-              Icon(m.isAcceptingOrders ? Icons.storefront_rounded : Icons.pause_circle_filled_rounded, color: m.isAcceptingOrders ? WColors.mintDeep : WColors.danger, size: 32),
+              Icon(m.isAcceptingOrders ? Icons.storefront_rounded : Icons.pause_circle_filled_rounded, color: m.isAcceptingOrders ? WColors.success : WColors.danger, size: 32),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

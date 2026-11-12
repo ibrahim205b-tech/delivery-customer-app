@@ -40,7 +40,7 @@ class _ProductsTabState extends State<ProductsTab> {
           final filtered = products.where((p) => _q.isEmpty || p.name.contains(_q)).toList();
           return Scaffold(
             floatingActionButton: FloatingActionButton.extended(
-              backgroundColor: WColors.coral,
+              backgroundColor: WColors.blue,
               foregroundColor: WColors.white,
               onPressed: () => _openForm(cats),
               icon: const Icon(Icons.add_rounded),

@@ -11,7 +11,6 @@ Future<void> main() async {
   if (ready) auth = AuthController();
   runApp(WaselApp(
     title: 'واصل للأعمال',
-    accent: WColors.navy,
     home: ready ? const Root() : const NotConfiguredScreen(),
   ));
 }
@@ -66,7 +65,7 @@ class _PendingAccess extends StatelessWidget {
             padding: const EdgeInsets.all(WSpace.xxl),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Spacer(),
-              const WaselMark(size: 72, stroke: WColors.navy, dot: WColors.coral),
+              const WaselMark(size: 72),
               const SizedBox(height: 24),
               Text('حسابك بانتظار الربط', style: WText.h1, textAlign: TextAlign.center),
               const SizedBox(height: 10),
@@ -134,7 +133,7 @@ class _RoleChooser extends StatelessWidget {
         onTap: f,
         padding: const EdgeInsets.all(20),
         child: Row(children: [
-          CircleAvatar(radius: 26, backgroundColor: WColors.coralSoft, child: Icon(i, color: WColors.coralDeep)),
+          CircleAvatar(radius: 26, backgroundColor: WColors.limeSoft, child: Icon(i, color: WColors.blue)),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t, style: WText.h3), Text(s, style: WText.small)])),
           const Icon(Icons.chevron_left_rounded),

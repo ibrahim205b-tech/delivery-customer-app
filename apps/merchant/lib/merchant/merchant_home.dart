@@ -91,7 +91,7 @@ class _MerchantHomeState extends State<MerchantHome> {
                   )
                 : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(m.name, style: WText.h3, overflow: TextOverflow.ellipsis),
-                    Text(_statusText(m), style: WText.caption.copyWith(color: m.isOpenNow ? WColors.mintDeep : WColors.danger)),
+                    Text(_statusText(m), style: WText.caption.copyWith(color: m.isOpenNow ? WColors.success : WColors.danger)),
                   ]),
           ),
         ]),
@@ -99,7 +99,7 @@ class _MerchantHomeState extends State<MerchantHome> {
       body: KeyedSubtree(key: ValueKey('${m.id}-$tab'), child: tabs[tab].$4),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
-        indicatorColor: WColors.mintSoft,
+        indicatorColor: WColors.successSoft,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [for (final t in tabs) NavigationDestination(icon: Icon(t.$2), selectedIcon: Icon(t.$3), label: t.$1)],
       ),

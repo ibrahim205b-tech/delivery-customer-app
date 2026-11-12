@@ -20,6 +20,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   ({double distanceKm, int fare})? _estimate;
   Object? _estimateError;
   bool _sending = false;
+  RouteResult? _route;
 
   @override
   void initState() {
@@ -44,6 +45,9 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     setState(() {
       _estimate = null;
       _estimateError = null;
+    });
+    geoApi.route(p, d).then((r) {
+      if (mounted) setState(() => _route = r);
     });
     try {
       final e = await customerApi.estimate(_vehicle.name, p.latitude, p.longitude, d.latitude, d.longitude);
@@ -86,7 +90,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           child: WMap(markers: [
             if (p != null) WMarker(p, kind: WMarkerKind.pickup),
             if (d != null) WMarker(d, kind: WMarkerKind.dropoff),
-          ], route: p != null && d != null ? [p, d] : null),
+          ], route: p != null && d != null ? (_route?.points ?? [p, d]) : null, routeDashed: _route?.isEstimate ?? true),
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
@@ -114,8 +118,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
             const SizedBox(height: 16),
             if (p != null && d != null)
               WCard(
-                color: WColors.navy,
-                borderColor: WColors.navy,
+                color: WColors.ink,
+                borderColor: WColors.ink,
                 child: _estimateError != null
                     ? Text(friendlyError(_estimateError!), style: WText.body.copyWith(color: WColors.white))
                     : _estimate == null
@@ -123,13 +127,14 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                         : Row(children: [
                             Expanded(
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text('الأجرة التقديرية', style: WText.caption.copyWith(color: WColors.mint)),
-                                Text(iqd(_estimate!.fare), style: WText.h1.copyWith(color: WColors.white)),
+                                Text('الأجرة التقديرية', style: WText.caption.copyWith(color: WColors.inkFaint)),
+                                Text(iqd(_estimate!.fare), style: WText.number.copyWith(fontSize: 26, color: WColors.lime)),
                               ]),
                             ),
                             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                              Text('المسافة', style: WText.caption.copyWith(color: WColors.mint)),
-                              Text(kmAr(_estimate!.distanceKm), style: WText.h3.copyWith(color: WColors.white)),
+                              Text(_route == null || _route!.isEstimate ? 'المسافة' : 'الطريق', style: WText.caption.copyWith(color: WColors.inkFaint)),
+                              Text(kmAr(_route != null && !_route!.isEstimate ? _route!.distanceKm : _estimate!.distanceKm), style: WText.h3.copyWith(color: WColors.white)),
+                              if (_route != null && !_route!.isEstimate) Text('~${_route!.minutes.ceil()} دقيقة', style: WText.caption.copyWith(color: WColors.lime)),
                             ]),
                           ]),
               ),
@@ -176,7 +181,7 @@ class RideTrackingScreen extends StatelessWidget {
                 child: WMap(markers: [
                   WMarker(LatLng(r.pickupLat, r.pickupLng), kind: WMarkerKind.pickup),
                   WMarker(LatLng(r.dropoffLat, r.dropoffLng), kind: WMarkerKind.dropoff),
-                  if (r.driverLat != null && r.status.isActive) WMarker(LatLng(r.driverLat!, r.driverLng!), kind: WMarkerKind.driver),
+                  if (r.driverLat != null && r.status.isActive) WMarker(LatLng(r.driverLat!, r.driverLng!), kind: r.vehicle == VehicleType.tuktuk ? WMarkerKind.tuktuk : WMarkerKind.taxi),
                 ]),
               ),
               Expanded(
@@ -196,7 +201,7 @@ class RideTrackingScreen extends StatelessWidget {
                   if (r.driverName != null)
                     WCard(
                       child: Row(children: [
-                        const CircleAvatar(radius: 24, backgroundColor: WColors.coralSoft, child: Icon(Icons.person_rounded, color: WColors.coralDeep)),
+                        const CircleAvatar(radius: 24, backgroundColor: WColors.limeSoft, child: Icon(Icons.person_rounded, color: WColors.blue)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -205,15 +210,15 @@ class RideTrackingScreen extends StatelessWidget {
                           ]),
                         ),
                         if ((r.driverPhone ?? '').isNotEmpty && r.status.isActive)
-                          WIconButton(Icons.call_rounded, background: WColors.mintDeep, color: WColors.white, onPressed: () => callPhone(r.driverPhone!)),
+                          WIconButton(Icons.call_rounded, background: WColors.success, color: WColors.white, onPressed: () => callPhone(r.driverPhone!)),
                       ]),
                     ),
                   const SizedBox(height: 12),
                   WCard(
                     child: Column(children: [
-                      InfoRow(icon: Icons.trip_origin_rounded, text: r.pickupText, color: WColors.navy),
+                      InfoRow(icon: Icons.trip_origin_rounded, text: r.pickupText, color: WColors.ink),
                       const SizedBox(height: 8),
-                      InfoRow(icon: Icons.flag_rounded, text: r.dropoffText, color: WColors.coralDeep),
+                      InfoRow(icon: Icons.flag_rounded, text: r.dropoffText, color: WColors.blue),
                       const Divider(height: 22),
                       Row(children: [
                         Expanded(child: Text('${r.vehicle.label} · ${kmAr(r.distanceKm)}', style: WText.small)),

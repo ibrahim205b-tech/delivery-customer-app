@@ -50,13 +50,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 return ListTile(
                   onTap: () => _open(n),
                   leading: CircleAvatar(
-                    backgroundColor: n.isRead ? WColors.surfaceAlt : WColors.coralSoft,
+                    backgroundColor: n.isRead ? WColors.surfaceAlt : WColors.limeSoft,
                     child: Icon(switch (n.data['type']) {
                       'ride' => Icons.local_taxi_rounded,
                       'task' => Icons.inventory_2_rounded,
                       'booking' => Icons.home_repair_service_rounded,
                       _ => Icons.receipt_long_rounded,
-                    }, color: n.isRead ? WColors.inkMuted : WColors.coralDeep, size: 20),
+                    }, color: n.isRead ? WColors.inkMuted : WColors.blue, size: 20),
                   ),
                   title: Text(n.title, style: n.isRead ? WText.body : WText.bodyStrong),
                   subtitle: Text([if (n.body.isNotEmpty) n.body, relativeAr(n.createdAt)].join(' · ')),

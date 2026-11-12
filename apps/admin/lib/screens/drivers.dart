@@ -21,7 +21,7 @@ class _DriversScreenState extends State<DriversScreen> {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('السائقون والمندوبون')),
         floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: WColors.navy,
+          backgroundColor: WColors.ink,
           foregroundColor: WColors.white,
           onPressed: () => _open(),
           icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -50,9 +50,9 @@ class _DriversScreenState extends State<DriversScreen> {
                       Stack(children: [
                         CircleAvatar(
                           backgroundColor: WColors.surfaceAlt,
-                          child: Icon(switch (d.vehicleType) { VehicleType.taxi => Icons.local_taxi_rounded, VehicleType.tuktuk => Icons.electric_rickshaw_rounded, VehicleType.courier => Icons.two_wheeler_rounded }, color: WColors.navy),
+                          child: Icon(switch (d.vehicleType) { VehicleType.taxi => Icons.local_taxi_rounded, VehicleType.tuktuk => Icons.electric_rickshaw_rounded, VehicleType.courier => Icons.two_wheeler_rounded }, color: WColors.ink),
                         ),
-                        if (d.isAvailable && d.isActive) const PositionedDirectional(end: 0, bottom: 0, child: CircleAvatar(radius: 6, backgroundColor: WColors.mintDeep)),
+                        if (d.isAvailable && d.isActive) const PositionedDirectional(end: 0, bottom: 0, child: CircleAvatar(radius: 6, backgroundColor: WColors.success)),
                       ]),
                       const SizedBox(width: 12),
                       Expanded(

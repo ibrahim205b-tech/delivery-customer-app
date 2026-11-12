@@ -71,7 +71,7 @@ class _ProvidersScreen extends StatelessWidget {
                             if (m.description.isNotEmpty) Text(m.description, style: WText.small, maxLines: 2),
                             if (m.ratingCount > 0)
                               Row(children: [
-                                const Icon(Icons.star_rounded, size: 15, color: WColors.coral),
+                                const Icon(Icons.star_rounded, size: 15, color: WColors.blue),
                                 Text(' ${m.ratingAvg.toStringAsFixed(1)}', style: WText.caption),
                               ]),
                           ]),
@@ -177,7 +177,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
           WCard(
             onTap: _pickTime,
             child: Row(children: [
-              const Icon(Icons.event_rounded, color: WColors.navy),
+              const Icon(Icons.event_rounded, color: WColors.ink),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -198,7 +198,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
                 PositionedDirectional(
                   top: 2,
                   end: 2,
-                  child: InkWell(onTap: () => setState(() => _photos.remove(p)), child: const CircleAvatar(radius: 12, backgroundColor: WColors.navy, child: Icon(Icons.close, size: 14, color: WColors.white))),
+                  child: InkWell(onTap: () => setState(() => _photos.remove(p)), child: const CircleAvatar(radius: 12, backgroundColor: WColors.ink, child: Icon(Icons.close, size: 14, color: WColors.white))),
                 ),
               ]),
             InkWell(

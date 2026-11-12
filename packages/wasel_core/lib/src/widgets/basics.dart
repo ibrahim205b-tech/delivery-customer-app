@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/errors.dart';
 import '../theme/tokens.dart';
@@ -7,10 +8,25 @@ import '../theme/tokens.dart';
 // =====================================================================
 // الأزرار
 // =====================================================================
-enum WButtonKind { primary, secondary, dark, danger, ghost }
+enum WButtonKind {
+  /// الفعل الرئيسي بالشاشة: ليموني + حبر
+  primary,
 
-/// زر موحّد مع حالة تحميل. استخدمه بدل FilledButton مباشرة.
-class WButton extends StatelessWidget {
+  /// فعل قوي ثانوي أو على خلفية فاتحة جداً: حبر + أبيض
+  dark,
+
+  /// إطار حبر بدون تعبئة
+  secondary,
+
+  /// بدون خلفية (روابط/أفعال خفيفة)
+  ghost,
+
+  /// حذف/إلغاء
+  danger,
+}
+
+/// زر واصل الموحّد. حالات: عادي، مضغوط (تصغير خفيف)، معطّل، تحميل، ونجاح (علامة صح لحظية).
+class WButton extends StatefulWidget {
   const WButton(
     this.label, {
     super.key,
@@ -18,8 +34,10 @@ class WButton extends StatelessWidget {
     this.kind = WButtonKind.primary,
     this.icon,
     this.loading = false,
+    this.success = false,
     this.expand = true,
     this.trailing,
+    this.compact = false,
   });
 
   final String label;
@@ -27,69 +45,133 @@ class WButton extends StatelessWidget {
   final WButtonKind kind;
   final IconData? icon;
   final bool loading;
+  final bool success;
   final bool expand;
   final Widget? trailing;
+  final bool compact;
+
+  @override
+  State<WButton> createState() => _WButtonState();
+}
+
+class _WButtonState extends State<WButton> {
+  bool _down = false;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
-    final (bg, fg, side) = switch (kind) {
-      WButtonKind.primary => (primary, onPrimary, BorderSide.none),
-      WButtonKind.dark => (WColors.navy, WColors.white, BorderSide.none),
-      WButtonKind.danger => (WColors.dangerSoft, WColors.danger, BorderSide.none),
-      WButtonKind.secondary => (WColors.white, WColors.ink, const BorderSide(color: WColors.line, width: 1.5)),
-      WButtonKind.ghost => (Colors.transparent, WColors.ink, BorderSide.none),
+    final enabled = widget.onPressed != null && !widget.loading;
+    final (bg, fg, border) = switch (widget.kind) {
+      WButtonKind.primary => (WColors.lime, WColors.ink, null),
+      WButtonKind.dark => (WColors.ink, WColors.white, null),
+      WButtonKind.secondary => (Colors.transparent, WColors.ink, WColors.ink),
+      WButtonKind.ghost => (Colors.transparent, WColors.ink, null),
+      WButtonKind.danger => (WColors.dangerSoft, WColors.danger, null),
     };
-    final child = loading
-        ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: fg))
-        : Row(
-            mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment: trailing == null ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
-            children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-                Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
-              ]),
-              if (trailing != null) trailing!,
-            ],
-          );
-    final button = FilledButton(
-      onPressed: loading ? null : onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: bg,
-        foregroundColor: fg,
-        disabledBackgroundColor: loading ? bg : WColors.line,
-        disabledForegroundColor: loading ? fg : WColors.inkFaint,
-        side: side,
-        elevation: 0,
+    final disabled = !enabled && !widget.loading;
+    final effBg = disabled && widget.kind != WButtonKind.ghost && widget.kind != WButtonKind.secondary ? WColors.surfaceAlt : bg;
+    final effFg = disabled ? WColors.inkFaint : fg;
+    final h = widget.compact ? 42.0 : 54.0;
+
+    Widget content;
+    if (widget.loading) {
+      content = SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: effFg));
+    } else if (widget.success) {
+      content = Icon(Icons.check_rounded, color: effFg, size: 24);
+    } else {
+      final main = Row(mainAxisSize: MainAxisSize.min, children: [
+        if (widget.icon != null) ...[Icon(widget.icon, size: 20, color: effFg), const SizedBox(width: 8)],
+        Flexible(child: Text(widget.label, overflow: TextOverflow.ellipsis, style: WText.button.copyWith(color: effFg))),
+      ]);
+      content = widget.trailing == null
+          ? main
+          : Row(children: [Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: main)), widget.trailing!]);
+    }
+
+    final button = AnimatedScale(
+      scale: _down ? 0.97 : 1,
+      duration: WDurations.fast,
+      curve: WDurations.curve,
+      child: AnimatedContainer(
+        duration: WDurations.base,
+        curve: WDurations.curve,
+        height: h,
+        padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
+        decoration: BoxDecoration(
+          color: widget.success && widget.kind == WButtonKind.primary ? WColors.success : effBg,
+          borderRadius: WRadius.all(WRadius.md),
+          border: border == null ? null : Border.all(color: disabled ? WColors.line : border, width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: AnimatedSwitcher(
+          duration: WDurations.base,
+          child: KeyedSubtree(key: ValueKey('${widget.loading}${widget.success}'), child: IconTheme(data: IconThemeData(color: effFg), child: content)),
+        ),
       ),
-      child: child,
     );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
+
+    final interactive = Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      // excludeSemantics يحذف فعل النقر من GestureDetector؛ نعطيه هنا حتى يشتغل مع قارئ الشاشة
+      onTap: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              widget.onPressed!();
+            }
+          : null,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => setState(() => _down = true) : null,
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: enabled
+            ? (_) {
+                setState(() => _down = false);
+                HapticFeedback.selectionClick();
+                widget.onPressed!();
+              }
+            : null,
+        child: button,
+      ),
+    );
+    return widget.expand ? SizedBox(width: double.infinity, child: interactive) : interactive;
   }
 }
 
-/// زر أيقونة دائري
+/// زر أيقونة (مربع بزوايا ناعمة، مو دائرة)
 class WIconButton extends StatelessWidget {
-  const WIconButton(this.icon, {super.key, required this.onPressed, this.tooltip, this.background = WColors.white, this.color = WColors.ink, this.size = 44});
+  const WIconButton(this.icon, {super.key, required this.onPressed, this.tooltip, this.background = WColors.white, this.color = WColors.ink, this.size = 44, this.bordered = false});
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
   final Color background;
   final Color color;
   final double size;
+  final bool bordered;
 
   @override
   Widget build(BuildContext context) => Tooltip(
         message: tooltip ?? '',
-        child: Material(
-          color: background,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onPressed,
-            child: SizedBox(width: size, height: size, child: Icon(icon, color: color, size: size * 0.5)),
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: Material(
+            color: background,
+            shape: RoundedRectangleBorder(
+              borderRadius: WRadius.all(size * 0.32),
+              side: bordered ? const BorderSide(color: WColors.line) : BorderSide.none,
+            ),
+            child: InkWell(
+              borderRadius: WRadius.all(size * 0.32),
+              onTap: onPressed == null
+                  ? null
+                  : () {
+                      HapticFeedback.selectionClick();
+                      onPressed!();
+                    },
+              child: SizedBox(width: size, height: size, child: Icon(icon, color: color, size: size * 0.48)),
+            ),
           ),
         ),
       );
@@ -123,10 +205,10 @@ class EmptyView extends StatelessWidget {
           padding: const EdgeInsets.all(WSpace.xxxl),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
-              width: 76,
-              height: 76,
-              decoration: const BoxDecoration(color: WColors.surfaceAlt, shape: BoxShape.circle),
-              child: Icon(icon, size: 34, color: WColors.inkMuted),
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(color: WColors.white, borderRadius: WRadius.all(22), border: Border.all(color: WColors.line)),
+              child: Icon(icon, size: 30, color: WColors.ink),
             ),
             const SizedBox(height: 16),
             Text(title, style: WText.h3, textAlign: TextAlign.center),
@@ -228,10 +310,10 @@ class SkeletonList extends StatelessWidget {
 // =====================================================================
 // رسائل
 // =====================================================================
-void showSuccess(BuildContext context, String msg) => _snack(context, msg, Icons.check_circle_rounded, WColors.mint);
+void showSuccess(BuildContext context, String msg) => _snack(context, msg, Icons.check_circle_rounded, WColors.lime);
 void showError(BuildContext context, Object error) =>
-    _snack(context, error is String ? error : friendlyError(error), Icons.error_outline_rounded, WColors.coral);
-void showInfo(BuildContext context, String msg) => _snack(context, msg, Icons.info_outline_rounded, WColors.mint);
+    _snack(context, error is String ? error : friendlyError(error), Icons.error_outline_rounded, const Color(0xFFFF8A78));
+void showInfo(BuildContext context, String msg) => _snack(context, msg, Icons.notifications_active_outlined, WColors.lime);
 
 void _snack(BuildContext context, String msg, IconData icon, Color iconColor) {
   final m = ScaffoldMessenger.maybeOf(context);
@@ -267,7 +349,7 @@ Future<bool> confirmDialog(BuildContext context, {required String title, String?
       actions: [
         TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('تراجع')),
         FilledButton(
-          style: danger ? FilledButton.styleFrom(backgroundColor: WColors.danger) : null,
+          style: danger ? FilledButton.styleFrom(backgroundColor: WColors.danger, foregroundColor: WColors.white) : FilledButton.styleFrom(backgroundColor: WColors.ink, foregroundColor: WColors.white),
           onPressed: () => Navigator.pop(c, true),
           child: Text(confirm),
         ),
@@ -314,7 +396,7 @@ class SectionTitle extends StatelessWidget {
               borderRadius: WRadius.all(WRadius.sm),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(action!, style: WText.caption.copyWith(color: WColors.coralDeep, fontWeight: FontWeight.w600)),
+                child: Text(action!, style: WText.label.copyWith(color: WColors.blue, fontWeight: FontWeight.w600)),
               ),
             ),
         ]),
@@ -334,22 +416,23 @@ class StatusPill extends StatelessWidget {
       PillTone.success => (WColors.successSoft, WColors.success),
       PillTone.warning => (WColors.warningSoft, WColors.warning),
       PillTone.danger => (WColors.dangerSoft, WColors.danger),
-      PillTone.info => (WColors.infoSoft, WColors.info),
-      PillTone.accent => (WColors.coralSoft, WColors.coralDeep),
+      PillTone.info => (WColors.blueSoft, WColors.blue),
+      PillTone.accent => (WColors.lime, WColors.ink),
+      PillTone.dark => (WColors.ink, WColors.lime),
       PillTone.neutral => (WColors.surfaceAlt, WColors.inkMuted),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: WRadius.all(WRadius.pill)),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: WRadius.all(WRadius.xs + 2)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 4)],
-        Text(label, style: WText.caption.copyWith(color: fg, fontWeight: FontWeight.w600)),
+        Text(label, style: WText.label.copyWith(fontSize: 11.5, color: fg, fontWeight: FontWeight.w600)),
       ]),
     );
   }
 }
 
-enum PillTone { neutral, success, warning, danger, info, accent }
+enum PillTone { neutral, success, warning, danger, info, accent, dark }
 
 /// بطاقة بيضاء بحد ناعم
 class WCard extends StatelessWidget {
@@ -414,7 +497,8 @@ class MerchantLogo extends StatelessWidget {
   final String? url;
   final double size;
 
-  static const _palette = [WColors.navy, WColors.coralDeep, WColors.mintDeep, Color(0xFF8A5A44), Color(0xFF5B4B8A), Color(0xFF2F6A8A)];
+  // ألوان الهوية فقط
+  static const _palette = [WColors.ink, WColors.blue, WColors.graphite, WColors.lime];
 
   @override
   Widget build(BuildContext context) {
@@ -425,7 +509,7 @@ class MerchantLogo extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: c, borderRadius: WRadius.all(size * 0.28)),
-      child: Text(name.isEmpty ? '؟' : name.characters.first, style: WText.h2.copyWith(color: WColors.white, fontSize: size * 0.42, height: 1)),
+      child: Text(name.isEmpty ? '؟' : name.characters.first, style: WText.h2.copyWith(color: c == WColors.ink ? WColors.lime : (c == WColors.lime ? WColors.ink : WColors.white), fontSize: size * 0.42, height: 1, fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -459,7 +543,7 @@ class StepProgress extends StatelessWidget {
                 duration: WDurations.slow,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i <= current ? WColors.coral : (onDark ? WColors.white.withValues(alpha: 0.18) : WColors.line),
+                  color: i <= current ? (onDark ? WColors.lime : WColors.ink) : (onDark ? WColors.white.withValues(alpha: 0.16) : WColors.line),
                   borderRadius: WRadius.all(WRadius.pill),
                 ),
               ),
@@ -494,41 +578,49 @@ class WaselWordmark extends StatelessWidget {
   final bool onDark;
   @override
   Widget build(BuildContext context) =>
-      Image.asset(onDark ? 'assets/brand/logo-ar-ivory.png' : 'assets/brand/logo-ar-navy.png', package: 'wasel_core', height: height);
+      Image.asset(onDark ? 'assets/brand/logo-ar-white.png' : 'assets/brand/logo-ar-ink.png', package: 'wasel_core', height: height);
 }
 
-/// العلامة مرسومة بالكود (حرف و كمسار) — حادة بأي حجم
+/// العلامة مرسومة بالكود: مسار متموّج (W) ينتهي بحلقة وصول. نفس هندسة brand/tools/build_brand.py
 class WaselMark extends StatelessWidget {
-  const WaselMark({super.key, this.size = 48, this.stroke = WColors.coral, this.dot = WColors.mint});
+  const WaselMark({super.key, this.size = 48, this.route = WColors.ink, this.ring = WColors.blue});
   final double size;
-  final Color stroke;
-  final Color dot;
+  final Color route;
+  final Color ring;
   @override
-  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(stroke, dot));
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route, ring));
 }
 
 class _MarkPainter extends CustomPainter {
-  _MarkPainter(this.stroke, this.dot);
-  final Color stroke;
-  final Color dot;
+  _MarkPainter(this.route, this.ring);
+  final Color route;
+  final Color ring;
 
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.width / 100;
     final p = Paint()
-      ..color = stroke
+      ..color = route
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 11 * s
+      ..strokeWidth = 12.5 * s
       ..strokeCap = StrokeCap.round;
-    // الرسم بإحداثيات LTR ثابتة (العلامة صورة، ما تنقلب مع الاتجاه)
-    canvas.drawCircle(Offset(60 * s, 34 * s), 15 * s, p);
     final path = Path()
-      ..moveTo(75 * s, 34 * s)
-      ..cubicTo(75 * s, 58 * s, 62 * s, 78 * s, 32 * s, 81 * s);
+      ..moveTo(14 * s, 32 * s)
+      ..cubicTo(20 * s, 54 * s, 24 * s, 72 * s, 32 * s, 72 * s)
+      ..cubicTo(40 * s, 72 * s, 43 * s, 49 * s, 50 * s, 49 * s)
+      ..cubicTo(57 * s, 49 * s, 60 * s, 72 * s, 68 * s, 72 * s)
+      ..cubicTo(76 * s, 72 * s, 80 * s, 52 * s, 84 * s, 34 * s);
     canvas.drawPath(path, p);
-    canvas.drawCircle(Offset(21 * s, 81.5 * s), 6.5 * s, Paint()..color = dot);
+    canvas.drawCircle(
+      Offset(84 * s, 34 * s),
+      12.5 * s,
+      Paint()
+        ..color = ring
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4 * s,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _MarkPainter old) => old.stroke != stroke || old.dot != dot;
+  bool shouldRepaint(covariant _MarkPainter old) => old.route != route || old.ring != ring;
 }

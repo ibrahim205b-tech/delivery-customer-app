@@ -70,12 +70,31 @@ class _OrdersTabState extends State<OrdersTab> {
                       title: switch (_filter) { _Filter.incoming => 'ما اكو طلبات جديدة', _Filter.inProgress => 'ما اكو طلبات قيد العمل', _Filter.history => 'ما اكو طلبات سابقة' },
                       message: _filter == _Filter.incoming ? 'الطلبات الجديدة تظهر هنا فوراً مع تنبيه صوتي.' : null,
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(WSpace.page, 4, WSpace.page, 24),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) => _OrderCard(order: list[i]),
-                    ),
+                  : LayoutBuilder(builder: (context, c) {
+                      // تابلت: عمودين من البطاقات
+                      if (c.maxWidth >= 760) {
+                        final cols = c.maxWidth >= 1200 ? 3 : 2;
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(WSpace.page, 4, WSpace.page, 24),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            for (var col = 0; col < cols; col++) ...[
+                              if (col > 0) const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(children: [
+                                  for (var i = col; i < list.length; i += cols) Padding(padding: const EdgeInsets.only(bottom: 12), child: _OrderCard(key: ValueKey(list[i].id), order: list[i])),
+                                ]),
+                              ),
+                            ],
+                          ]),
+                        );
+                      }
+                      return ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(WSpace.page, 4, WSpace.page, 24),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, i) => _OrderCard(key: ValueKey(list[i].id), order: list[i]),
+                      );
+                    }),
             ),
           ]);
         },
@@ -83,7 +102,7 @@ class _OrdersTabState extends State<OrdersTab> {
 }
 
 class _OrderCard extends StatefulWidget {
-  const _OrderCard({required this.order});
+  const _OrderCard({super.key, required this.order});
   final Order order;
   @override
   State<_OrderCard> createState() => _OrderCardState();
@@ -126,7 +145,7 @@ class _OrderCardState extends State<_OrderCard> {
     final o = widget.order;
     final isNew = o.status == OrderStatus.placed;
     return WCard(
-      borderColor: isNew ? WColors.coral : WColors.line,
+      borderColor: isNew ? WColors.blue : WColors.line,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Text(o.code, style: WText.h3),
@@ -152,14 +171,14 @@ class _OrderCardState extends State<_OrderCard> {
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                      decoration: BoxDecoration(color: WColors.navy, borderRadius: WRadius.all(6)),
+                      decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(6)),
                       child: Text('${it.qty}', style: WText.caption.copyWith(color: WColors.white, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(it.name, style: WText.bodyStrong),
-                        if (it.note.isNotEmpty) Text(it.note, style: WText.caption.copyWith(color: WColors.coralDeep)),
+                        if (it.note.isNotEmpty) Text(it.note, style: WText.caption.copyWith(color: WColors.blue)),
                       ]),
                     ),
                     Text(iqd(it.unitPrice * it.qty), style: WText.small),
@@ -200,7 +219,7 @@ class _OrderCardState extends State<_OrderCard> {
         ],
         if (o.driverName != null && o.status.isActive) ...[
           const SizedBox(height: 8),
-          InfoRow(icon: Icons.two_wheeler_rounded, text: 'المندوب: ${o.driverName}${(o.driverPhone ?? '').isEmpty ? '' : ' · ${o.driverPhone}'}', color: WColors.navy),
+          InfoRow(icon: Icons.two_wheeler_rounded, text: 'المندوب: ${o.driverName}${(o.driverPhone ?? '').isEmpty ? '' : ' · ${o.driverPhone}'}', color: WColors.ink),
         ],
         const SizedBox(height: 12),
         ..._actions(o),

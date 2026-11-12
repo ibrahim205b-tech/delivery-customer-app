@@ -3,21 +3,20 @@ import 'package:flutter/services.dart';
 
 import 'tokens.dart';
 
-/// الثيم الموحد لتطبيقات واصل الثلاثة.
-/// [accent] يميّز كل تطبيق (المستهلك: مرجاني، التاجر: كحلي، الإدارة: كحلي).
-ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColors.white}) {
-  final scheme = ColorScheme(
+/// الثيم الموحد. الفعل الرئيسي ليموني على حبر، والتفاعل الثانوي أزرق.
+ThemeData buildWaselTheme() {
+  const scheme = ColorScheme(
     brightness: Brightness.light,
-    primary: accent,
-    onPrimary: onAccent,
-    primaryContainer: WColors.coralSoft,
-    onPrimaryContainer: WColors.navy,
-    secondary: WColors.navy,
+    primary: WColors.ink,
+    onPrimary: WColors.white,
+    primaryContainer: WColors.lime,
+    onPrimaryContainer: WColors.ink,
+    secondary: WColors.blue,
     onSecondary: WColors.white,
-    secondaryContainer: WColors.mintSoft,
-    onSecondaryContainer: WColors.navy,
-    tertiary: WColors.mintDeep,
-    onTertiary: WColors.white,
+    secondaryContainer: WColors.blueSoft,
+    onSecondaryContainer: WColors.ink,
+    tertiary: WColors.lime,
+    onTertiary: WColors.ink,
     error: WColors.danger,
     onError: WColors.white,
     surface: WColors.white,
@@ -27,11 +26,11 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     outlineVariant: WColors.line,
     surfaceContainerLowest: WColors.white,
     surfaceContainerLow: WColors.white,
-    surfaceContainer: WColors.ivory,
+    surfaceContainer: WColors.paper,
     surfaceContainerHigh: WColors.surfaceAlt,
     surfaceContainerHighest: WColors.surfaceAlt,
     surfaceTint: Colors.transparent,
-    shadow: const Color(0x33172E3B),
+    shadow: Color(0x33111923),
   );
 
   final textTheme = TextTheme(
@@ -45,23 +44,25 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     bodyMedium: WText.body,
     bodySmall: WText.small,
     labelLarge: WText.button,
-    labelMedium: WText.caption,
-    labelSmall: WText.caption.copyWith(fontSize: 11),
+    labelMedium: WText.label,
+    labelSmall: WText.caption,
   );
 
-  final buttonShape = RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md));
-  const buttonPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 14);
+  OutlineInputBorder border(Color c, [double w = 1]) =>
+      OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: BorderSide(color: c, width: w));
 
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
     fontFamily: kWaselFont,
+    fontFamilyFallback: kWaselFallback,
     textTheme: textTheme,
-    scaffoldBackgroundColor: WColors.ivory,
-    splashFactory: InkSparkle.splashFactory,
-    visualDensity: VisualDensity.standard,
+    primaryTextTheme: textTheme,
+    scaffoldBackgroundColor: WColors.paper,
+    splashFactory: InkRipple.splashFactory,
+    highlightColor: Colors.transparent,
     appBarTheme: AppBarTheme(
-      backgroundColor: WColors.ivory,
+      backgroundColor: WColors.paper,
       foregroundColor: WColors.ink,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -71,32 +72,37 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: onAccent,
-        disabledBackgroundColor: WColors.line,
+        backgroundColor: WColors.lime,
+        foregroundColor: WColors.ink,
+        disabledBackgroundColor: WColors.surfaceAlt,
         disabledForegroundColor: WColors.inkFaint,
         textStyle: WText.button,
-        shape: buttonShape,
-        padding: buttonPadding,
+        shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         minimumSize: const Size(64, 52),
+        elevation: 0,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: WColors.ink,
-        side: const BorderSide(color: WColors.line, width: 1.5),
+        side: const BorderSide(color: WColors.ink, width: 1.5),
         textStyle: WText.button,
-        shape: buttonShape,
-        padding: buttonPadding,
+        shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         minimumSize: const Size(64, 52),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: accent == WColors.coral ? WColors.coralDeep : accent,
-        textStyle: WText.button,
-        shape: buttonShape,
-      ),
+      style: TextButton.styleFrom(foregroundColor: WColors.blue, textStyle: WText.button, shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.sm))),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: WColors.lime,
+      foregroundColor: WColors.ink,
+      elevation: 2,
+      highlightElevation: 4,
+      extendedTextStyle: WText.button,
+      shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.lg)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -104,13 +110,14 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       hintStyle: WText.body.copyWith(color: WColors.inkFaint),
       labelStyle: WText.body.copyWith(color: WColors.inkMuted),
-      floatingLabelStyle: WText.caption.copyWith(color: WColors.navy),
+      floatingLabelStyle: WText.label.copyWith(color: WColors.blue),
       prefixIconColor: WColors.inkMuted,
-      border: OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: const BorderSide(color: WColors.line)),
-      enabledBorder: OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: const BorderSide(color: WColors.line)),
-      focusedBorder: OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: const BorderSide(color: WColors.navy, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: const BorderSide(color: WColors.danger)),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: WRadius.all(WRadius.md), borderSide: const BorderSide(color: WColors.danger, width: 1.5)),
+      suffixIconColor: WColors.inkMuted,
+      border: border(WColors.line),
+      enabledBorder: border(WColors.line),
+      focusedBorder: border(WColors.ink, 1.6),
+      errorBorder: border(WColors.danger),
+      focusedErrorBorder: border(WColors.danger, 1.6),
       errorStyle: WText.caption.copyWith(color: WColors.danger),
     ),
     cardTheme: CardThemeData(
@@ -121,13 +128,25 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     ),
     chipTheme: ChipThemeData(
       backgroundColor: WColors.white,
-      selectedColor: WColors.navy,
-      labelStyle: WText.caption.copyWith(color: WColors.ink),
-      secondaryLabelStyle: WText.caption.copyWith(color: WColors.white),
+      selectedColor: WColors.ink,
+      labelStyle: WText.label.copyWith(color: WColors.ink),
+      secondaryLabelStyle: WText.label.copyWith(color: WColors.white),
       side: const BorderSide(color: WColors.line),
       shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.pill)),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       showCheckmark: false,
+      checkmarkColor: WColors.lime,
+      iconTheme: const IconThemeData(size: 16, color: WColors.inkMuted),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.ink : WColors.white),
+        foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.white : WColors.ink),
+        side: const WidgetStatePropertyAll(BorderSide(color: WColors.line)),
+        textStyle: WidgetStatePropertyAll(WText.label),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md))),
+        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+      ),
     ),
     dividerTheme: const DividerThemeData(color: WColors.line, thickness: 1, space: 1),
     bottomSheetTheme: const BottomSheetThemeData(
@@ -141,12 +160,12 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
       backgroundColor: WColors.white,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.lg)),
-      titleTextStyle: WText.h3,
+      titleTextStyle: WText.h2,
       contentTextStyle: WText.body,
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: WColors.navy,
+      backgroundColor: WColors.ink,
       contentTextStyle: WText.body.copyWith(color: WColors.white),
       shape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md)),
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -154,25 +173,38 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: WColors.white,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: WColors.coralSoft,
-      height: 68,
+      indicatorColor: WColors.lime,
+      indicatorShape: RoundedRectangleBorder(borderRadius: WRadius.all(WRadius.md)),
+      height: 70,
       elevation: 0,
       labelTextStyle: WidgetStateProperty.resolveWith(
-        (s) => WText.caption.copyWith(
+        (s) => WText.label.copyWith(
+          fontSize: 12,
           color: s.contains(WidgetState.selected) ? WColors.ink : WColors.inkMuted,
-          fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
-      iconTheme: WidgetStateProperty.resolveWith(
-        (s) => IconThemeData(color: s.contains(WidgetState.selected) ? WColors.ink : WColors.inkMuted, size: 24),
-      ),
+      iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(color: s.contains(WidgetState.selected) ? WColors.ink : WColors.inkMuted, size: 24)),
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: WColors.ink,
+      indicatorColor: WColors.lime,
+      selectedIconTheme: const IconThemeData(color: WColors.ink),
+      unselectedIconTheme: const IconThemeData(color: WColors.inkFaint),
+      selectedLabelTextStyle: WText.label.copyWith(color: WColors.white),
+      unselectedLabelTextStyle: WText.label.copyWith(color: WColors.inkFaint),
     ),
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.white : WColors.inkFaint),
-      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.mintDeep : WColors.surfaceAlt),
-      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.ink : WColors.white),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.lime : WColors.surfaceAlt),
+      trackOutlineColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.limeDeep : WColors.line),
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(color: WColors.coral, linearTrackColor: WColors.line),
+    radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.blue : WColors.inkFaint)),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.ink : Colors.transparent),
+      checkColor: const WidgetStatePropertyAll(WColors.lime),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(color: WColors.blue, linearTrackColor: WColors.line, circularTrackColor: Colors.transparent),
     listTileTheme: ListTileThemeData(
       iconColor: WColors.inkMuted,
       titleTextStyle: WText.bodyStrong,
@@ -182,11 +214,15 @@ ThemeData buildWaselTheme({Color accent = WColors.coral, Color onAccent = WColor
     tabBarTheme: TabBarThemeData(
       labelColor: WColors.ink,
       unselectedLabelColor: WColors.inkMuted,
-      labelStyle: WText.bodyStrong,
+      labelStyle: WText.bodyStrong.copyWith(fontWeight: FontWeight.w600),
       unselectedLabelStyle: WText.body,
-      indicatorColor: WColors.coral,
+      indicator: const UnderlineTabIndicator(borderSide: BorderSide(color: WColors.ink, width: 3), borderRadius: BorderRadius.vertical(top: Radius.circular(3))),
       dividerColor: WColors.line,
       indicatorSize: TabBarIndicatorSize.label,
+    ),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(WRadius.sm)),
+      textStyle: WText.caption.copyWith(color: WColors.white),
     ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),

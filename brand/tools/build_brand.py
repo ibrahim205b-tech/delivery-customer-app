@@ -1,176 +1,170 @@
 #!/usr/bin/env python3
 """
-مولّد الهوية البصرية لواصل | WASEL
------------------------------------
-- يحوّل كلمة "واصل" و "WASEL" إلى مسارات SVG حقيقية (outlines) من خطوط مرخّصة OFL
-  (Reem Kufi للشعار العربي، Readex Pro للإنگليزي) مع تشكيل عربي صحيح عبر HarfBuzz.
-- يرسم العلامة: حرف "و" على شكل مسار توصيل يبدأ بحلقة وينتهي بنقطة وصول.
-- يكتب ملفات SVG في brand/svg/ ، ثم يحوّلها PNG عبر Chromium (render_png.js).
+مولّد الهوية البصرية لواصل | WASEL — الإصدار الثاني (Bold Contemporary)
+--------------------------------------------------------------------------
+العلامة: مسار متصل على شكل موجة (W) يبدأ من نقطة وينتهي بحلقة وصول.
+الفكرة: الحركة + المسار + لحظة الوصول. بدون دبوس خرائط وبدون أسهم.
+
+الخط: Alexandria (SIL OFL) للعربي والإنگليزي، محوّل لمسارات SVG عبر HarfBuzz.
 
 الاستخدام:
-  python3 brand/tools/build_brand.py --reem <ReemKufi_700Bold.ttf> --readex <ReadexPro_600SemiBold.ttf>
+  pip install uharfbuzz fonttools
+  python3 brand/tools/build_brand.py --font Alexandria_700Bold.ttf
+  node brand/tools/render_png.js
 """
 import argparse
 import pathlib
+import shutil
 
 import uharfbuzz as hb
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
-NAVY = "#172E3B"
-CORAL = "#F0785B"
-IVORY = "#F5F1E8"
-MINT = "#A9C8B9"
+INK = "#111923"
+LIME = "#D8F36A"
+PAPER = "#F4F2EC"
+BLUE = "#4058E8"
 WHITE = "#FFFFFF"
+GRAPHITE = "#303943"
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "svg"
 
+# مسار العلامة داخل مربع 100×100 (نفسه مستخدم بالكود: WaselMark في wasel_core)
+ROUTE = "M14 32 C20 54 24 72 32 72 C40 72 43 49 50 49 C57 49 60 72 68 72 C76 72 80 52 84 34"
+RING_C = (84, 34)
 
-def text_path(font_path: str, text: str, size: float, rtl: bool, tracking: float = 0.0):
-    """يرجّع (d, width, ascent, descent) لنص مشكّل كمسار SVG بإحداثيات y للأسفل."""
+
+def text_path(font_path, text, size, rtl, tracking=0.0):
     blob = hb.Blob.from_file_path(font_path)
-    face = hb.Face(blob)
-    font = hb.Font(face)
+    font = hb.Font(hb.Face(blob))
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
     if rtl:
         buf.direction = "rtl"
     hb.shape(font, buf, {"kern": True, "liga": True})
-
     tt = TTFont(font_path)
     upem = tt["head"].unitsPerEm
     scale = size / upem
-    glyph_set = tt.getGlyphSet()
+    gs = tt.getGlyphSet()
     order = tt.getGlyphOrder()
-    pen = SVGPathPen(glyph_set)
-
+    pen = SVGPathPen(gs)
     x = 0.0
     for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-        name = order[info.codepoint]
-        # y يتقلب لأن SVG محوره للأسفل
         t = (scale, 0, 0, -scale, (x + pos.x_offset) * scale, -pos.y_offset * scale)
-        glyph_set[name].draw(TransformPen(pen, t))
+        gs[order[info.codepoint]].draw(TransformPen(pen, t))
         x += pos.x_advance + tracking * upem
     x -= tracking * upem
-    hhea = tt["hhea"]
-    return pen.getCommands(), x * scale, hhea.ascent * scale, -hhea.descent * scale
+    # حدود فعلية للحروف (أدق من ascent/descent للتوسيط)
+    from fontTools.pens.boundsPen import BoundsPen
+    bp = BoundsPen(gs)
+    x2 = 0.0
+    for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+        t = (scale, 0, 0, -scale, (x2 + pos.x_offset) * scale, -pos.y_offset * scale)
+        gs[order[info.codepoint]].draw(TransformPen(bp, t))
+        x2 += pos.x_advance + tracking * upem
+    xmin, ymin, xmax, ymax = bp.bounds
+    return pen.getCommands(), (xmin, ymin, xmax, ymax)
 
 
-def mark_paths(stroke: str, dot: str, ring_fill: str | None = None, sw: float = 11.0) -> str:
-    """
-    العلامة داخل مربع 100×100: حلقة (نقطة الانطلاق) + ذيل الواو كمسار + نقطة الوصول.
-    """
-    fill_ring = f'<circle cx="60" cy="34" r="9" fill="{ring_fill}"/>' if ring_fill else ""
+def mark(route, ring, sw=12.5):
+    cx, cy = RING_C
     return (
-        f'<circle cx="60" cy="34" r="15" fill="none" stroke="{stroke}" stroke-width="{sw}"/>'
-        f"{fill_ring}"
-        f'<path d="M75 34 C75 58 62 78 32 81" fill="none" stroke="{stroke}" stroke-width="{sw}" stroke-linecap="round"/>'
-        f'<circle cx="21" cy="81.5" r="6.5" fill="{dot}"/>'
+        f'<path d="{ROUTE}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="12.5" fill="none" stroke="{ring}" stroke-width="4"/>'
     )
 
 
-def svg(w: float, h: float, body: str, bg: str | None = None, rx: float = 0) -> str:
+def svg(w, h, body, bg=None, rx=0):
     rect = f'<rect width="{w:g}" height="{h:g}" rx="{rx:g}" fill="{bg}"/>' if bg else ""
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:g} {h:g}" width="{w:g}" height="{h:g}">'
-        f"{rect}{body}</svg>\n"
-    )
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:g} {h:g}" width="{w:g}" height="{h:g}">{rect}{body}</svg>\n'
 
 
-def write(name: str, content: str):
+def write(name, content):
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / name).write_text(content, encoding="utf-8")
-    print("wrote", OUT / name)
+    print("wrote", name)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--reem", required=True)
-    ap.add_argument("--readex", required=True)
+    ap.add_argument("--font", required=True, help="Alexandria Bold TTF")
     a = ap.parse_args()
 
-    ar_d, ar_w, ar_asc, ar_desc = text_path(a.reem, "واصل", 120, rtl=True)
-    en_d, en_w, en_asc, en_desc = text_path(a.readex, "WASEL", 40, rtl=False, tracking=0.18)
+    if OUT.exists():
+        shutil.rmtree(OUT)
 
-    # ---- العلامة وحدها ----
-    write("mark-coral.svg", svg(100, 100, mark_paths(CORAL, MINT)))
-    write("mark-navy.svg", svg(100, 100, mark_paths(NAVY, CORAL)))
-    write("mark-ivory.svg", svg(100, 100, mark_paths(IVORY, CORAL)))
+    ar_d, (axmin, aymin, axmax, aymax) = text_path(a.font, "واصل", 120, rtl=True)
+    en_d, (exmin, eymin, exmax, eymax) = text_path(a.font, "WASEL", 44, rtl=False, tracking=0.08)
+    ar_w, ar_h = axmax - axmin, aymax - aymin
+    en_w, en_h = exmax - exmin, eymax - eymin
 
-    # ---- الشعار العربي: العلامة + واصل ----
-    def lockup_ar(text_color, mark_stroke, mark_dot, bg=None):
-        pad = 24
-        mark_size = 120
-        gap = 22
-        h = max(ar_asc + ar_desc, mark_size) + pad * 2
-        w = pad + ar_w + gap + mark_size + pad
-        base = pad + ar_asc + (h - pad * 2 - (ar_asc + ar_desc)) / 2
+    # ---- العلامة ----
+    write("mark-ink.svg", svg(100, 100, mark(INK, BLUE)))
+    write("mark-lime.svg", svg(100, 100, mark(LIME, WHITE)))
+    write("mark-white.svg", svg(100, 100, mark(WHITE, LIME)))
+
+    def place_text(d, xmin, ymin, x, y):
+        # يضع النص بحيث تبدأ حدوده الفعلية عند (x, y)
+        return f'<path transform="translate({x - xmin:.2f},{y - ymin:.2f})" d="{d}"'
+
+    # ---- الشعار العربي الأفقي: [واصل][العلامة] ----
+    def lockup_ar(text_c, route_c, ring_c, bg=None):
+        pad, ms, gap = 28, 128, 26
+        h = max(ar_h, ms) + pad * 2
+        w = pad + ar_w + gap + ms + pad
         body = (
-            # RTL: العلامة يمين، الكلمة يسارها
-            f'<g transform="translate({pad + ar_w + gap},{(h - mark_size) / 2}) scale({mark_size / 100})">'
-            f"{mark_paths(mark_stroke, mark_dot)}</g>"
-            f'<path transform="translate({pad},{base})" d="{ar_d}" fill="{text_color}"/>'
+            f'<g transform="translate({pad + ar_w + gap},{(h - ms) / 2}) scale({ms / 100})">{mark(route_c, ring_c)}</g>'
+            + place_text(ar_d, axmin, aymin, pad, (h - ar_h) / 2) + f' fill="{text_c}"/>'
         )
-        return svg(round(w), round(h), body, bg, rx=28 if bg else 0)
+        return svg(round(w), round(h), body, bg, rx=32 if bg else 0)
 
-    write("logo-ar-navy.svg", lockup_ar(NAVY, CORAL, NAVY))
-    write("logo-ar-ivory.svg", lockup_ar(IVORY, CORAL, MINT))
-    write("logo-ar-on-navy.svg", lockup_ar(IVORY, CORAL, MINT, bg=NAVY))
+    write("logo-ar-ink.svg", lockup_ar(INK, INK, BLUE))
+    write("logo-ar-white.svg", lockup_ar(WHITE, LIME, WHITE))
+    write("logo-ar-on-ink.svg", lockup_ar(WHITE, LIME, WHITE, bg=INK))
+    write("logo-ar-on-lime.svg", lockup_ar(INK, INK, BLUE, bg=LIME))
 
-    # ---- الشعار الإنگليزي ----
-    def lockup_en(text_color, mark_stroke, mark_dot):
-        pad = 16
-        mark_size = 56
-        gap = 14
-        h = mark_size + pad * 2
-        w = pad + mark_size + gap + en_w + pad
-        base = h / 2 + (en_asc - en_desc) / 2 - 4
+    # ---- الشعار الإنگليزي: [العلامة][WASEL] ----
+    def lockup_en(text_c, route_c, ring_c, bg=None):
+        pad, ms, gap = 20, 64, 16
+        h = ms + pad * 2
+        w = pad + ms + gap + en_w + pad
         body = (
-            f'<g transform="translate({pad},{pad}) scale({mark_size / 100})">{mark_paths(mark_stroke, mark_dot)}</g>'
-            f'<path transform="translate({pad + mark_size + gap},{base})" d="{en_d}" fill="{text_color}"/>'
+            f'<g transform="translate({pad},{pad}) scale({ms / 100})">{mark(route_c, ring_c)}</g>'
+            + place_text(en_d, exmin, eymin, pad + ms + gap, (h - en_h) / 2) + f' fill="{text_c}"/>'
         )
-        return svg(round(w), round(h), body)
+        return svg(round(w), round(h), body, bg, rx=24 if bg else 0)
 
-    write("logo-en-navy.svg", lockup_en(NAVY, CORAL, NAVY))
-    write("logo-en-ivory.svg", lockup_en(IVORY, CORAL, MINT))
+    write("logo-en-ink.svg", lockup_en(INK, INK, BLUE))
+    write("logo-en-white.svg", lockup_en(WHITE, LIME, WHITE))
 
-    # ---- الشعار المزدوج (عربي فوق إنگليزي) للـ Splash ----
-    pad = 40
-    mark_size = 150
-    w = max(ar_w, en_w, mark_size) + pad * 2
-    y_mark = pad
-    y_ar = y_mark + mark_size + 26 + ar_asc
-    y_en = y_ar + ar_desc + 8 + en_asc
-    h = y_en + en_desc + pad
+    # ---- شاشة البداية: علامة كبيرة + واصل + WASEL ----
+    pad, ms = 40, 150
+    w = max(ar_w, en_w, ms) + pad * 2
+    y_ar = pad + ms + 30
+    y_en = y_ar + ar_h + 22
+    h = y_en + en_h + pad
     body = (
-        f'<g transform="translate({(w - mark_size) / 2},{y_mark}) scale({mark_size / 100})">{mark_paths(CORAL, MINT)}</g>'
-        f'<path transform="translate({(w - ar_w) / 2},{y_ar})" d="{ar_d}" fill="{IVORY}"/>'
-        f'<path transform="translate({(w - en_w) / 2},{y_en})" d="{en_d}" fill="{MINT}"/>'
+        f'<g transform="translate({(w - ms) / 2},{pad}) scale({ms / 100})">{mark(LIME, WHITE)}</g>'
+        + place_text(ar_d, axmin, aymin, (w - ar_w) / 2, y_ar) + f' fill="{WHITE}"/>'
+        + place_text(en_d, exmin, eymin, (w - en_w) / 2, y_en) + f' fill="{LIME}" fill-opacity="0.8"/>'
     )
     write("splash-lockup.svg", svg(round(w), round(h), body))
 
-    # ---- أيقونات التطبيقات (1024) ----
-    # كامل (للأجهزة القديمة) + طبقة أمامية للأيقونة المتكيّفة (المنطقة الآمنة 66%)
+    # ---- أيقونات التطبيقات (1024): كاملة + طبقة أمامية للأيقونة المتكيّفة ----
     apps = {
-        # التطبيق: (الخلفية، لون العلامة، لون النقطة، شارة)
-        "customer": (NAVY, CORAL, MINT, None),
-        "merchant": (CORAL, NAVY, IVORY, None),
-        "admin": (MINT, NAVY, CORAL, None),
+        "customer": (INK, LIME, WHITE),   # الأساسي: حبر + ليموني
+        "merchant": (LIME, INK, BLUE),    # التاجر: ليموني + حبر
+        "admin": (BLUE, WHITE, LIME),     # الإدارة: أزرق + أبيض
     }
-    for app, (bg, stroke, dot, badge) in apps.items():
-        def icon_body(scale_pct):
-            s = 1024 * scale_pct / 100
+    for app, (bg, route_c, ring_c) in apps.items():
+        def body(pct):
+            s = 1024 * pct / 100
             off = (1024 - s) / 2
-            b = f'<g transform="translate({off},{off}) scale({s / 100})">{mark_paths(stroke, dot)}</g>'
-            if badge:
-                # شارة صغيرة تميّز تطبيق الإدارة
-                b += f'<rect x="{off + s * 0.62}" y="{off + s * 0.70}" width="{s * 0.30}" height="{s * 0.13}" rx="{s * 0.065}" fill="{badge}"/>'
-            return b
-
-        write(f"icon-{app}-full.svg", svg(1024, 1024, icon_body(62), bg))
-        write(f"icon-{app}-foreground.svg", svg(1024, 1024, icon_body(46)))
+            return f'<g transform="translate({off},{off}) scale({s / 100})">{mark(route_c, ring_c)}</g>'
+        write(f"icon-{app}-full.svg", svg(1024, 1024, body(64), bg))
+        write(f"icon-{app}-foreground.svg", svg(1024, 1024, body(48)))
         write(f"icon-{app}-background.svg", svg(1024, 1024, "", bg))
 
 

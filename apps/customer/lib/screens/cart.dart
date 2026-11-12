@@ -83,7 +83,7 @@ class _CartScreenState extends State<CartScreen> {
                   WCard(
                     onTap: () => pickAddressSheet(context, onAddNew: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen()))),
                     child: Row(children: [
-                      const CircleAvatar(backgroundColor: WColors.coralSoft, child: Icon(Icons.location_on_rounded, color: WColors.coralDeep)),
+                      const CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.location_on_rounded, color: WColors.blue)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -98,7 +98,7 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 12),
                   WCard(
                     child: Row(children: [
-                      const CircleAvatar(backgroundColor: WColors.mintSoft, child: Icon(Icons.payments_outlined, color: WColors.mintDeep)),
+                      const CircleAvatar(backgroundColor: WColors.successSoft, child: Icon(Icons.payments_outlined, color: WColors.success)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -106,7 +106,7 @@ class _CartScreenState extends State<CartScreen> {
                           Text('نقداً عند الاستلام', style: WText.bodyStrong),
                         ]),
                       ),
-                      const Icon(Icons.check_circle_rounded, color: WColors.mintDeep),
+                      const Icon(Icons.check_circle_rounded, color: WColors.success),
                     ]),
                   ),
                   const SizedBox(height: 12),
@@ -167,7 +167,7 @@ class _CartScreenState extends State<CartScreen> {
             },
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(l.note.isEmpty ? '+ ملاحظة' : '✎ ${l.note}', style: WText.caption.copyWith(color: WColors.coralDeep)),
+              child: Text(l.note.isEmpty ? '+ ملاحظة' : '✎ ${l.note}', style: WText.caption.copyWith(color: WColors.blue)),
             ),
           ),
         ]),

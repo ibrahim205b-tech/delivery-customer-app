@@ -53,7 +53,9 @@ supabase/migrations/0002_functions.sql
 supabase/migrations/0003_security.sql
 supabase/migrations/0004_storage.sql
 supabase/migrations/0005_seed.sql
+supabase/migrations/0006_admin_reports.sql
 ```
+> إذا شغّلت `setup_all.sql` قبل التحديث البصري، شغّل الآن **فقط** `0006_admin_reports.sql` (تقارير لوحة الإدارة).
 أو بالـ CLI: `supabase link --project-ref <ref>` ثم `supabase db push`.
 
 تأكد من **Database ← Publications ← supabase_realtime** إنه يحتوي: `orders, delivery_tasks, rides, service_bookings, notifications, merchants, products` (الملف 0003 يضيفهم).
@@ -161,9 +163,21 @@ WASEL_IT_URL=http://localhost:54321 WASEL_IT_ANON=<anon> WASEL_IT_SERVICE=<servi
 - **العمولات معطّلة** ولا تُحتسب (إعداد محفوظ للمستقبل فقط).
 - **الإشعارات داخل التطبيق** (لحظية + صوت) عندما يكون التطبيق مفتوحاً. إشعارات Push والتطبيق مسكّر تحتاج Firebase (المرحلة الجاية).
 - **موقع السائق** يتحدّث كل 15 ثانية والتطبيق مفتوح فقط.
-- **المسافة** خط مستقيم (Haversine) وليست مسافة الطريق.
+- **التسعير** يعتمد مسافة خط مستقيم (Haversine) بالخادم. الخرائط تعرض مسار الطريق الفعلي من خدمة التوجيه، وإذا فشلت يظهر خط منقّط مع كلمة «تقريباً».
 - **التحقق من الرقم** بكلمة مرور بدون SMS (حتى نتجنب كلفة مزوّد الرسائل).
-- **خرائط OpenStreetMap** العامة مجانية لكن لها حدود استخدام؛ للإطلاق الأوسع استخدم مزوّد Tiles (مثل MapTiler، فيه باقة مجانية).
+- **الخرائط** تستخدم افتراضياً خدمات مجانية عامة: OpenStreetMap (الصور)، Nominatim (البحث عن العناوين)، OSRM (المسارات). هذه الخدمات لها حدود استخدام ومناسبة للتجربة فقط.
+
+### تغيير مزوّد الخرائط (بدون تعديل كود)
+عند البناء أضف أي من هذه القيم (`--dart-define` أو GitHub Secrets بنفس الاسم):
+
+| المتغير | الافتراضي | مثال مدفوع |
+|---|---|---|
+| `MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | MapTiler: `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=KEY` |
+| `MAP_TILE_ATTRIBUTION` | `© OpenStreetMap` | `© MapTiler © OpenStreetMap` |
+| `GEOCODER_URL` | `https://nominatim.openstreetmap.org` | خادم Nominatim خاص |
+| `ROUTER_URL` | `https://router.project-osrm.org` | خادم OSRM خاص |
+
+> لم يُفعَّل أي مزوّد مدفوع. التفعيل يحتاج موافقتك ومفتاح من حسابك.
 
 ## التكلفة المتوقعة للتجربة
 
@@ -176,6 +190,6 @@ WASEL_IT_URL=http://localhost:54321 WASEL_IT_ANON=<anon> WASEL_IT_SERVICE=<servi
 
 ---
 
-الخطوط: Readex Pro و Reem Kufi برخصة SIL Open Font License (مسموحة تجارياً). تفاصيل الهوية في [`brand/README.md`](brand/README.md).
+الخطوط: Alexandria و Noto Sans Arabic برخصة SIL Open Font License (مسموحة تجارياً). تفاصيل الهوية في [`brand/README.md`](brand/README.md).
 
 </div>

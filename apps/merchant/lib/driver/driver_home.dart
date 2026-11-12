@@ -124,7 +124,7 @@ class _DriverHomeState extends State<DriverHome> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        indicatorColor: WColors.coralSoft,
+        indicatorColor: WColors.limeSoft,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route_rounded), label: 'المهام'),
@@ -137,19 +137,19 @@ class _DriverHomeState extends State<DriverHome> {
   Widget _header(Driver me) => Container(
         margin: const EdgeInsets.all(WSpace.lg),
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: me.isAvailable ? WColors.navy : WColors.white, borderRadius: WRadius.all(WRadius.xl), border: Border.all(color: me.isAvailable ? WColors.navy : WColors.line)),
+        decoration: BoxDecoration(color: me.isAvailable ? WColors.ink : WColors.white, borderRadius: WRadius.all(WRadius.xl), border: Border.all(color: me.isAvailable ? WColors.ink : WColors.line)),
         child: Row(children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: me.isAvailable ? WColors.coral : WColors.surfaceAlt,
+            backgroundColor: me.isAvailable ? WColors.blue : WColors.surfaceAlt,
             child: Icon(switch (me.vehicleType) { VehicleType.taxi => Icons.local_taxi_rounded, VehicleType.tuktuk => Icons.electric_rickshaw_rounded, VehicleType.courier => Icons.two_wheeler_rounded },
-                color: me.isAvailable ? WColors.white : WColors.navy),
+                color: me.isAvailable ? WColors.white : WColors.ink),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(me.isAvailable ? 'متاح للمهام' : 'غير متاح', style: WText.h3.copyWith(color: me.isAvailable ? WColors.white : WColors.ink)),
-              Text([auth.profile?.fullName ?? '', me.vehicleType.label].join(' · '), style: WText.caption.copyWith(color: me.isAvailable ? WColors.mint : WColors.inkMuted)),
+              Text([auth.profile?.fullName ?? '', me.vehicleType.label].join(' · '), style: WText.caption.copyWith(color: me.isAvailable ? WColors.lime : WColors.inkMuted)),
             ]),
           ),
           _toggling
@@ -189,8 +189,8 @@ class _DriverHomeState extends State<DriverHome> {
             }
             _lastAvailableCount = count;
 
-            if (myTask != null) return _ActiveTask(task: myTask, me: _pos);
-            if (myRide != null) return _ActiveRide(ride: myRide, me: _pos);
+            if (myTask != null) return _ActiveTask(task: myTask, me: _pos, vehicle: _me!.vehicleType);
+            if (myRide != null) return _ActiveRide(ride: myRide, me: _pos, vehicle: _me!.vehicleType);
             if (!_me!.isAvailable) {
               return const EmptyView(icon: Icons.toggle_off_outlined, title: 'شغّل "متاح" حتى تستلم مهام', message: 'موقعك يتحدّث كل 15 ثانية وأنت متاح.');
             }
@@ -228,9 +228,9 @@ class _DriverHomeState extends State<DriverHome> {
             Text(iqd(t.fee), style: WText.price.copyWith(fontSize: 18)),
           ]),
           const SizedBox(height: 10),
-          InfoRow(icon: Icons.trip_origin_rounded, text: 'استلام: ${t.pickupText.isEmpty ? 'على الخريطة' : t.pickupText}${_distTo(t.pickupLat, t.pickupLng) == null ? '' : ' · يبعد ${_distTo(t.pickupLat, t.pickupLng)}'}', color: WColors.navy),
+          InfoRow(icon: Icons.trip_origin_rounded, text: 'استلام: ${t.pickupText.isEmpty ? 'على الخريطة' : t.pickupText}${_distTo(t.pickupLat, t.pickupLng) == null ? '' : ' · يبعد ${_distTo(t.pickupLat, t.pickupLng)}'}', color: WColors.ink),
           const SizedBox(height: 4),
-          InfoRow(icon: Icons.flag_rounded, text: 'تسليم: ${t.dropoffText.isEmpty ? 'على الخريطة' : t.dropoffText}', color: WColors.coralDeep),
+          InfoRow(icon: Icons.flag_rounded, text: 'تسليم: ${t.dropoffText.isEmpty ? 'على الخريطة' : t.dropoffText}', color: WColors.blue),
           if (t.description.isNotEmpty) ...[const SizedBox(height: 6), Text(t.description, style: WText.small, maxLines: 2, overflow: TextOverflow.ellipsis)],
           if (t.distanceKm != null) ...[const SizedBox(height: 4), Text('مسافة التوصيل ${kmAr(t.distanceKm!)}', style: WText.caption)],
           const SizedBox(height: 12),
@@ -246,9 +246,9 @@ class _DriverHomeState extends State<DriverHome> {
             Text(iqd(r.fare), style: WText.price.copyWith(fontSize: 18)),
           ]),
           const SizedBox(height: 10),
-          InfoRow(icon: Icons.trip_origin_rounded, text: '${r.pickupText}${_distTo(r.pickupLat, r.pickupLng) == null ? '' : ' · يبعد ${_distTo(r.pickupLat, r.pickupLng)}'}', color: WColors.navy),
+          InfoRow(icon: Icons.trip_origin_rounded, text: '${r.pickupText}${_distTo(r.pickupLat, r.pickupLng) == null ? '' : ' · يبعد ${_distTo(r.pickupLat, r.pickupLng)}'}', color: WColors.ink),
           const SizedBox(height: 4),
-          InfoRow(icon: Icons.flag_rounded, text: '${r.dropoffText} · ${kmAr(r.distanceKm)}', color: WColors.coralDeep),
+          InfoRow(icon: Icons.flag_rounded, text: '${r.dropoffText} · ${kmAr(r.distanceKm)}', color: WColors.blue),
           const SizedBox(height: 12),
           WButton('قبول الرحلة', kind: WButtonKind.dark, icon: Icons.check_rounded, onPressed: () => _accept(r.id, () => driverApi.acceptRide(r.id))),
         ]),
@@ -273,7 +273,7 @@ class _DriverHomeState extends State<DriverHome> {
             final todayTotal = items.where((e) => e.$5 && e.$1.year == today.year && e.$1.month == today.month && e.$1.day == today.day).fold<int>(0, (a, e) => a + e.$4);
             return ListView(padding: const EdgeInsets.fromLTRB(WSpace.lg, 0, WSpace.lg, 24), children: [
               WCard(
-                color: WColors.mintSoft,
+                color: WColors.successSoft,
                 borderColor: Colors.transparent,
                 child: Row(children: [
                   Expanded(child: Text('حصيلة اليوم (نقداً)', style: WText.bodyStrong)),
@@ -284,7 +284,7 @@ class _DriverHomeState extends State<DriverHome> {
               for (final e in items)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(e.$5 ? Icons.check_circle_rounded : Icons.cancel_outlined, color: e.$5 ? WColors.mintDeep : WColors.inkFaint),
+                  leading: Icon(e.$5 ? Icons.check_circle_rounded : Icons.cancel_outlined, color: e.$5 ? WColors.success : WColors.inkFaint),
                   title: Text('${e.$2} · ${e.$3}', maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(dateTimeAr(e.$1)),
                   trailing: Text(iqd(e.$4), style: WText.bodyStrong),
@@ -297,9 +297,10 @@ class _DriverHomeState extends State<DriverHome> {
 
 /// المهمة الحالية (توصيل طلب / مندوب / غرض)
 class _ActiveTask extends StatelessWidget {
-  const _ActiveTask({required this.task, required this.me});
+  const _ActiveTask({required this.task, required this.me, required this.vehicle});
   final DeliveryTask task;
   final LatLng? me;
+  final VehicleType vehicle;
 
   @override
   Widget build(BuildContext context) {
@@ -314,12 +315,14 @@ class _ActiveTask extends StatelessWidget {
       ClipRRect(
         borderRadius: WRadius.all(WRadius.lg),
         child: SizedBox(
-          height: 220,
-          child: WMap(markers: [
-            WMarker(LatLng(t.pickupLat, t.pickupLng), kind: WMarkerKind.pickup),
-            WMarker(LatLng(t.dropoffLat, t.dropoffLng), kind: WMarkerKind.dropoff),
-            if (me != null) WMarker(me!, kind: WMarkerKind.driver),
-          ]),
+          height: 260,
+          child: _RouteMap(
+            pickup: LatLng(t.pickupLat, t.pickupLng),
+            dropoff: LatLng(t.dropoffLat, t.dropoffLng),
+            me: me,
+            vehicle: vehicle,
+            toPickup: goingToPickup,
+          ),
         ),
       ),
       const SizedBox(height: 14),
@@ -328,9 +331,9 @@ class _ActiveTask extends StatelessWidget {
         StatusPill(t.kind.label, tone: PillTone.info),
       ]),
       const SizedBox(height: 12),
-      _stop(context, 'الاستلام', t.pickupText, t.pickupLat, t.pickupLng, Icons.trip_origin_rounded, WColors.navy, active: goingToPickup),
+      _stop(context, 'الاستلام', t.pickupText, t.pickupLat, t.pickupLng, Icons.trip_origin_rounded, WColors.ink, active: goingToPickup),
       const SizedBox(height: 10),
-      _stop(context, 'التسليم', t.dropoffText, t.dropoffLat, t.dropoffLng, Icons.flag_rounded, WColors.coralDeep, active: !goingToPickup,
+      _stop(context, 'التسليم', t.dropoffText, t.dropoffLat, t.dropoffLng, Icons.flag_rounded, WColors.blue, active: !goingToPickup,
           phone: t.recipientPhone.isNotEmpty ? t.recipientPhone : t.customerPhone),
       const SizedBox(height: 12),
       WCard(
@@ -365,9 +368,10 @@ class _ActiveTask extends StatelessWidget {
 
 /// الرحلة الحالية (تكسي / تكتك)
 class _ActiveRide extends StatelessWidget {
-  const _ActiveRide({required this.ride, required this.me});
+  const _ActiveRide({required this.ride, required this.me, required this.vehicle});
   final Ride ride;
   final LatLng? me;
+  final VehicleType vehicle;
 
   @override
   Widget build(BuildContext context) {
@@ -381,21 +385,23 @@ class _ActiveRide extends StatelessWidget {
       ClipRRect(
         borderRadius: WRadius.all(WRadius.lg),
         child: SizedBox(
-          height: 220,
-          child: WMap(markers: [
-            WMarker(LatLng(r.pickupLat, r.pickupLng), kind: WMarkerKind.pickup),
-            WMarker(LatLng(r.dropoffLat, r.dropoffLng), kind: WMarkerKind.dropoff),
-            if (me != null) WMarker(me!, kind: WMarkerKind.driver),
-          ]),
+          height: 260,
+          child: _RouteMap(
+            pickup: LatLng(r.pickupLat, r.pickupLng),
+            dropoff: LatLng(r.dropoffLat, r.dropoffLng),
+            me: me,
+            vehicle: vehicle,
+            toPickup: r.status != RideStatus.inProgress,
+          ),
         ),
       ),
       const SizedBox(height: 14),
       Text(r.status.label, style: WText.h2),
       const SizedBox(height: 12),
-      _stop(context, 'الانطلاق', r.pickupText, r.pickupLat, r.pickupLng, Icons.trip_origin_rounded, WColors.navy,
+      _stop(context, 'الانطلاق', r.pickupText, r.pickupLat, r.pickupLng, Icons.trip_origin_rounded, WColors.ink,
           active: r.status != RideStatus.inProgress, phone: r.customerPhone),
       const SizedBox(height: 10),
-      _stop(context, 'الوجهة', r.dropoffText, r.dropoffLat, r.dropoffLng, Icons.flag_rounded, WColors.coralDeep, active: r.status == RideStatus.inProgress),
+      _stop(context, 'الوجهة', r.dropoffText, r.dropoffLat, r.dropoffLng, Icons.flag_rounded, WColors.blue, active: r.status == RideStatus.inProgress),
       const SizedBox(height: 12),
       WCard(
         child: Row(children: [
@@ -433,3 +439,76 @@ Widget _stop(BuildContext context, String title, String text, double lat, double
         WIconButton(Icons.navigation_rounded, background: active ? color : WColors.surfaceAlt, color: active ? WColors.white : WColors.ink, tooltip: 'افتح بالخرائط', onPressed: () => openInMaps(lat, lng, label: title)),
       ]),
     );
+
+
+/// خريطة المهمة مع مسار الطريق: من موقعي للاستلام، أو من الاستلام للتسليم.
+/// المسار من خدمة التوجيه (OSRM افتراضياً)؛ إذا فشلت يُرسم خط تقديري منقّط.
+class _RouteMap extends StatefulWidget {
+  const _RouteMap({required this.pickup, required this.dropoff, required this.me, required this.vehicle, required this.toPickup});
+  final LatLng pickup;
+  final LatLng dropoff;
+  final LatLng? me;
+  final VehicleType vehicle;
+  final bool toPickup;
+  @override
+  State<_RouteMap> createState() => _RouteMapState();
+}
+
+class _RouteMapState extends State<_RouteMap> {
+  RouteResult? _route;
+  LatLng? _from;
+  bool? _leg;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RouteMap old) {
+    super.didUpdateWidget(old);
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    final from = widget.toPickup ? (widget.me ?? widget.pickup) : widget.pickup;
+    final to = widget.toPickup ? widget.pickup : widget.dropoff;
+    // لا نعيد الطلب إلا إذا تغيّرت المرحلة أو تحركت أكثر من 150 م
+    if (_leg == widget.toPickup && _from != null && distanceKm(_from!.latitude, _from!.longitude, from.latitude, from.longitude) < 0.15) return;
+    _from = from;
+    _leg = widget.toPickup;
+    if (from == to) return;
+    final r = await geoApi.route(from, to);
+    if (mounted) setState(() => _route = r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _route;
+    return Stack(children: [
+      Positioned.fill(
+        child: WMap(
+          markers: [
+            WMarker(widget.pickup, kind: WMarkerKind.pickup),
+            WMarker(widget.dropoff, kind: WMarkerKind.dropoff),
+            if (widget.me != null)
+              WMarker(widget.me!, kind: switch (widget.vehicle) { VehicleType.taxi => WMarkerKind.taxi, VehicleType.tuktuk => WMarkerKind.tuktuk, VehicleType.courier => WMarkerKind.courier }),
+          ],
+          route: r?.points,
+          routeDashed: r?.isEstimate ?? false,
+        ),
+      ),
+      if (r != null)
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(WRadius.sm)),
+            child: Text('${r.isEstimate ? '≈ ' : ''}${kmAr(r.distanceKm)} · ${r.minutes.ceil()} د', style: WText.label.copyWith(color: WColors.lime)),
+          ),
+        ),
+    ]);
+  }
+}

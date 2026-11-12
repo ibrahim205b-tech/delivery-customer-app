@@ -62,7 +62,7 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => WCard(
-        borderColor: b.status == BookingStatus.requested ? WColors.coral : WColors.line,
+        borderColor: b.status == BookingStatus.requested ? WColors.blue : WColors.line,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(child: Text(b.customerName, style: WText.h3)),

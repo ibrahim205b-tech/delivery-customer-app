@@ -15,22 +15,22 @@ class AccountScreen extends StatelessWidget {
             final p = auth.profile;
             return ListView(padding: EdgeInsets.zero, children: [
               Container(
-                color: WColors.navy,
+                color: WColors.ink,
                 padding: EdgeInsets.fromLTRB(WSpace.page, MediaQuery.paddingOf(context).top + 24, WSpace.page, 28),
                 child: Row(children: [
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: WColors.coral,
+                    backgroundColor: WColors.blue,
                     child: Text((p?.fullName ?? '؟').characters.firstOrNull ?? '؟', style: WText.h1.copyWith(color: WColors.white)),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(p?.fullName ?? '', style: WText.h2.copyWith(color: WColors.white)),
-                      Text(p?.phone ?? '', style: WText.body.copyWith(color: WColors.mint), textDirection: TextDirection.ltr),
+                      Text(p?.phone ?? '', style: WText.body.copyWith(color: WColors.lime), textDirection: TextDirection.ltr),
                     ]),
                   ),
-                  WIconButton(Icons.edit_outlined, background: WColors.navySoft, color: WColors.white, tooltip: 'تعديل الاسم', onPressed: () async {
+                  WIconButton(Icons.edit_outlined, background: WColors.graphite, color: WColors.white, tooltip: 'تعديل الاسم', onPressed: () async {
                     final n = await promptText(context, title: 'الاسم', initial: p?.fullName);
                     if (n != null && context.mounted) await runAction(context, () => auth.updateName(n), success: 'تم الحفظ');
                   }),
@@ -79,7 +79,7 @@ class AccountScreen extends StatelessWidget {
 
   Widget _tile(BuildContext context, IconData icon, String title, String? sub, VoidCallback onTap, {bool danger = false}) => ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: danger ? WColors.danger : WColors.navy),
+        leading: Icon(icon, color: danger ? WColors.danger : WColors.ink),
         title: Text(title, style: WText.bodyStrong.copyWith(color: danger ? WColors.danger : WColors.ink)),
         subtitle: sub == null ? null : Text(sub),
         trailing: danger ? null : const Icon(Icons.chevron_left_rounded),
@@ -92,7 +92,7 @@ class AddressesScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('عناويني')),
         floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: WColors.navy,
+          backgroundColor: WColors.ink,
           foregroundColor: WColors.white,
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen())),
           icon: const Icon(Icons.add_location_alt_outlined),
@@ -111,7 +111,7 @@ class AddressesScreen extends StatelessWidget {
                     return WCard(
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddressFormScreen(existing: a))),
                       child: Row(children: [
-                        Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.navy),
+                        Icon(a.label == 'الدوام' ? Icons.work_outline_rounded : Icons.home_outlined, color: WColors.ink),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -162,8 +162,13 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   bool _saving = false;
 
   Future<void> _pick() async {
-    final p = await LocationPickerPage.open(context, initial: _point, title: 'وين بالضبط؟');
-    if (p != null) setState(() => _point = p);
+    final picked = await LocationPickerPage.openPlace(context, initial: _point, title: 'وين بالضبط؟');
+    if (picked == null) return;
+    setState(() {
+      _point = picked.point;
+      // نعبّي التفاصيل من اسم المكان إذا فارغة
+      if (_details.text.trim().isEmpty && picked.label.isNotEmpty) _details.text = picked.label;
+    });
   }
 
   Future<void> _save() async {
@@ -205,7 +210,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                           color: WColors.surfaceAlt,
                           alignment: Alignment.center,
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.add_location_alt_rounded, size: 36, color: WColors.coral),
+                            const Icon(Icons.add_location_alt_rounded, size: 36, color: WColors.blue),
                             const SizedBox(height: 8),
                             Text('اضغط وحدّد الموقع على الخريطة', style: WText.bodyStrong),
                           ]),

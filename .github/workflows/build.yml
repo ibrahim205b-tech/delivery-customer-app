@@ -38,7 +38,7 @@ jobs:
         run: |
           flutter pub get
           flutter analyze
-          flutter test test/core_test.dart
+          flutter test test/core_test.dart test/geo_test.dart test/widgets_test.dart
       - name: Analyze apps
         run: |
           for app in customer merchant admin; do
@@ -81,7 +81,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          MAP_TILE_URL: ${{ secrets.MAP_TILE_URL }}
+          MAP_TILE_ATTRIBUTION: ${{ secrets.MAP_TILE_ATTRIBUTION }}
+          GEOCODER_URL: ${{ secrets.GEOCODER_URL }}
+          ROUTER_URL: ${{ secrets.ROUTER_URL }}
         run: |
+          # إعدادات الخرائط اختيارية: نمررها فقط إذا مضبوطة حتى ما نلغي القيم الافتراضية
+          MAP_DEFINES=()
+          for v in MAP_TILE_URL MAP_TILE_ATTRIBUTION GEOCODER_URL ROUTER_URL; do
+            if [ -n "${!v}" ]; then MAP_DEFINES+=("--dart-define=$v=${!v}"); fi
+          done
           if [ -z "$SUPABASE_URL" ] || { [ -z "$SUPABASE_PUBLISHABLE_KEY" ] && [ -z "$SUPABASE_ANON_KEY" ]; }; then
             echo "::warning::SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY غير مضبوطة: التطبيق راح يعرض شاشة (غير مربوط بالخادم)."
           fi
@@ -90,7 +99,8 @@ jobs:
             --build-number=${{ github.run_number }} \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            "${MAP_DEFINES[@]}"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/out/wasel-${{ matrix.app }}.apk"
           ls -la "$GITHUB_WORKSPACE/out"

@@ -321,5 +321,17 @@ update users set is_active = false where id = t.id('cust2');
 select t.login(t.id('cust2'));
 select t.fails($$select request_ride('taxi', 'a', 33.30, 44.43, 'b', 33.32, 44.40)$$, 'account_disabled', 'الحساب المعطّل ما يگدر يطلب');
 
+-- ---------------------------------------------------------------------
+-- 14) تقارير الإدارة (بيانات حقيقية للرسوم)
+-- ---------------------------------------------------------------------
+select t.login(t.id('admin'));
+select t.ok(jsonb_array_length(admin_reports(14)->'daily') = 14, 'تقرير يومي لـ 14 يوم بدون فجوات');
+select t.ok((select sum((d->>'delivered')::int) from jsonb_array_elements(admin_reports(14)->'daily') d) = 1, 'عدد الطلبات المسلّمة بالتقرير مطابق');
+select t.ok((select sum((d->>'sales')::int) from jsonb_array_elements(admin_reports(14)->'daily') d) = 17000 - 1500, 'مبيعات التقرير = المسلّم بدون التوصيل');
+select t.ok((admin_reports(14)->'by_status'->>'cancelled')::int = 2, 'توزيع الحالات صحيح');
+select t.ok(admin_reports(14)->'top_merchants'->0->>'name' = 'مطعم التجربة', 'أفضل المحلات من البيانات الفعلية');
+select t.login(t.id('cust'));
+select t.fails($$select admin_reports(14)$$, 'forbidden', 'المستهلك ما يشوف تقارير الإدارة');
+
 reset role;
 select 'ALL TESTS PASSED' as result;

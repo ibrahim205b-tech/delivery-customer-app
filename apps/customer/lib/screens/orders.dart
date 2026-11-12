@@ -69,8 +69,8 @@ class _StoreOrders extends StatelessWidget {
                         Row(children: [
                           Text(iqd(o.total), style: WText.price),
                           const Spacer(),
-                          Text(o.status.isActive ? 'تتبع الطلب' : 'التفاصيل', style: WText.caption.copyWith(color: WColors.coralDeep, fontWeight: FontWeight.w600)),
-                          const Icon(Icons.chevron_left_rounded, size: 18, color: WColors.coralDeep),
+                          Text(o.status.isActive ? 'تتبع الطلب' : 'التفاصيل', style: WText.caption.copyWith(color: WColors.blue, fontWeight: FontWeight.w600)),
+                          const Icon(Icons.chevron_left_rounded, size: 18, color: WColors.blue),
                         ]),
                       ]),
                     );
@@ -104,7 +104,7 @@ class _Rides extends StatelessWidget {
                       child: Row(children: [
                         CircleAvatar(
                           backgroundColor: WColors.surfaceAlt,
-                          child: Icon(r.vehicle == VehicleType.tuktuk ? Icons.electric_rickshaw_rounded : Icons.local_taxi_rounded, color: WColors.navy),
+                          child: Icon(r.vehicle == VehicleType.tuktuk ? Icons.electric_rickshaw_rounded : Icons.local_taxi_rounded, color: WColors.ink),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -146,7 +146,7 @@ class _Errands extends StatelessWidget {
                       child: Row(children: [
                         CircleAvatar(
                           backgroundColor: WColors.surfaceAlt,
-                          child: Icon(t.kind == TaskKind.courier ? Icons.delivery_dining_rounded : Icons.inventory_2_rounded, color: WColors.navy),
+                          child: Icon(t.kind == TaskKind.courier ? Icons.delivery_dining_rounded : Icons.inventory_2_rounded, color: WColors.ink),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
