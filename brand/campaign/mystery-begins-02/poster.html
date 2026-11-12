@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:A;src:url('../../../packages/wasel_core/fonts/Alexandria_400Regular.ttf');font-weight:400}
+@font-face{font-family:A;src:url('../../../packages/wasel_core/fonts/Alexandria_500Medium.ttf');font-weight:500}
+@font-face{font-family:A;src:url('../../../packages/wasel_core/fonts/Alexandria_600SemiBold.ttf');font-weight:600}
+@font-face{font-family:A;src:url('../../../packages/wasel_core/fonts/Alexandria_700Bold.ttf');font-weight:700}
+:root{--ink:#111923;--lime:#D8F36A;--paper:#F4F2EC;--blue:#4058E8}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1350px;overflow:hidden;background:var(--lime)}
+.poster{position:relative;width:1080px;height:1350px;font-family:A;color:var(--ink);
+  background:radial-gradient(1100px 900px at 85% 0%, rgba(255,255,255,.22), rgba(255,255,255,0) 60%),
+             radial-gradient(900px 800px at 0% 100%, rgba(17,25,35,.10), rgba(17,25,35,0) 65%), var(--lime)}
+.grain{position:absolute;inset:0;opacity:.22;mix-blend-mode:multiply;pointer-events:none}
+.top{position:absolute;top:76px;right:84px;left:84px;display:flex;justify-content:space-between;
+  font-weight:500;font-size:19px;color:rgba(17,25,35,.62)}
+.top .no{direction:ltr}
+.rule{position:absolute;top:122px;right:84px;left:84px;height:1px;background:rgba(17,25,35,.18)}
+svg.art{position:absolute;inset:0}
+.head{position:absolute;right:84px;left:84px;top:826px;text-align:right}
+.l1{font-weight:500;font-size:50px;line-height:1;color:rgba(17,25,35,.72);margin-bottom:20px}
+.l2{font-weight:700;font-size:150px;line-height:1.05;letter-spacing:-3px;white-space:nowrap}
+.l2 .d{color:var(--blue);letter-spacing:2px}
+.l3{font-weight:500;font-size:50px;line-height:1.25;margin-top:10px}
+.rule2{position:absolute;bottom:170px;right:84px;left:84px;height:1px;background:rgba(17,25,35,.18)}
+.sig{position:absolute;bottom:78px;right:84px;left:84px;display:flex;justify-content:space-between;align-items:flex-end}
+.brand{display:flex;align-items:center;gap:16px}
+.brand .name{font-weight:700;font-size:34px;line-height:1}
+.brand .name span{color:rgba(17,25,35,.45);font-weight:400;margin:0 8px}
+.brand .en{font-weight:600;letter-spacing:4px;direction:ltr;display:inline-block;color:rgba(17,25,35,.7)}
+.soon{text-align:left;font-weight:500;font-size:22px;line-height:1.5;color:rgba(17,25,35,.66)}
+.soon b{display:block;color:var(--ink);font-weight:600;font-size:26px}
+</style></head><body>
+<div class="poster">
+  <svg class="grain" width="1080" height="1350"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+  <div class="top"><span>بغداد · قضاء الزوراء</span><span class="no">02</span></div>
+  <div class="rule"></div>
+  <!-- تكبير على نهاية علامة واصل: آخر منحنى من المسار يدخل حلقة الوصول -->
+  <svg class="art" width="1080" height="1350" viewBox="0 0 1080 1350">
+    <!-- نفس هندسة العلامة: المقطع الأخير C68 72 → 84 34، مكبّر ومنقول -->
+    <g transform="translate(-170,-66) scale(11)">
+      <path d="M14 32 C20 54 24 72 32 72 C40 72 43 49 50 49 C57 49 60 72 68 72 C76 72 80 52 84 34" fill="none" stroke="#111923" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="84" cy="34" r="12.5" fill="none" stroke="#4058E8" stroke-width="4"/>
+    </g>
+  </svg>
+  <div class="head">
+    <div class="l1">أهل</div>
+    <div class="l2">المعامل<span class="d">...</span></div>
+    <div class="l3">شي جديد بالطريق.</div>
+  </div>
+  <div class="rule2"></div>
+  <div class="sig">
+    <div class="brand">
+      <svg width="62" height="62" viewBox="0 0 100 100"><path d="M14 32 C20 54 24 72 32 72 C40 72 43 49 50 49 C57 49 60 72 68 72 C76 72 80 52 84 34" fill="none" stroke="#111923" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="84" cy="34" r="12.5" fill="none" stroke="#4058E8" stroke-width="4"/></svg>
+      <div class="name">واصل<span>|</span><span class="en">WASEL</span></div>
+    </div>
+    <div class="soon"><b>قريباً في المعامل</b>قضاء الزوراء</div>
+  </div>
+</div>
+<script>document.fonts.ready.then(()=>document.body.dataset.ready='1')</script>
+</body></html>
