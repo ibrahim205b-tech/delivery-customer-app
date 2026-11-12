@@ -33,6 +33,7 @@ class _DriverHomeState extends State<DriverHome> {
   void initState() {
     super.initState();
     _load();
+    notifier.requestPermission();
   }
 
   @override
@@ -110,8 +111,12 @@ class _DriverHomeState extends State<DriverHome> {
         body: EmptyView(
           icon: Icons.no_transfer_outlined,
           title: me == null ? 'حساب السائق غير مكتمل' : 'حساب السائق موقوف',
-          message: 'تواصل مع إدارة واصل.',
-          action: WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.secondary, expand: false),
+          message: 'تواصل مع دعم واصل.',
+          action: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SupportContactButtons(),
+            const SizedBox(height: 10),
+            WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.ghost, expand: false),
+          ]),
         ),
       );
     }
@@ -124,7 +129,6 @@ class _DriverHomeState extends State<DriverHome> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        indicatorColor: WColors.limeSoft,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route_rounded), label: 'المهام'),
@@ -155,6 +159,7 @@ class _DriverHomeState extends State<DriverHome> {
           _toggling
               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.4))
               : Switch(value: me.isAvailable, onChanged: _toggle),
+          SupportIconButton(app: SupportApp.driver, color: me.isAvailable ? WColors.white : WColors.ink),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: me.isAvailable ? WColors.white : WColors.ink),
             onSelected: (v) async {
@@ -184,8 +189,7 @@ class _DriverHomeState extends State<DriverHome> {
             final availRides = rs.data!.where((r) => r.status == RideStatus.requested && r.driverId == null && !_hidden.contains(r.id)).toList();
             final count = availTasks.length + availRides.length;
             if (_lastAvailableCount >= 0 && count > _lastAvailableCount && _me!.isAvailable && myTask == null && myRide == null) {
-              SystemSound.play(SystemSoundType.alert);
-              HapticFeedback.mediumImpact();
+              notifier.show('مهمة جديدة متاحة', 'افتح واصل شريك واقبلها قبل غيرك', channel: WChannel.orders);
             }
             _lastAvailableCount = count;
 

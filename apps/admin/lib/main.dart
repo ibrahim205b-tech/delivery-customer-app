@@ -6,6 +6,7 @@ import 'screens/drivers.dart';
 import 'screens/merchants.dart';
 import 'screens/more.dart';
 import 'screens/orders.dart';
+import 'screens/support_inbox.dart';
 
 late final AuthController auth;
 
@@ -60,6 +61,26 @@ class _AdminShellState extends State<AdminShell> {
   int _tab = 0;
 
   void go(int i) => setState(() => _tab = i);
+
+  @override
+  void initState() {
+    super.initState();
+    notifier.requestPermission();
+    // رسائل الدعم الجديدة: إشعار بصوت + تنبيه داخل التطبيق يفتح المحادثات
+    supportInbox.start((t) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('رسالة دعم جديدة: ${t.lastMessage}', maxLines: 2, overflow: TextOverflow.ellipsis),
+        action: SnackBarAction(label: 'فتح', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportInboxScreen()))),
+      ));
+    });
+  }
+
+  @override
+  void dispose() {
+    supportInbox.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

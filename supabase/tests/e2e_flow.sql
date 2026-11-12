@@ -333,5 +333,31 @@ select t.ok(admin_reports(14)->'top_merchants'->0->>'name' = 'مطعم التج�
 select t.login(t.id('cust'));
 select t.fails($$select admin_reports(14)$$, 'forbidden', 'المستهلك ما يشوف تقارير الإدارة');
 
+-- ---------------------------------------------------------------------
+-- 15) الدعم داخل التطبيق
+-- ---------------------------------------------------------------------
+select t.login(t.id('cust'));
+select support_send('customer', 'وين طلبي؟', 'W1001');
+select support_send('customer', 'رسالة ثانية');
+select t.ok((select count(*) from support_threads where user_id = auth.uid()) = 1, 'محادثة دعم وحدة لكل مستخدم بكل تطبيق');
+select t.ok((select unread_for_admin from support_threads where user_id = auth.uid()) = 2, 'عداد غير المقروء للإدارة صحيح');
+select t.ok((select order_code from support_messages order by id limit 1) = 'W1001', 'رقم الطلب ينحفظ مع الرسالة');
+select t.fails($$select support_send('customer', '   ')$$, 'empty_message', 'رسالة فارغة مرفوضة');
+select t.fails($$select support_reply((select id from support_threads limit 1), 'x')$$, 'forbidden', 'المستهلك ما يگدر يرد كإدارة');
+select t.fails($$insert into support_messages (thread_id, body) select id, 'x' from support_threads limit 1$$, 'permission denied', 'ما ينكتب على الرسائل مباشرة');
+select t.login(t.id('owner'));
+select t.ok((select count(*) from support_messages) = 0, 'المستخدم ما يشوف محادثات غيره');
+select t.login(t.id('admin'));
+select t.ok((select count(*) from support_messages) = 2, 'الإدارة تشوف رسائل الدعم');
+select support_reply((select id from support_threads where user_id = t.id('cust')), 'طلبك بالطريق');
+select support_mark_read((select id from support_threads where user_id = t.id('cust')));
+select t.ok((select unread_for_admin from support_threads where user_id = t.id('cust')) = 0, 'الإدارة علّمت المحادثة مقروءة');
+select t.login(t.id('cust'));
+select t.ok((select unread_for_user from support_threads where user_id = auth.uid()) = 1, 'المستخدم عنده رد غير مقروء');
+select t.ok(exists (select 1 from notifications where user_id = auth.uid() and data->>'type' = 'support'), 'رد الدعم يوصل كإشعار');
+select t.ok((select from_admin from support_messages order by id desc limit 1), 'رد الإدارة ظاهر للمستخدم');
+select t.login(t.id('cust2'));
+select t.fails($$select support_send('customer', 'مرحبا')$$, 'account_disabled', 'الحساب الموقوف ما يراسل (يتواصل بالواتساب)');
+
 reset role;
 select 'ALL TESTS PASSED' as result;

@@ -23,7 +23,7 @@ String friendlyError(Object e) {
   final arg = msg.contains(':') ? msg.substring(msg.indexOf(':') + 1).trim() : '';
   return switch (code) {
     'not_authenticated' => 'لازم تسجّل دخولك أولاً.',
-    'account_disabled' => 'حسابك موقوف. تواصل مع الإدارة.',
+    'account_disabled' => 'حسابك موقوف. تواصل مع الدعم بالواتساب أو الاتصال.',
     'forbidden' => 'ما عندك صلاحية لهذه العملية.',
     'merchant_unavailable' => 'المحل غير متاح حالياً.',
     'merchant_closed' => 'المحل مسكّر هسه أو موقف الطلبات.',
@@ -48,6 +48,8 @@ String friendlyError(Object e) {
     'same_location' => 'الانطلاق والوجهة نفس المكان.',
     'invalid_vehicle' || 'invalid_kind' => 'نوع الخدمة غير صحيح.',
     'description_required' => 'اكتب وصف للطلب.',
+    'empty_message' => 'اكتب رسالتك أولاً.',
+    'message_too_long' => 'الرسالة طويلة، الحد 2000 حرف.',
     'too_far' => 'المسافة أبعد من المسموح.',
     'pricing_not_configured' => 'التسعير غير مضبوط من الإدارة.',
     'provider_unavailable' => 'مقدّم الخدمة غير متاح.',
@@ -58,8 +60,7 @@ String friendlyError(Object e) {
     'cannot_remove_own_admin' => 'ما تگدر تشيل صلاحية الإدارة عن نفسك.',
     _ when msg.contains('duplicate key') => 'هذا العنصر موجود مسبقاً.',
     _ when msg.contains('row-level security') => 'ما عندك صلاحية لهذه العملية.',
-    _ when msg.contains('Failed host lookup') || msg.contains('SocketException') || msg.contains('ClientException') =>
-      'ما اكو اتصال بالإنترنت. تأكد من الشبكة وحاول مرة ثانية.',
+    _ when msg.contains('Failed host lookup') || msg.contains('SocketException') || msg.contains('ClientException') => 'ما اكو اتصال بالإنترنت. تأكد من الشبكة وحاول مرة ثانية.',
     _ => 'صار خطأ غير متوقع. حاول مرة ثانية.',
   };
 }

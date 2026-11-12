@@ -37,6 +37,7 @@ class AccountScreen extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 12),
+              _group([const SupportTile(app: SupportApp.customer)]),
               _group([
                 _tile(context, Icons.location_on_outlined, 'عناويني', '${app.addresses.length} عنوان محفوظ', () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressesScreen()));

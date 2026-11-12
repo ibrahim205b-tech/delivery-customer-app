@@ -156,6 +156,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     }),
                   ],
                   if (o.status == OrderStatus.delivered && !_rated) ...[const SizedBox(height: 14), _RateCard(orderId: o.id, onDone: () => setState(() => _rated = true))],
+                  const SizedBox(height: 10),
+                  WButton('مساعدة بهذا الطلب', kind: WButtonKind.ghost, icon: Icons.support_agent_rounded, onPressed: () => showSupportSheet(context, app: SupportApp.customer, orderCode: o.code)),
                 ]),
               ),
             ]),

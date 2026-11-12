@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wasel_core/wasel_core.dart';
 
@@ -21,10 +23,43 @@ class _MerchantHomeState extends State<MerchantHome> {
   Object? _error;
   int _tab = 0;
 
+  // مراقبة الطلبات/الحجوزات الجديدة على مستوى الصفحة (حتى لو التاجر على تبويب ثاني)
+  StreamSubscription<Object>? _watch;
+  String? _watchedId;
+  Set<String>? _known;
+  int _newCount = 0;
+
+  void _watchIncoming(Merchant m) {
+    if (_watchedId == m.id) return;
+    _watch?.cancel();
+    _watchedId = m.id;
+    _known = null;
+    final isProvider = m.categoryId == 'home_services';
+    final Stream<Set<String>> pending = isProvider
+        ? merchantApi.watchBookings(m.id).map((l) => l.where((b) => b.status == BookingStatus.requested).map((b) => b.id).toSet())
+        : merchantApi.watchOrders(m.id).map((l) => l.where((o) => o.status == OrderStatus.placed).map((o) => o.id).toSet());
+    _watch = pending.listen((ids) {
+      final fresh = _known == null ? <String>{} : ids.difference(_known!);
+      _known = {...?_known, ...ids};
+      if (mounted) setState(() => _newCount = ids.length);
+      if (fresh.isEmpty) return;
+      final what = isProvider ? 'حجز' : 'طلب';
+      notifier.show(fresh.length == 1 ? '$what جديد!' : '${fresh.length} ${isProvider ? 'حجوزات' : 'طلبات'} جديدة', 'افتح واصل شريك وأكّد بسرعة', channel: WChannel.orders);
+      if (mounted) showInfo(context, fresh.length == 1 ? 'وصلك $what جديد!' : 'وصلتك ${fresh.length} ${isProvider ? 'حجوزات' : 'طلبات'} جديدة');
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _watch?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
+    notifier.requestPermission();
   }
 
   Future<void> _load() async {
@@ -56,10 +91,15 @@ class _MerchantHomeState extends State<MerchantHome> {
           icon: Icons.storefront_outlined,
           title: 'ما مربوط بحسابك أي محل',
           message: 'إدارة واصل تضيف المحل وتربطه برقمك.',
-          action: WButton('تحديث', onPressed: _load, kind: WButtonKind.secondary, expand: false),
+          action: Column(mainAxisSize: MainAxisSize.min, children: [
+            WButton('تحديث', onPressed: _load, kind: WButtonKind.secondary, expand: false),
+            const SizedBox(height: 10),
+            WButton('تواصل مع الدعم', icon: Icons.support_agent_rounded, kind: WButtonKind.ghost, expand: false, onPressed: () => showSupportSheet(context, app: SupportApp.merchant)),
+          ]),
         ),
       );
     }
+    _watchIncoming(m);
     final isProvider = m.categoryId == 'home_services';
     final tabs = <(String, IconData, IconData, Widget)>[
       if (isProvider)
@@ -95,13 +135,21 @@ class _MerchantHomeState extends State<MerchantHome> {
                   ]),
           ),
         ]),
+        actions: const [SupportIconButton(app: SupportApp.merchant), SizedBox(width: 6)],
       ),
       body: KeyedSubtree(key: ValueKey('${m.id}-$tab'), child: tabs[tab].$4),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
-        indicatorColor: WColors.successSoft,
         onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: [for (final t in tabs) NavigationDestination(icon: Icon(t.$2), selectedIcon: Icon(t.$3), label: t.$1)],
+        destinations: [
+          for (var i = 0; i < tabs.length; i++)
+            NavigationDestination(
+              // شارة بعدد الطلبات/الحجوزات الجديدة على أول تبويب
+              icon: Badge(isLabelVisible: i == 0 && _newCount > 0, label: Text('$_newCount'), child: Icon(tabs[i].$2)),
+              selectedIcon: Badge(isLabelVisible: i == 0 && _newCount > 0, label: Text('$_newCount'), child: Icon(tabs[i].$3)),
+              label: tabs[i].$1,
+            ),
+        ],
       ),
     );
   }

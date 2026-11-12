@@ -42,8 +42,12 @@ class Root extends StatelessWidget {
               body: EmptyView(
                 icon: Icons.block_rounded,
                 title: 'حسابك موقوف',
-                message: 'تواصل مع إدارة واصل لإعادة التفعيل.',
-                action: WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.secondary, expand: false),
+                message: 'تواصل مع دعم واصل لإعادة التفعيل.',
+                action: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const SupportContactButtons(),
+                  const SizedBox(height: 10),
+                  WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.ghost, expand: false),
+                ]),
               ),
             );
           }

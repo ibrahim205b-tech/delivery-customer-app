@@ -354,4 +354,46 @@ void main() {
     });
     await as(adminC, () => adminApi.setUserActive(ids['cust']!, true));
   }, skip: skip);
+
+  test('10) الدعم داخل التطبيق: رسالة، تنبيه لحظي للإدارة، ورد لحظي للمستخدم', () async {
+    // الإدارة تراقب صندوق الدعم قبل ما توصل الرسالة
+    useClientForTesting(adminC);
+    final adminInbox = supportApi.watchAllThreads();
+    final adminSees = waitFor<List<SupportThread>>(adminInbox, (l) => l.any((t) => t.userId == ids['cust'] && t.unreadForAdmin >= 1), what: 'رسالة الدعم عند الإدارة');
+
+    await as(custC, () async {
+      final m = await supportApi.send(SupportApp.customer, 'وين طلبي؟', orderCode: 'W-TEST');
+      expect(m.fromAdmin, isFalse);
+      expect(m.orderCode, 'W-TEST');
+    });
+    final threads = await adminSees;
+    final th = threads.firstWhere((t) => t.userId == ids['cust']);
+    expect(th.userName, isNotEmpty);
+    expect(th.app, SupportApp.customer);
+
+    // المستخدم يراقب محادثته ويستلم الرد لحظياً
+    useClientForTesting(custC);
+    final custThread = waitFor<SupportThread?>(supportApi.watchMyThread(SupportApp.customer), (t) => (t?.unreadForUser ?? 0) >= 1, what: 'رد الدعم عند المستخدم');
+    final custMsgs = waitFor<List<SupportMessage>>(supportApi.watchMessages(th.id), (l) => l.any((m) => m.fromAdmin), what: 'رسالة الرد بالمحادثة');
+
+    await as(adminC, () async {
+      await supportApi.reply(th.id, 'طلبك بالطريق');
+      await supportApi.markRead(th.id);
+    });
+    expect((await custThread)!.lastMessage, 'طلبك بالطريق');
+    expect((await custMsgs).last.body, 'طلبك بالطريق');
+
+    // التاجر ما يشوف محادثة الزبون، ولا يگدر يرد كإدارة
+    await as(ownerC, () async {
+      final r = await db.from('support_messages').select().eq('thread_id', th.id);
+      expect(r, isEmpty);
+      await expectLater(supportApi.reply(th.id, 'x'), throwsA(predicate((e) => friendlyError(e!).contains('صلاحية'))));
+    });
+
+    // أرقام التواصل من الإعدادات
+    await as(custC, () async {
+      final c = await supportApi.contacts();
+      expect(c, isA<SupportContacts>());
+    });
+  }, skip: skip);
 }

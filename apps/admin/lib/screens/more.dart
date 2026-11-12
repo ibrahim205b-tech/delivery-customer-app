@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
+import 'support_inbox.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -23,6 +24,8 @@ class MoreScreen extends StatelessWidget {
         WCard(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(children: [
+            tile(Icons.support_agent_rounded, 'رسائل الدعم', 'محادثات المستهلكين والتجار والسائقين', const SupportInboxScreen()),
+            const Divider(indent: 72),
             tile(Icons.people_alt_outlined, 'المستخدمون', 'بحث، تعطيل، صلاحيات، الطلبات', const UsersScreen()),
             const Divider(indent: 72),
             tile(Icons.map_outlined, 'المناطق', 'مناطق التشغيل ونطاقها', const AreasScreen()),
@@ -652,7 +655,13 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
               const SizedBox(width: 10),
               Expanded(child: TextFormField(initialValue: '${hours['close'] ?? '02:00'}', decoration: const InputDecoration(labelText: 'ينتهي'), onChanged: (v) => hours['close'] = v)),
             ]),
-            TextFormField(initialValue: '${support['phone'] ?? ''}', keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الدعم'), onChanged: (v) => support['phone'] = v),
+            TextFormField(initialValue: '${support['phone'] ?? ''}', keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الدعم (للاتصال)', hintText: '07XXXXXXXXX'), onChanged: (v) => support['phone'] = v),
+            TextFormField(
+              initialValue: '${support['whatsapp'] ?? ''}',
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'رقم واتساب الدعم', hintText: 'إذا فارغ يُستخدم رقم الدعم', helperText: 'يظهر زر واتساب للزبائن والتجار والسائقين'),
+              onChanged: (v) => support['whatsapp'] = v,
+            ),
             const SizedBox(height: 8),
             WButton('حفظ', kind: WButtonKind.dark, loading: _saving, onPressed: () async {
               await _save('operating_hours');

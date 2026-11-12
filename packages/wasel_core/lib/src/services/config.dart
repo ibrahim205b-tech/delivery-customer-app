@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'notifier.dart';
+
 /// إعدادات الاتصال. تُمرَّر وقت البناء ولا تُحفظ بالمستودع:
 ///   flutter build apk --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 /// المفتاح العام (publishable) آمن داخل التطبيق لأن الحماية الفعلية عبر RLS، لكن نبقيه خارج الكود.
@@ -37,5 +39,6 @@ Future<bool> bootstrapWasel() async {
     publishableKey: WaselConfig.supabaseAnonKey,
     debug: kDebugMode,
   );
+  await WaselNotifier.instance.init();
   return true;
 }

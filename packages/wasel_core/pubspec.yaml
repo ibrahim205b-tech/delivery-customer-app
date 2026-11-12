@@ -23,6 +23,7 @@ dependencies:
   uuid: ^4.6.0
   connectivity_plus: ">=7.0.0 <7.3.2"
   cached_network_image: ^4.0.7
+  flutter_local_notifications: ^23.0.1
 
 dev_dependencies:
   flutter_test:

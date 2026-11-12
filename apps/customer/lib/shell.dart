@@ -26,6 +26,7 @@ class _CustomerShellState extends State<CustomerShell> {
   void initState() {
     super.initState();
     app.load();
+    notifier.requestPermission();
     _notifSub = customerApi.watchNotifications().listen((list) {
       if (!mounted) return;
       setState(() => _unread = list.where((n) => !n.isRead).length);
@@ -33,6 +34,8 @@ class _CustomerShellState extends State<CustomerShell> {
       if (newest == null) return;
       // أول تحميل: نسجل آخر إشعار بدون عرضه
       if (_lastSeenId != null && newest.id > _lastSeenId! && !newest.isRead) {
+        // إشعار نظام بصوت (يظهر حتى لو التطبيق بالخلفية) + تنبيه داخل التطبيق
+        notifier.show(newest.title, newest.body, channel: newest.data['type'] == 'support' ? WChannel.support : WChannel.updates);
         showInfo(context, '${newest.title}${newest.body.isEmpty ? '' : ' · ${newest.body}'}');
       }
       _lastSeenId = newest.id;

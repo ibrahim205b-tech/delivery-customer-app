@@ -82,6 +82,8 @@ class _PendingAccess extends StatelessWidget {
                   child: Text(auth.profile?.phone ?? '', style: WText.h2, textDirection: TextDirection.ltr),
                 ),
               ),
+              const SizedBox(height: 18),
+              const SupportContactButtons(),
               const Spacer(),
               WButton('تحقّق مرة ثانية', icon: Icons.refresh_rounded, onPressed: auth.refresh, loading: auth.loading),
               const SizedBox(height: 10),
@@ -99,8 +101,12 @@ class _Blocked extends StatelessWidget {
         body: EmptyView(
           icon: Icons.block_rounded,
           title: 'الحساب موقوف',
-          message: 'تواصل مع إدارة واصل.',
-          action: WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.secondary, expand: false),
+          message: 'تواصل مع دعم واصل.',
+          action: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SupportContactButtons(),
+            const SizedBox(height: 10),
+            WButton('تسجيل الخروج', onPressed: auth.signOut, kind: WButtonKind.ghost, expand: false),
+          ]),
         ),
       );
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 enum _Filter { incoming, inProgress, history }
@@ -17,26 +16,6 @@ class OrdersTab extends StatefulWidget {
 class _OrdersTabState extends State<OrdersTab> {
   late Stream<List<Order>> _stream = merchantApi.watchOrders(widget.merchant.id);
   _Filter _filter = _Filter.incoming;
-  final Set<String> _seen = {};
-  bool _first = true;
-
-  void _alertOnNew(List<Order> list) {
-    final placed = list.where((o) => o.status == OrderStatus.placed).map((o) => o.id).toSet();
-    final fresh = placed.difference(_seen);
-    _seen.addAll(placed);
-    if (_first) {
-      _first = false;
-      return;
-    }
-    if (fresh.isNotEmpty) {
-      SystemSound.play(SystemSoundType.alert);
-      HapticFeedback.heavyImpact();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showInfo(context, fresh.length == 1 ? 'وصلك طلب جديد!' : 'وصلتك ${fresh.length} طلبات جديدة');
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) => StreamBuilder<List<Order>>(
         stream: _stream,
@@ -44,7 +23,6 @@ class _OrdersTabState extends State<OrdersTab> {
           if (s.hasError) return ErrorView(error: s.error!, onRetry: () => setState(() => _stream = merchantApi.watchOrders(widget.merchant.id)));
           if (!s.hasData) return const SkeletonList();
           final all = s.data!;
-          _alertOnNew(all);
           final incoming = all.where((o) => o.status == OrderStatus.placed).toList();
           final progress = all.where((o) => o.status.isActive && o.status != OrderStatus.placed).toList();
           final history = all.where((o) => !o.status.isActive).toList();

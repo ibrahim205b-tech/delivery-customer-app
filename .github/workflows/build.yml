@@ -38,7 +38,7 @@ jobs:
         run: |
           flutter pub get
           flutter analyze
-          flutter test test/core_test.dart test/geo_test.dart test/widgets_test.dart
+          flutter test test/core_test.dart test/geo_test.dart test/widgets_test.dart test/support_test.dart
       - name: Analyze apps
         run: |
           for app in customer merchant admin; do

@@ -4,6 +4,7 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import 'charts.dart';
 import 'ops_map.dart';
+import 'support_inbox.dart';
 
 /// لوحة المؤشرات: أرقام لحظية + رسوم من بيانات حقيقية (admin_reports)
 class DashboardScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text('لوحة التحكم', style: WText.h2),
           ]),
           actions: [
+            const SupportInboxButton(),
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 16),
               child: Center(child: Text(auth.profile?.fullName ?? '', style: WText.caption)),
