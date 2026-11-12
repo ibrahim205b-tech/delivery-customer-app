@@ -28,7 +28,11 @@ const S = process.argv[2];
   // فتح محل
   try { await tapLabel('مشويات الرافدين'); await shot('s5_merchant'); } catch (e) { console.log('merchant tap failed', e.message.slice(0, 100)); }
   // زر "+" داخل بطاقة المنتج (البطاقة نفسها تفتح تفاصيل المنتج)، نرسل حدث النقر للعقدة مباشرة
-  try { await clickSem('أضف للسلة'); await shot('s6_merchant_cart'); } catch (e) { console.log('add failed', e.message.slice(0, 100)); }
+  try { await clickSem('أضف للسلة'); await shot('s6_merchant_cart');
+    // فحص: شريط السلة لازم يبقى شريط صغير (خطأ سابق: كان يتمدد ويغطي الشاشة)
+    const barH = await p.evaluate(() => { const el = [...document.querySelectorAll('flt-semantics[role=button]')].find(e => e.textContent.trim() === 'عرض السلة'); return el ? el.getBoundingClientRect().height : -1; });
+    console.log('cart bar height', barH);
+    if (barH < 0 || barH > 120) { console.error('FAIL: cart bar height ' + barH); process.exitCode = 1; } } catch (e) { console.log('add failed', e.message.slice(0, 100)); }
   // تفاصيل المنتج
   try { await p.mouse.click(300, 680); await shot('s6b_product_sheet'); await clickSem('رجوع').catch(() => p.mouse.click(195, 100)); await p.waitForTimeout(1000); } catch (e) { console.log('sheet failed', e.message.slice(0, 100)); }
   try { await clickSem('عرض السلة'); await shot('s7_cart'); } catch (e) { console.log('cart failed', e.message.slice(0, 100)); }

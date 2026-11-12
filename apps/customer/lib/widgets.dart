@@ -200,7 +200,8 @@ class CartBar extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              // mainAxisSize.min ضروري: الشريط بمكان bottomNavigationBar وياخذ ارتفاع الشاشة إذا العمود تمدد
+                              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Text('السلة', style: WText.bodyStrong.copyWith(color: WColors.white, fontWeight: FontWeight.w600)),
                                 Text(app.cartMerchant?.name ?? '', style: WText.caption.copyWith(color: WColors.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis),
                               ]),

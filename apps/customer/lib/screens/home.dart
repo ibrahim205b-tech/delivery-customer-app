@@ -77,8 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
                     SliverToBoxAdapter(child: _bento()),
                     if (d != null && d.promotions.isNotEmpty) SliverToBoxAdapter(child: _promotions(d.promotions)),
-                    if (d == null && !s.hasError)
-                      const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: SkeletonBox(height: 180, radius: WRadius.lg))),
+                    if (d == null && !s.hasError) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: SkeletonBox(height: 180, radius: WRadius.lg))),
                     if (d != null) ..._merchantSections(d),
                     if (d != null && d.recent.where((o) => !o.status.isActive).isNotEmpty) SliverToBoxAdapter(child: _recent(d.recent.where((o) => !o.status.isActive).toList())),
                     const SliverToBoxAdapter(child: SizedBox(height: 36)),
@@ -114,8 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Container(width: 10, height: 10, decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(3))),
                     const SizedBox(width: 10),
                     Flexible(
-                      child: Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine,
-                          style: WText.bodyStrong.copyWith(color: WColors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.bodyStrong.copyWith(color: WColors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                     const Icon(Icons.expand_more_rounded, color: WColors.inkFaint, size: 20),
                   ]),
@@ -294,9 +292,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final homeSvc = app.categories.where((c) => c.kind == CategoryKind.homeService).firstOrNull;
     if (stores.isEmpty && homeSvc == null) return const SizedBox.shrink();
     const gap = 10.0;
-    const small = 92.0;
+    const small = 106.0;
 
-    Widget tile(MerchantCategory c, {bool big = false}) => Semantics(
+    Widget tile(MerchantCategory c, {bool big = false, double? height}) => Semantics(
           button: true,
           label: c.name,
           onTap: () => openCategory(context, c),
@@ -304,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Pressable(
             onTap: () => openCategory(context, c),
             child: Container(
-              height: big ? small * 2 + gap : small,
+              height: height ?? (big ? small * 2 + gap : small),
               padding: EdgeInsets.all(big ? 14 : 11),
               decoration: BoxDecoration(
                 color: big ? WColors.ink : WColors.white,
@@ -318,17 +316,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(color: big ? WColors.lime : WColors.paper, borderRadius: WRadius.all(big ? 14 : 11)),
                   child: Icon(categoryIcon(c.icon), color: WColors.ink, size: big ? 26 : 20),
                 ),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (big)
-                    Text(c.name, style: WText.h2.copyWith(color: WColors.white, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)
-                  else
-                    // البلاطة الصغيرة ضيقة: الاسم الطويل ينزل لسطرين بخط أصغر بدل ما ينقص
-                    Text(c.name,
-                        style: (c.name.length > 9 ? WText.label.copyWith(height: 1.2) : WText.bodyStrong).copyWith(color: WColors.ink, fontWeight: FontWeight.w600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  if (big) Text('أكل، مشويات، بيتزا وأكثر', style: WText.caption.copyWith(color: WColors.inkFaint)),
-                ]),
+                if (big)
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(c.name, style: WText.h2.copyWith(color: WColors.white, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text('أكل، مشويات، بيتزا وأكثر', style: WText.caption.copyWith(color: WColors.inkFaint), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ])
+                else ...[
+                  const SizedBox(height: 6),
+                  // البلاطة الصغيرة ضيقة: كل كلمة بسطر (الكلمة ما تنكسر أبداً)، وإذا ما وسعت يصغر الخط
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.bottomStart,
+                      child: Text(
+                        c.name.trim().split(RegExp(r'\s+')).join('\n'),
+                        style: WText.bodyStrong.copyWith(color: WColors.ink, fontWeight: FontWeight.w600, height: 1.2),
+                      ),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
+          ),
+        );
+
+    Widget homeTile(MerchantCategory homeSvc) => Semantics(
+          button: true,
+          label: homeSvc.name,
+          onTap: () => openCategory(context, homeSvc),
+          excludeSemantics: true,
+          child: Pressable(
+            onTap: () => openCategory(context, homeSvc),
+            child: Container(
+              height: small,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(WRadius.lg)),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text(homeSvc.name, style: WText.bodyStrong.copyWith(color: WColors.white, fontWeight: FontWeight.w600)),
+                    Text('سباكة · كهرباء · تنظيف', style: WText.caption.copyWith(color: WColors.white.withValues(alpha: 0.75))),
+                  ]),
+                ),
+                const Icon(Icons.handyman_rounded, color: WColors.lime, size: 30),
               ]),
             ),
           ),
@@ -338,63 +368,58 @@ class _HomeScreenState extends State<HomeScreen> {
     final grid = stores.skip(1).take(4).toList();
     final rest = stores.skip(5).toList();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(WSpace.page, 24, WSpace.page, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('الأقسام', style: WText.h2),
-        const SizedBox(height: 12),
-        if (first != null)
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: tile(first, big: true)),
-            const SizedBox(width: gap),
-            Expanded(
-              child: Column(children: [
-                for (var r = 0; r < 2; r++) ...[
-                  if (r > 0) const SizedBox(height: gap),
-                  Row(children: [
-                    for (var c = 0; c < 2; c++) ...[
-                      if (c > 0) const SizedBox(width: gap),
-                      Expanded(child: r * 2 + c < grid.length ? tile(grid[r * 2 + c]) : const SizedBox(height: small)),
-                    ],
-                  ]),
-                ],
-              ]),
-            ),
-          ]),
-        if (rest.isNotEmpty || homeSvc != null) ...[
+    // شاشة ضيقة (عرض صغير أو «حجم العرض» مكبّر بالهاتف): القسم الأول بعرض كامل، والباقي عمودين
+    // حتى ما تصغر الأسماء أو تنكسر.
+    Widget narrow() {
+      final others = [...grid, ...rest];
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (first != null) tile(first, big: true, height: 150),
+        for (var r = 0; r < (others.length + 1) ~/ 2; r++) ...[
           const SizedBox(height: gap),
           Row(children: [
-            for (final c in rest) ...[Expanded(child: tile(c)), const SizedBox(width: gap)],
-            if (homeSvc != null)
-              Expanded(
-                flex: rest.isEmpty ? 1 : 2,
-                child: Semantics(
-                  button: true,
-                  label: homeSvc.name,
-                  onTap: () => openCategory(context, homeSvc),
-                  excludeSemantics: true,
-                  child: Pressable(
-                    onTap: () => openCategory(context, homeSvc),
-                    child: Container(
-                      height: small,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(WRadius.lg)),
-                      child: Row(children: [
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                            Text(homeSvc.name, style: WText.bodyStrong.copyWith(color: WColors.white, fontWeight: FontWeight.w600)),
-                            Text('سباكة · كهرباء · تنظيف', style: WText.caption.copyWith(color: WColors.white.withValues(alpha: 0.75))),
-                          ]),
-                        ),
-                        const Icon(Icons.handyman_rounded, color: WColors.lime, size: 30),
-                      ]),
-                    ),
-                  ),
-                ),
-              ),
+            Expanded(child: tile(others[r * 2])),
+            const SizedBox(width: gap),
+            Expanded(child: r * 2 + 1 < others.length ? tile(others[r * 2 + 1]) : const SizedBox(height: small)),
           ]),
         ],
-      ]),
+        if (homeSvc != null) ...[const SizedBox(height: gap), homeTile(homeSvc)],
+      ]);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(WSpace.page, 24, WSpace.page, 0),
+      child: LayoutBuilder(
+          builder: (context, box) => box.maxWidth < 340
+              ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text('الأقسام', style: WText.h2), const SizedBox(height: 12), narrow()])
+              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Text('الأقسام', style: WText.h2),
+                  const SizedBox(height: 12),
+                  if (first != null)
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: tile(first, big: true)),
+                      const SizedBox(width: gap),
+                      Expanded(
+                        child: Column(children: [
+                          for (var r = 0; r < 2; r++) ...[
+                            if (r > 0) const SizedBox(height: gap),
+                            Row(children: [
+                              for (var c = 0; c < 2; c++) ...[
+                                if (c > 0) const SizedBox(width: gap),
+                                Expanded(child: r * 2 + c < grid.length ? tile(grid[r * 2 + c]) : const SizedBox(height: small)),
+                              ],
+                            ]),
+                          ],
+                        ]),
+                      ),
+                    ]),
+                  if (rest.isNotEmpty || homeSvc != null) ...[
+                    const SizedBox(height: gap),
+                    Row(children: [
+                      for (final c in rest) ...[Expanded(child: tile(c)), const SizedBox(width: gap)],
+                      if (homeSvc != null) Expanded(flex: rest.isEmpty ? 1 : 2, child: homeTile(homeSvc)),
+                    ]),
+                  ],
+                ])),
     );
   }
 
