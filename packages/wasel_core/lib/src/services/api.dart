@@ -314,6 +314,10 @@ class MerchantApi {
   Future<Map<String, dynamic>> stats(String merchantId) async =>
       (await db.rpc('merchant_stats', params: {'p_merchant_id': merchantId})) as Json;
 
+  /// عمولة واصل على المحل: النسبة، مستحق الشهر، المتبقي، والدفعات
+  Future<Map<String, dynamic>> commission(String merchantId) async =>
+      (await db.rpc('merchant_commission_summary', params: {'p_merchant_id': merchantId})) as Json;
+
   Future<void> updateProfile(String merchantId, {String? description, String? phone, Map<String, DayHours>? hours, bool? accepting, int? prepMinutes, String? logoUrl, String? coverUrl}) =>
       db.rpc('merchant_update_profile', params: {
         'p_merchant_id': merchantId,
@@ -462,7 +466,15 @@ class AdminApi {
     return Merchant.fromJson(r);
   }
 
-  Future<void> deleteMerchant(String id) => db.from('merchants').delete().eq('id', id);
+  /// يحذف المحل فقط إذا ما عنده طلبات/حجوزات؛ غير ذلك يرمي merchant_has_history (والحل: إيقاف).
+  Future<void> deleteMerchant(String id) => db.rpc('admin_delete_merchant', params: {'p_merchant_id': id});
+
+  // ---------- العمولة ----------
+  Future<Map<String, dynamic>> commissionSummary({int days = 30}) async =>
+      (await db.rpc('admin_commission_summary', params: {'p_days': days})) as Json;
+
+  Future<void> addSettlement(String merchantId, int amount, {String note = ''}) =>
+      db.rpc('admin_add_settlement', params: {'p_merchant_id': merchantId, 'p_amount': amount, 'p_note': note});
 
   Future<void> linkOwner(String merchantId, String? userId) =>
       db.rpc('admin_link_merchant_owner', params: {'p_merchant_id': merchantId, 'p_user_id': userId});

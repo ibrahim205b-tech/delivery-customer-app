@@ -359,5 +359,45 @@ select t.ok((select from_admin from support_messages order by id desc limit 1), 
 select t.login(t.id('cust2'));
 select t.fails($$select support_send('customer', 'مرحبا')$$, 'account_disabled', 'الحساب الموقوف ما يراسل (يتواصل بالواتساب)');
 
+-- ---------------------------------------------------------------------
+-- 16) العمولة + حذف المحلات
+-- ---------------------------------------------------------------------
+select t.login(t.id('admin'));
+select t.ok((select count(*) from order_commissions) = (select count(*) from orders), 'كل طلب إله سجل عمولة');
+select t.ok((select coalesce(sum(amount), 0) from order_commissions) = 0, 'الطلبات القديمة بدون عمولة (كانت معطّلة)');
+update app_settings set value = '{"enabled": true, "percent": 10}' where key = 'commission';
+select t.ok(effective_commission_percent(t.id('rest')) = 10, 'النسبة العامة تنطبق على المحل');
+select t.login(t.id('owner'));
+select merchant_update_profile(t.id('rest'), null, null, null, true, null, null, null);
+select t.login(t.id('cust'));
+insert into t.ids select 'corder', (place_order(t.id('rest'), t.id('addr'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, '', gen_random_uuid())).id;
+select t.ok((select total from orders where id = t.id('corder')) = 2*7000 + 1500, 'الزبون يدفع نفس السعر (العمولة على المحل)');
+select t.ok((select count(*) from order_commissions) = 0, 'الزبون ما يشوف عمولة المحل');
+select t.login(t.id('admin'));
+select t.ok((select percent from order_commissions where order_id = t.id('corder')) = 10, 'النسبة تتثبت على الطلب وقت إنشائه');
+select t.ok((select amount from order_commissions where order_id = t.id('corder')) = 0, 'العمولة ما تُستحق قبل التسليم');
+-- تغيير النسبة بعد الطلب ما يأثر عليه
+update merchants set commission_percent = 5 where id = t.id('rest');
+reset role;
+update orders set status = 'delivered' where id = t.id('corder');
+select t.login(t.id('admin'));
+select t.ok((select amount from order_commissions where order_id = t.id('corder')) = 1400, 'العمولة = 10% من المنتجات فقط بعد التسليم (بدون التوصيل)');
+select t.ok(effective_commission_percent(t.id('rest')) = 5, 'النسبة الخاصة بالمحل تتقدّم على العامة');
+select t.ok((merchant_commission_summary(t.id('rest'))->>'due')::int = 1400, 'المستحق على المحل صحيح');
+select admin_add_settlement(t.id('rest'), 1000, 'نقداً');
+select t.ok((merchant_commission_summary(t.id('rest'))->>'due')::int = 400, 'الدفعة تنقص من المستحق');
+select t.ok((admin_commission_summary(30)->>'period_commission')::int = 1400, 'ملخص الإدارة للفترة صحيح');
+select t.fails($$select admin_add_settlement((select id from merchants limit 1), 0)$$, 'invalid_amount', 'دفعة صفر مرفوضة');
+select t.login(t.id('owner'));
+select t.ok((merchant_commission_summary(t.id('rest'))->>'due')::int = 400, 'التاجر يشوف مستحقاته');
+select t.fails($$select admin_add_settlement((select id from merchants limit 1), 100)$$, 'forbidden', 'التاجر ما يسجّل دفعات');
+select t.fails(format($$select merchant_commission_summary(%L)$$, t.id('provider')), 'forbidden', 'التاجر ما يشوف عمولة محل غيره');
+-- الحذف
+select t.login(t.id('admin'));
+select t.fails(format($$select admin_delete_merchant(%L)$$, t.id('rest')), 'merchant_has_history', 'المحل اللي عنده طلبات ما ينحذف');
+with x as (insert into merchants (category_id, name, lat, lng) values ('restaurants', 'محل فارغ', 33.3, 44.43) returning id) insert into t.ids select 'empty', id from x;
+select admin_delete_merchant(t.id('empty'));
+select t.ok(not exists (select 1 from merchants where id = t.id('empty')), 'المحل الجديد بدون طلبات ينحذف');
+
 reset role;
 select 'ALL TESTS PASSED' as result;

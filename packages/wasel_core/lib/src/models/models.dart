@@ -130,6 +130,9 @@ class Merchant {
   final int orderCount;
   final DateTime createdAt;
 
+  /// نسبة عمولة خاصة بالمحل (null = النسبة العامة). تظهر للإدارة والتاجر فقط.
+  final double? commissionPercent;
+
   const Merchant({
     required this.id,
     this.ownerId,
@@ -154,6 +157,7 @@ class Merchant {
     required this.ratingCount,
     required this.orderCount,
     required this.createdAt,
+    this.commissionPercent,
   });
 
   factory Merchant.fromJson(Json j) {
@@ -185,6 +189,7 @@ class Merchant {
       ratingAvg: _d(j['rating_avg']),
       ratingCount: _i(j['rating_count']),
       orderCount: _i(j['order_count']),
+      commissionPercent: (j['commission_percent'] as num?)?.toDouble(),
       createdAt: _t(j['created_at']),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
+import 'commissions.dart';
 import 'support_inbox.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -24,6 +25,8 @@ class MoreScreen extends StatelessWidget {
         WCard(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(children: [
+            tile(Icons.percent_rounded, 'العمولات', 'عمولة الفترة، المستحق على كل محل، وتسجيل الدفعات', const CommissionsScreen()),
+            const Divider(indent: 72),
             tile(Icons.support_agent_rounded, 'رسائل الدعم', 'محادثات المستهلكين والتجار والسائقين', const SupportInboxScreen()),
             const Divider(indent: 72),
             tile(Icons.people_alt_outlined, 'المستخدمون', 'بحث، تعطيل، صلاحيات، الطلبات', const UsersScreen()),
@@ -633,7 +636,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
           builder: (context, set) => WCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text('العمولات', style: WText.h3),
-              Text('معطّلة افتراضياً، ولا تُحتسب على أي طلب بهذه النسخة. الإعداد محفوظ للمستقبل فقط.', style: WText.small),
+              Text('النسبة العامة على كل المحلات (إلا اللي إلها نسبة خاصة). تُحسب على مبلغ المنتجات فقط وتُستحق عند التسليم. تغييرها ينطبق على الطلبات الجديدة فقط.', style: WText.small),
               SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('تفعيل العمولة'), value: commission['enabled'] == true, onChanged: (v) => set(() => commission['enabled'] = v)),
               if (commission['enabled'] == true)
                 TextFormField(
@@ -645,6 +648,8 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
                 ),
               const SizedBox(height: 8),
               WButton('حفظ', kind: WButtonKind.dark, loading: _saving, onPressed: () => _save('commission')),
+              const SizedBox(height: 6),
+              WButton('عرض العمولات والمستحقات', kind: WButtonKind.ghost, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CommissionsScreen()))),
             ]),
           ),
         ),

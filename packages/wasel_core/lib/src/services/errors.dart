@@ -49,6 +49,8 @@ String friendlyError(Object e) {
     'invalid_vehicle' || 'invalid_kind' => 'نوع الخدمة غير صحيح.',
     'description_required' => 'اكتب وصف للطلب.',
     'empty_message' => 'اكتب رسالتك أولاً.',
+    'merchant_has_history' => 'المحل عنده طلبات سابقة، فما ينحذف حتى تبقى السجلات والحسابات. تگدر توقفه بدل الحذف.',
+    'invalid_amount' => 'اكتب مبلغ صحيح.',
     'message_too_long' => 'الرسالة طويلة، الحد 2000 حرف.',
     'too_far' => 'المسافة أبعد من المسموح.',
     'pricing_not_configured' => 'التسعير غير مضبوط من الإدارة.',

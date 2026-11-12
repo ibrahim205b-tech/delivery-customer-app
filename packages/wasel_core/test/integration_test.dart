@@ -396,4 +396,27 @@ void main() {
       expect(c, isA<SupportContacts>());
     });
   }, skip: skip);
+
+  test('11) العمولة الفعلية وحذف المحل الآمن', () async {
+    // الإدارة تفعّل عمولة عامة 10%
+    await as(adminC, () => db.from('app_settings').update({'value': {'enabled': true, 'percent': 10}}).eq('key', 'commission'));
+    final rest = ids['rest']!;
+    await as(adminC, () async {
+      final s = await adminApi.commissionSummary(days: 30);
+      expect(s['merchants'], isA<List>());
+      // محل عنده طلبات: الحذف مرفوض برسالة واضحة
+      await expectLater(adminApi.deleteMerchant(rest), throwsA(predicate((e) => friendlyError(e!).contains('طلبات سابقة'))));
+      // نسبة خاصة للمحل
+      await adminApi.saveMerchant(rest, {'commission_percent': 7.5});
+    });
+    await as(ownerC, () async {
+      final c = await merchantApi.commission(rest);
+      expect((c['percent'] as num).toDouble(), 7.5);
+      expect(c['custom'], isTrue);
+    });
+    await as(adminC, () async {
+      await adminApi.saveMerchant(rest, {'commission_percent': null});
+      await db.from('app_settings').update({'value': {'enabled': false, 'percent': 0}}).eq('key', 'commission');
+    });
+  }, skip: skip);
 }

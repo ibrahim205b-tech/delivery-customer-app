@@ -104,6 +104,8 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
   late final _min = TextEditingController(text: '${m?.minOrder ?? 0}');
   late final _radius = TextEditingController(text: '${m?.deliveryRadiusKm ?? 5}');
   late final _prep = TextEditingController(text: '${m?.prepMinutes ?? 20}');
+  late final _commission = TextEditingController(text: m?.commissionPercent == null ? '' : _pct(m!.commissionPercent!));
+  static String _pct(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   late final _ownerPhone = TextEditingController();
   late String? _category = m?.categoryId;
   late String? _area = m?.areaId;
@@ -165,6 +167,8 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
       'delivery_radius_km': double.parse(_radius.text),
       'prep_minutes': int.parse(_prep.text),
       'status': _status.name,
+      // فارغ = النسبة العامة من إعدادات المنصة
+      'commission_percent': _commission.text.trim().isEmpty ? null : double.parse(_commission.text.trim()),
     };
     final ok = await runAction(context, () async {
       final saved = await adminApi.saveMerchant(m?.id, data);
@@ -200,9 +204,36 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
   }
 
   Future<void> _delete() async {
-    if (!await confirmDialog(context, title: 'حذف المحل نهائياً؟', message: 'إذا عنده طلبات سابقة الأفضل "إيقاف" بدل الحذف.', confirm: 'حذف', danger: true)) return;
+    if (!await confirmDialog(context, title: 'حذف المحل نهائياً؟', message: 'ينحذف فقط إذا ما عنده أي طلبات سابقة.', confirm: 'حذف', danger: true)) return;
     if (!mounted) return;
-    if (await runAction(context, () => adminApi.deleteMerchant(m!.id), success: 'انحذف') && mounted) Navigator.pop(context, true);
+    try {
+      await adminApi.deleteMerchant(m!.id);
+      if (!mounted) return;
+      showSuccess(context, 'انحذف المحل');
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      if (!friendlyError(e).contains('طلبات سابقة')) return showError(context, e);
+      // عنده سجل طلبات: نقترح الإيقاف (يختفي من التطبيق وتبقى الحسابات محفوظة)
+      final suspend = await confirmDialog(
+        context,
+        title: 'ما ينحذف لأن عنده طلبات سابقة',
+        message: 'حتى تبقى سجلات الطلبات والعمولات محفوظة. تريد توقفه؟ المحل الموقوف يختفي من تطبيق الزبائن وما يستقبل طلبات، وتگدر ترجعه بأي وقت.',
+        confirm: 'إيقاف المحل',
+        danger: true,
+      );
+      if (!suspend || !mounted) return;
+      if (await runAction(context, () async {
+            final saved = await adminApi.saveMerchant(m!.id, {'status': 'suspended'});
+            setState(() {
+              m = saved;
+              _status = MerchantStatus.suspended;
+            });
+          }, success: 'انوقف المحل') &&
+          mounted) {
+        Navigator.pop(context, true);
+      }
+    }
   }
 
   String? _num(String? v) => int.tryParse(v ?? '') == null ? 'رقم' : null;
@@ -299,6 +330,25 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
                 const SizedBox(width: 10),
                 Expanded(child: TextFormField(controller: _prep, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'وقت التحضير', suffixText: 'دقيقة'), validator: _num)),
               ]),
+              if (!_isProvider) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _commission,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  decoration: const InputDecoration(
+                    labelText: 'نسبة عمولة خاصة بهذا المحل',
+                    suffixText: '%',
+                    helperText: 'اتركها فارغة حتى تنطبق النسبة العامة من إعدادات المنصة',
+                  ),
+                  validator: (v) {
+                    final t = (v ?? '').trim();
+                    if (t.isEmpty) return null;
+                    final d = double.tryParse(t);
+                    return d == null || d < 0 || d > 50 ? 'من 0 إلى 50' : null;
+                  },
+                ),
+              ],
               const SizedBox(height: 20),
               WButton(m == null ? 'إضافة المحل' : 'حفظ', onPressed: _save, loading: _saving),
               if (m != null) ...[
