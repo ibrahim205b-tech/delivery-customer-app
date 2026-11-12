@@ -604,21 +604,15 @@ class _MarkPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12.5 * s
       ..strokeCap = StrokeCap.round;
+    // نفس هندسة brand/tools/build_brand.py (الإصدار 3): W كمسار، والطرف الأخير يلف ويصير حلقة الوصول
     final path = Path()
-      ..moveTo(14 * s, 32 * s)
-      ..cubicTo(20 * s, 54 * s, 24 * s, 72 * s, 32 * s, 72 * s)
-      ..cubicTo(40 * s, 72 * s, 43 * s, 49 * s, 50 * s, 49 * s)
-      ..cubicTo(57 * s, 49 * s, 60 * s, 72 * s, 68 * s, 72 * s)
-      ..cubicTo(76 * s, 72 * s, 80 * s, 52 * s, 84 * s, 34 * s);
-    canvas.drawPath(path, p);
-    canvas.drawCircle(
-      Offset(84 * s, 34 * s),
-      12.5 * s,
-      Paint()
-        ..color = ring
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4 * s,
-    );
+      ..moveTo(11.5 * s, 38.5 * s)
+      ..cubicTo(17.5 * s, 60.5 * s, 21.5 * s, 78.5 * s, 29.5 * s, 78.5 * s)
+      ..cubicTo(37.5 * s, 78.5 * s, 40.5 * s, 55.5 * s, 47.5 * s, 55.5 * s)
+      ..cubicTo(54.5 * s, 55.5 * s, 57.5 * s, 78.5 * s, 65.5 * s, 78.5 * s)
+      ..cubicTo(73.5 * s, 78.5 * s, 80.76 * s, 51.39 * s, 86.76 * s, 41 * s)
+      ..arcToPoint(Offset(64.24 * s, 41 * s), radius: Radius.circular(13 * s), largeArc: true, clockwise: false);
+    canvas.drawPath(path, p..strokeJoin = StrokeJoin.round);
   }
 
   @override

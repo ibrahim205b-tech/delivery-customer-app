@@ -31,8 +31,10 @@ GRAPHITE = "#303943"
 OUT = pathlib.Path(__file__).resolve().parent.parent / "svg"
 
 # مسار العلامة داخل مربع 100×100 (نفسه مستخدم بالكود: WaselMark في wasel_core)
-ROUTE = "M14 32 C20 54 24 72 32 72 C40 72 43 49 50 49 C57 49 60 72 68 72 C76 72 80 52 84 34"
-RING_C = (84, 34)
+# الإصدار 3: نفس الـW كمسار، والطرف الأخير يلف على نفسه ويصير هو حلقة الوصول (خط واحد متصل، لون واحد).
+# القوس: مركز (75.5, 34.5) نصف قطر 13، من 30° يلف عكس عقارب الساعة 240° — يترك فتحة حتى ما يلمس الخط الصاعد.
+ROUTE = ("M11.5 38.5 C17.5 60.5 21.5 78.5 29.5 78.5 C37.5 78.5 40.5 55.5 47.5 55.5 "
+         "C54.5 55.5 57.5 78.5 65.5 78.5 C73.5 78.5 80.76 51.39 86.76 41 A13 13 0 1 0 64.24 41")
 
 
 def text_path(font_path, text, size, rtl, tracking=0.0):
@@ -68,12 +70,10 @@ def text_path(font_path, text, size, rtl, tracking=0.0):
     return pen.getCommands(), (xmin, ymin, xmax, ymax)
 
 
-def mark(route, ring, sw=12.5):
-    cx, cy = RING_C
-    return (
-        f'<path d="{ROUTE}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round"/>'
-        f'<circle cx="{cx}" cy="{cy}" r="12.5" fill="none" stroke="{ring}" stroke-width="4"/>'
-    )
+def mark(route, ring=None, sw=12.5):
+    # ring محفوظ للتوافق؛ العلامة الآن خط واحد بلون واحد
+    return f'<path d="{ROUTE}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round"/>'
+
 
 
 def svg(w, h, body, bg=None, rx=0):

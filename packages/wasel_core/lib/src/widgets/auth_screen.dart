@@ -181,14 +181,13 @@ class _RouteLinePainter extends CustomPainter {
       path.cubicTo(x - seg * 0.35, up ? h * 0.95 : h * 0.15, nx + seg * 0.35, up ? h * 0.95 : h * 0.15, nx, up ? h * 0.6 : h * 0.3);
       x = nx;
     }
+    // النهاية تلف على نفسها مثل العلامة (حلقة الوصول من نفس الخط)
+    // الموجة تنتهي صاعدة؛ نكمل قوس 3/4 لفوق ولليسار ولتحت حتى تصير حلقة مفتوحة مثل العلامة
+    final y = h * 0.3, r = h * 0.28;
+    path.arcToPoint(Offset(x - r, y - r), radius: Radius.circular(r), clockwise: false);
+    path.arcToPoint(Offset(x - 2 * r, y), radius: Radius.circular(r), clockwise: false);
+    path.arcToPoint(Offset(x - r * 1.15, y + r * 0.85), radius: Radius.circular(r), clockwise: false);
     canvas.drawPath(path, p);
-    canvas.drawCircle(
-        Offset(x - 12, h * 0.3),
-        9,
-        Paint()
-          ..color = WColors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3);
     canvas.drawCircle(Offset(w - 4, h * 0.3), 4, Paint()..color = WColors.lime);
   }
 
