@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wasel_core/wasel_core.dart';
 
@@ -16,6 +18,86 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   bool _placing = false;
   late final _note = TextEditingController(text: app.cartNote);
+  late final _promo = TextEditingController(text: app.cartPromo ?? '');
+  bool _promoOpen = app.cartPromo != null;
+  bool _quoting = false;
+  String? _promoTried; // آخر كود جرّبه المستخدم (حتى لو انرفض)
+  CheckoutQuote? _quote; // null = الخادم ما يدعم العرض أو ما وصل بعد؛ نحسب محلياً
+  String _quotedFor = '';
+  Timer? _debounce;
+
+  /// بصمة السلة: إذا تغيّرت نطلب عرض سعر جديد
+  String get _signature => '${app.cartMerchant?.id}|${app.cart.map((l) => '${l.product.id}x${l.qty}').join(',')}|${app.cartPromo}|${app.cartUseWallet}';
+
+  @override
+  void initState() {
+    super.initState();
+    app.addListener(_onCartChanged);
+    _requote();
+  }
+
+  @override
+  void dispose() {
+    app.removeListener(_onCartChanged);
+    _debounce?.cancel();
+    _note.dispose();
+    _promo.dispose();
+    super.dispose();
+  }
+
+  void _onCartChanged() {
+    if (_signature == _quotedFor) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 250), _requote);
+  }
+
+  Future<void> _requote({String? tryPromo}) async {
+    final m = app.cartMerchant;
+    if (m == null || app.cart.isEmpty) return;
+    final sig = _signature;
+    final code = tryPromo ?? app.cartPromo;
+    if (mounted) setState(() => _quoting = true);
+    try {
+      final q = await customerApi.checkoutQuote(merchantId: m.id, items: app.cartItemsPayload, promoCode: code, useWallet: app.cartUseWallet);
+      if (!mounted) return;
+      _quotedFor = sig;
+      setState(() {
+        _quote = q;
+        if (tryPromo != null) _promoTried = tryPromo;
+      });
+      // الكود ينحفظ بالسلة فقط إذا الخادم قبله؛ وإذا صار ما ينطبق (نزل المبلغ مثلاً) ينشال
+      // (العرض الحالي يبقى صحيح بالحالتين، فما نطلب عرض ثاني)
+      if (tryPromo != null && q.promoError == null) {
+        app.setCartPromo(tryPromo);
+        _debounce?.cancel();
+        _quotedFor = _signature;
+      } else if (tryPromo == null && q.promoError != null && app.cartPromo != null) {
+        _promoTried = app.cartPromo;
+        _promoOpen = true;
+        app.setCartPromo(null);
+        _debounce?.cancel();
+        _quotedFor = _signature;
+      }
+    } catch (_) {
+      // خادم قبل تحديث المكافآت أو انقطاع: السلة تشتغل بالحساب المحلي بدون كود ورصيد
+      if (mounted) setState(() => _quote = null);
+    } finally {
+      if (mounted) setState(() => _quoting = false);
+    }
+  }
+
+  void _applyPromo() {
+    final code = _promo.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    _requote(tryPromo: code);
+  }
+
+  void _removePromo() {
+    _promo.clear();
+    setState(() => _promoTried = null);
+    app.setCartPromo(null);
+  }
 
   Future<void> _place() async {
     final m = app.cartMerchant;
@@ -63,7 +145,11 @@ class _CartScreenState extends State<CartScreen> {
             final a = app.selectedAddress;
             final minOrder = m.minOrder;
             final belowMin = app.cartSubtotal < minOrder;
-            final total = app.cartSubtotal + m.deliveryFee;
+            final q = _quote;
+            final discount = q?.discount ?? 0;
+            final walletUsed = q?.walletUsed ?? 0;
+            final total = app.cartSubtotal + m.deliveryFee - discount - walletUsed;
+            final promoError = app.cartPromo == null && _promoTried != null ? q?.promoError : null;
             return Column(children: [
               Expanded(
                 child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
@@ -116,12 +202,24 @@ class _CartScreenState extends State<CartScreen> {
                     maxLength: 500,
                     decoration: const InputDecoration(labelText: 'ملاحظة للمحل (اختياري)', hintText: 'مثلاً: بدون بصل، اتصل قبل لا توصل'),
                   ),
+                  if (q != null) ...[
+                    _promoCard(discount, promoError),
+                    const SizedBox(height: 12),
+                    if (q.walletBalance > 0) ...[_walletCard(q), const SizedBox(height: 12)],
+                  ],
                   WCard(
                     child: Column(children: [
                       _sum('المنتجات', iqd(app.cartSubtotal)),
+                      if (discount > 0) _sum('خصم الكود ${app.cartPromo ?? ''}', '− ${iqd(discount)}', accent: true),
+                      if (walletUsed > 0) _sum('من رصيدك', '− ${iqd(walletUsed)}', accent: true),
                       _sum('أجور التوصيل', m.deliveryFee == 0 ? 'مجاني' : iqd(m.deliveryFee)),
                       const Divider(height: 20),
                       _sum('المبلغ النهائي', iqd(total), strong: true),
+                      if (discount + walletUsed > 0)
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Padding(padding: const EdgeInsets.only(top: 6), child: StatusPill('وفّرت ${iqd(discount + walletUsed)}', tone: PillTone.success, icon: Icons.savings_outlined)),
+                        ),
                     ]),
                   ),
                   if (belowMin) ...[
@@ -137,7 +235,7 @@ class _CartScreenState extends State<CartScreen> {
                   decoration: BoxDecoration(color: WColors.surface, border: Border(top: BorderSide(color: WColors.line))),
                   child: WButton(
                     'تأكيد الطلب',
-                    onPressed: belowMin || a == null || !m.isOpenNow ? null : _place,
+                    onPressed: belowMin || a == null || !m.isOpenNow || _quoting ? null : _place,
                     loading: _placing,
                     trailing: Text(iqd(total), style: WText.price.copyWith(color: WColors.ink)),
                   ),
@@ -173,11 +271,85 @@ class _CartScreenState extends State<CartScreen> {
         ]),
       );
 
-  Widget _sum(String k, String v, {bool strong = false}) => Padding(
+  Widget _sum(String k, String v, {bool strong = false, bool accent = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(children: [
-          Expanded(child: Text(k, style: strong ? WText.bodyStrong : WText.body.copyWith(color: WColors.inkMuted))),
-          Text(v, style: strong ? WText.price.copyWith(fontSize: 17) : WText.bodyStrong),
+          Expanded(child: Text(k, style: strong ? WText.bodyStrong : WText.body.copyWith(color: accent ? WColors.success : WColors.inkMuted))),
+          Text(v, style: strong ? WText.price.copyWith(fontSize: 17) : WText.bodyStrong.copyWith(color: accent ? WColors.success : null)),
+        ]),
+      );
+
+  // ---------------- كود الخصم ----------------
+  Widget _promoCard(int discount, String? error) {
+    final applied = app.cartPromo;
+    if (applied != null) {
+      return WCard(
+        child: Row(children: [
+          CircleAvatar(backgroundColor: WColors.successSoft, child: const Icon(Icons.local_offer_rounded, color: WColors.success, size: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('كود الخصم', style: WText.caption),
+              Text(discount > 0 ? '$applied · خصم ${iqd(discount)}' : applied, style: WText.bodyStrong, textDirection: TextDirection.rtl),
+            ]),
+          ),
+          TextButton(onPressed: _removePromo, child: const Text('إزالة')),
+        ]),
+      );
+    }
+    if (!_promoOpen) {
+      return WCard(
+        onTap: () => setState(() => _promoOpen = true),
+        child: Row(children: [
+          CircleAvatar(backgroundColor: WColors.blueSoft, child: Icon(Icons.local_offer_outlined, color: WColors.link, size: 20)),
+          const SizedBox(width: 12),
+          Expanded(child: Text('عندك كود خصم؟', style: WText.bodyStrong)),
+          Icon(Icons.chevron_left_rounded, color: WColors.inkMuted),
+        ]),
+      );
+    }
+    return WCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: TextField(
+              controller: _promo,
+              autofocus: true,
+              textDirection: TextDirection.ltr,
+              textCapitalization: TextCapitalization.characters,
+              autocorrect: false,
+              maxLength: 24,
+              onSubmitted: (_) => _applyPromo(),
+              decoration: InputDecoration(labelText: 'كود الخصم', counterText: '', errorText: error == null ? null : friendlyError(error), errorMaxLines: 2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Padding(padding: const EdgeInsets.only(top: 4), child: WButton('تطبيق', kind: WButtonKind.dark, expand: false, loading: _quoting, onPressed: _applyPromo)),
+        ]),
+      ]),
+    );
+  }
+
+  // ---------------- رصيد المحفظة ----------------
+  Widget _walletCard(CheckoutQuote q) => WCard(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
+        child: Row(children: [
+          CircleAvatar(backgroundColor: WColors.limeSoft, child: Icon(Icons.stars_rounded, color: WColors.isDark ? WColors.lime : WColors.limeDeep, size: 22)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('استخدم رصيدي', style: WText.bodyStrong),
+              Text(
+                q.walletAvailable <= 0
+                    ? 'رصيدك ${iqd(q.walletBalance)} · ما ينطبق على هذا الطلب'
+                    : app.cartUseWallet
+                        ? 'ينخصم ${iqd(q.walletUsed)} من هذا الطلب'
+                        : 'عندك ${iqd(q.walletBalance)} · يغطي ${iqd(q.walletAvailable)}',
+                style: WText.caption,
+              ),
+            ]),
+          ),
+          Switch(value: app.cartUseWallet && q.walletAvailable > 0, onChanged: q.walletAvailable <= 0 ? null : app.setCartUseWallet),
         ]),
       );
 }

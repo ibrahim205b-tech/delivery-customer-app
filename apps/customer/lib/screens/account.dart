@@ -3,6 +3,7 @@ import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
 import 'notifications.dart';
+import 'rewards.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -10,7 +11,7 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: ListenableBuilder(
-          listenable: auth,
+          listenable: Listenable.merge([auth, app]),
           builder: (context, _) {
             final p = auth.profile;
             return ListView(padding: EdgeInsets.zero, children: [
@@ -37,6 +38,15 @@ class AccountScreen extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 12),
+              if (app.rewards != null && app.rewards!.enabled)
+                _group([
+                  _tile(context, Icons.stars_outlined, 'رصيدي ونقاطي', '${iqd(app.rewards!.wallet)} · ${app.rewards!.points} نقطة', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const RewardsScreen()));
+                  }),
+                  _tile(context, Icons.group_add_outlined, 'ادعُ صديق', 'إلك ${iqd(app.rewards!.referralInviter)} عن كل صديق يكمّل أول طلب', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const InviteScreen()));
+                  }),
+                ]),
               _group([const SupportTile(app: SupportApp.customer)]),
               _group([
                 _tile(context, Icons.location_on_outlined, 'عناويني', '${app.addresses.length} عنوان محفوظ', () {

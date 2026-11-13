@@ -5,6 +5,7 @@ import '../main.dart';
 import '../widgets.dart';
 import 'account.dart';
 import 'errand.dart';
+import 'home_sections.dart';
 import 'home_services.dart';
 import 'merchant_list.dart';
 import 'merchant_page.dart';
@@ -38,12 +39,20 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<_HomeData> _data = _load();
 
   Future<_HomeData> _load() async {
-    final r = await Future.wait([
+    final r = await Future.wait<Object?>([
       catalogApi.merchants(areaId: app.selectedAreaId),
       catalogApi.activePromotions(),
       customerApi.myOrders(limit: 6),
+      catalogApi.homeLayout(),
+      // الرحلة الشغّالة والوجهات إضافات: فشلها ما يوقف الرئيسية
+      customerApi.activeRide().then<Ride?>((v) => v, onError: (_) => null),
+      customerApi.rideDestinations(),
     ]);
-    return _HomeData(r[0] as List<Merchant>, r[1] as List<Promotion>, r[2] as List<Order>);
+    return _HomeData(r[0] as List<Merchant>, r[1] as List<Promotion>, r[2] as List<Order>, r[3] as List<HomeSection>, r[4] as Ride?, r[5] as List<RideDestination>);
+  }
+
+  void _reload() {
+    if (mounted) setState(() => _data = _load());
   }
 
   Future<void> _refresh() async {
@@ -74,12 +83,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   return CustomScrollView(slivers: [
                     SliverToBoxAdapter(child: _hero()),
                     if (active != null) SliverToBoxAdapter(child: _activeOrder(active)),
+                    if (d?.activeRide != null) SliverToBoxAdapter(child: ActiveRideCard(d!.activeRide!, onClosed: _reload)),
                     if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
-                    SliverToBoxAdapter(child: _bento()),
-                    if (d != null && d.promotions.isNotEmpty) SliverToBoxAdapter(child: _promotions(d.promotions)),
+                    // قبل وصول البيانات: شبكة الأقسام (محمّلة مسبقاً) + هيكل تحميل
+                    if (d == null) SliverToBoxAdapter(child: _bento('الأقسام')),
                     if (d == null && !s.hasError) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: SkeletonBox(height: 180, radius: WRadius.lg))),
-                    if (d != null) ..._merchantSections(d),
-                    if (d != null && d.recent.where((o) => !o.status.isActive).isNotEmpty) SliverToBoxAdapter(child: _recent(d.recent.where((o) => !o.status.isActive).toList())),
+                    // الأقسام بالترتيب اللي حددته الإدارة
+                    if (d != null) ..._sections(d),
                     const SliverToBoxAdapter(child: SizedBox(height: 36)),
                   ]);
                 },
@@ -121,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (app.rewards != null && app.rewards!.enabled) ...[RewardsChip(app.rewards!), const SizedBox(width: 8)],
           Stack(clipBehavior: Clip.none, children: [
             WIconButton(Icons.notifications_none_rounded, background: WColors.inkSurface, color: WColors.white, tooltip: 'الإشعارات', onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
@@ -287,7 +298,70 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ======================= شبكة الأقسام (Bento) =======================
-  Widget _bento() {
+  // ======================= ترتيب الأقسام من الإدارة =======================
+  List<Widget> _sections(_HomeData d) {
+    Widget box(Widget child) => SliverToBoxAdapter(child: child);
+    Widget title(String t, {double top = 26}) => box(SectionTitle(t, padding: EdgeInsets.fromLTRB(WSpace.page, top, WSpace.page, 12)));
+    final ref = app.referencePoint;
+    final past = d.recent.where((o) => !o.status.isActive).toList();
+    final out = <Widget>[];
+    var emptyShown = false;
+    void emptyMerchants() {
+      if (emptyShown) return;
+      emptyShown = true;
+      out.add(box(const EmptyView(icon: Icons.storefront_outlined, title: 'ما اكو محلات بهذه المنطقة بعد', message: 'المحلات تظهر هنا بعد ما تعتمدها إدارة واصل.')));
+    }
+
+    for (final s in d.layout) {
+      switch (s.type) {
+        case HomeSectionType.categories:
+          out.add(box(_bento(s.title.isEmpty ? 'الأقسام' : s.title)));
+        case HomeSectionType.promotions:
+          if (d.promotions.isNotEmpty) out.add(box(_promotions(d.promotions)));
+        case HomeSectionType.destinations:
+          if (d.destinations.isNotEmpty) {
+            out.add(title(s.title.isEmpty ? 'وين رايح؟' : s.title, top: 24));
+            out.add(box(HomeDestinations(d.destinations)));
+          }
+        case HomeSectionType.slider:
+          if (s.items.isNotEmpty) {
+            if (s.title.isNotEmpty) out.add(title(s.title, top: 24));
+            out.add(box(Padding(padding: EdgeInsets.only(top: s.title.isEmpty ? 24 : 0), child: HomeSlider(s.items))));
+          }
+        case HomeSectionType.banner:
+          if (s.items.isNotEmpty) {
+            if (s.title.isNotEmpty) out.add(title(s.title, top: 24));
+            out.add(box(Padding(padding: EdgeInsets.fromLTRB(WSpace.page, s.title.isEmpty ? 24 : 0, WSpace.page, 0), child: HomeBannerCard(s.items.first))));
+          }
+        case HomeSectionType.cards:
+          if (s.items.isNotEmpty) {
+            if (s.title.isNotEmpty) out.add(title(s.title, top: 24));
+            out.add(box(Padding(padding: EdgeInsets.only(top: s.title.isEmpty ? 24 : 0), child: HomeCards(s.items))));
+          }
+        case HomeSectionType.nearby:
+          if (d.merchants.isEmpty) {
+            emptyMerchants();
+          } else {
+            out.add(title(s.title.isNotEmpty ? s.title : (ref == null ? 'محلات مختارة' : 'قريب منك'), top: 28));
+            out.add(box(_nearby(d.merchants, ref)));
+          }
+        case HomeSectionType.popular:
+          if (d.merchants.isEmpty) {
+            emptyMerchants();
+          } else {
+            out.add(box(SectionTitle(s.title.isEmpty ? 'الأكثر طلباً' : s.title, padding: const EdgeInsets.fromLTRB(WSpace.page, 26, WSpace.page, 4))));
+            out.add(_popular(d.merchants));
+          }
+        case HomeSectionType.reorder:
+          if (past.isNotEmpty) out.add(box(_recent(past, s.title.isEmpty ? 'اطلب مرة ثانية' : s.title)));
+        case HomeSectionType.unknown:
+          break;
+      }
+    }
+    return out;
+  }
+
+  Widget _bento(String heading) {
     final stores = app.categories.where((c) => c.kind == CategoryKind.store).toList();
     final homeSvc = app.categories.where((c) => c.kind == CategoryKind.homeService).firstOrNull;
     if (stores.isEmpty && homeSvc == null) return const SizedBox.shrink();
@@ -390,9 +464,9 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(WSpace.page, 24, WSpace.page, 0),
       child: LayoutBuilder(
           builder: (context, box) => box.maxWidth < 340
-              ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text('الأقسام', style: WText.h2), const SizedBox(height: 12), narrow()])
+              ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text(heading, style: WText.h2), const SizedBox(height: 12), narrow()])
               : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Text('الأقسام', style: WText.h2),
+                  Text(heading, style: WText.h2),
                   const SizedBox(height: 12),
                   if (first != null)
                     Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -469,44 +543,33 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
   // ======================= المحلات =======================
-  List<Widget> _merchantSections(_HomeData d) {
-    if (d.merchants.isEmpty) {
-      return const [
-        SliverToBoxAdapter(
-          child: EmptyView(icon: Icons.storefront_outlined, title: 'ما اكو محلات بهذه المنطقة بعد', message: 'المحلات تظهر هنا بعد ما تعتمدها إدارة واصل.'),
-        ),
-      ];
-    }
-    final ref = app.referencePoint;
-    final nearby = [...d.merchants];
+  Widget _nearby(List<Merchant> merchants, LatLng? ref) {
+    final nearby = [...merchants];
     if (ref != null) {
       nearby.sort((a, b) => distanceKm(ref.latitude, ref.longitude, a.lat, a.lng).compareTo(distanceKm(ref.latitude, ref.longitude, b.lat, b.lng)));
     }
-    final popular = [...d.merchants]..sort((a, b) => b.orderCount.compareTo(a.orderCount));
-    return [
-      SliverToBoxAdapter(child: SectionTitle(ref == null ? 'محلات مختارة' : 'قريب منك', padding: const EdgeInsets.fromLTRB(WSpace.page, 28, WSpace.page, 12))),
-      SliverToBoxAdapter(
-        child: SizedBox(
-          height: 222,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-            itemCount: nearby.take(10).length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (context, i) => MerchantCard(nearby[i], onTap: () => openMerchant(context, nearby[i])),
-          ),
-        ),
+    return SizedBox(
+      height: 222,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
+        itemCount: nearby.take(10).length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, i) => MerchantCard(nearby[i], onTap: () => openMerchant(context, nearby[i])),
       ),
-      SliverToBoxAdapter(child: SectionTitle('الأكثر طلباً', padding: const EdgeInsets.fromLTRB(WSpace.page, 26, WSpace.page, 4))),
-      SliverList.list(children: [
-        for (var i = 0; i < popular.take(8).length; i++) MerchantRow(popular[i], rank: i + 1, onTap: () => openMerchant(context, popular[i])),
-      ]),
-    ];
+    );
+  }
+
+  Widget _popular(List<Merchant> merchants) {
+    final popular = [...merchants]..sort((a, b) => b.orderCount.compareTo(a.orderCount));
+    return SliverList.list(children: [
+      for (var i = 0; i < popular.take(8).length; i++) MerchantRow(popular[i], rank: i + 1, onTap: () => openMerchant(context, popular[i])),
+    ]);
   }
 
   // ======================= اطلب مرة ثانية =======================
-  Widget _recent(List<Order> orders) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const SectionTitle('اطلب مرة ثانية', padding: EdgeInsets.fromLTRB(WSpace.page, 26, WSpace.page, 12)),
+  Widget _recent(List<Order> orders, String heading) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SectionTitle(heading, padding: const EdgeInsets.fromLTRB(WSpace.page, 26, WSpace.page, 12)),
         SizedBox(
           height: 70,
           child: ListView.separated(
@@ -540,10 +603,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeData {
-  _HomeData(this.merchants, this.promotions, this.recent);
+  _HomeData(this.merchants, this.promotions, this.recent, this.layout, this.activeRide, this.destinations);
   final List<Merchant> merchants;
   final List<Promotion> promotions;
   final List<Order> recent;
+  final List<HomeSection> layout;
+  final Ride? activeRide;
+  final List<RideDestination> destinations;
 }
 
 class _LivePulse extends StatefulWidget {

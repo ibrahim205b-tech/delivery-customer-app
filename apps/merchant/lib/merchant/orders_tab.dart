@@ -191,6 +191,10 @@ class _OrderCardState extends State<_OrderCard> {
           Text(iqd(o.subtotal), style: WText.price),
           Text('  + توصيل ${iqd(o.deliveryFee)}', style: WText.caption),
         ]),
+        if (o.discount + o.walletUsed > 0) ...[
+          const SizedBox(height: 6),
+          StatusPill('الزبون يدفع ${iqd(o.total)} · ${iqd(o.discount + o.walletUsed)} على واصل وتنطرح من عمولتك', tone: PillTone.info, icon: Icons.info_outline_rounded),
+        ],
         if (o.status == OrderStatus.cancelled && (o.cancelReason ?? '').isNotEmpty) ...[
           const SizedBox(height: 6),
           Text('السبب: ${o.cancelReason}', style: WText.caption.copyWith(color: WColors.danger)),

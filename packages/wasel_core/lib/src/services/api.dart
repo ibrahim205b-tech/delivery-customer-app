@@ -91,6 +91,18 @@ class CatalogApi {
     final r = await db.from('app_settings').select();
     return {for (final e in r) e['key'] as String: e['value']};
   }
+
+  /// ترتيب الرئيسية من الإدارة (migration 0009). يرجّع [HomeSection.fallback] إذا الخادم قديم أو ما رجّع أقسام،
+  /// ويتجاهل الأنواع اللي هذي النسخة ما تعرفها.
+  Future<List<HomeSection>> homeLayout() async {
+    try {
+      final r = await db.rpc('home_layout') as List;
+      final list = r.map((e) => HomeSection.fromJson(e as Json)).where((s) => s.type != HomeSectionType.unknown).toList();
+      return list.isEmpty ? HomeSection.fallback : list;
+    } on PostgrestException {
+      return HomeSection.fallback;
+    }
+  }
 }
 
 // =====================================================================
@@ -138,16 +150,46 @@ class CustomerApi {
   // ---------- الطلبات ----------
   static const orderSelect = '*, order_items(*), merchants(name, logo_url, lat, lng)';
 
-  Future<Order> placeOrder({required String merchantId, required String addressId, required List<Map<String, dynamic>> items, required String note, required String clientRef}) async {
+  Future<Order> placeOrder({
+    required String merchantId,
+    required String addressId,
+    required List<Map<String, dynamic>> items,
+    required String note,
+    required String clientRef,
+    String? promoCode,
+    bool useWallet = false,
+  }) async {
+    final promo = promoCode?.trim() ?? '';
     final r = await db.rpc('place_order', params: {
       'p_merchant_id': merchantId,
       'p_address_id': addressId,
       'p_items': items,
       'p_note': note,
       'p_client_ref': clientRef,
+      // المعاملان الجديدان ينرسلان فقط عند الحاجة حتى يبقى الطلب العادي شغّال على خادم قبل 0009
+      if (promo.isNotEmpty) 'p_promo_code': promo,
+      if (useWallet) 'p_use_wallet': true,
     });
     return order((r as Json)['id'] as String);
   }
+
+  /// السعر كما يحسبه الخادم مع كود الخصم والرصيد (للعرض بالسلة)
+  Future<CheckoutQuote> checkoutQuote({required String merchantId, required List<Map<String, dynamic>> items, String? promoCode, bool useWallet = false}) async {
+    final r = await db.rpc('checkout_quote', params: {
+      'p_merchant_id': merchantId,
+      'p_items': items,
+      'p_promo_code': promoCode,
+      'p_use_wallet': useWallet,
+    });
+    return CheckoutQuote.fromJson(r as Json);
+  }
+
+  // ---------- المكافآت: رصيد، نقاط، دعوات ----------
+  Future<Rewards> rewards() async => Rewards.fromJson(await db.rpc('my_rewards') as Json);
+
+  Future<Rewards> redeemPoints() async => Rewards.fromJson(await db.rpc('redeem_points') as Json);
+
+  Future<Rewards> applyReferralCode(String code) async => Rewards.fromJson(await db.rpc('apply_referral_code', params: {'p_code': code}) as Json);
 
   Future<Order> order(String id) async => Order.fromJson(await db.from('orders').select(orderSelect).eq('id', id).single());
 
@@ -198,6 +240,25 @@ class CustomerApi {
       db.from('rides').stream(primaryKey: ['id']).eq('id', id).map((rows) => rows.isEmpty ? null : Ride.fromJson(rows.first));
 
   Future<void> cancelRide(String id) => db.rpc('customer_cancel_ride', params: {'p_ride_id': id});
+
+  Future<void> rateRide(String id, int rating, String comment) =>
+      db.rpc('rate_ride', params: {'p_ride_id': id, 'p_rating': rating, 'p_comment': comment});
+
+  /// الرحلة الشغّالة حالياً (إن وجدت) لعرضها بالرئيسية
+  Future<Ride?> activeRide() async {
+    final r = await db.from('rides').select().eq('customer_id', _uid).inFilter('status', ['requested', 'accepted', 'arrived', 'in_progress']).order('created_at', ascending: false).limit(1);
+    return r.isEmpty ? null : Ride.fromJson(r.first);
+  }
+
+  /// أكثر وجهات الزبون تكراراً. قائمة فارغة إذا الخادم قبل 0009.
+  Future<List<RideDestination>> rideDestinations({int limit = 4}) async {
+    try {
+      final r = await db.rpc('my_ride_destinations', params: {'p_limit': limit}) as List;
+      return r.map((e) => RideDestination.fromJson(e as Json)).toList();
+    } on PostgrestException {
+      return const [];
+    }
+  }
 
   // ---------- المندوب وتوصيل الأغراض ----------
   Future<DeliveryTask> createErrand({
@@ -632,6 +693,67 @@ class AdminApi {
   // ---------- الإعدادات ----------
   Future<void> saveSetting(String key, Object value) =>
       db.from('app_settings').upsert({'key': key, 'value': value, 'updated_at': DateTime.now().toUtc().toIso8601String()});
+
+  // ---------- الرئيسية (migration 0009) ----------
+  Future<List<HomeSection>> homeSections() async {
+    final r = await db.from('home_sections').select('*, home_items(*)').order('sort', ascending: true).order('created_at', ascending: true);
+    return r.map(HomeSection.fromJson).toList();
+  }
+
+  Future<void> saveHomeSection(String? id, Json data) async {
+    if (id == null) {
+      await db.from('home_sections').insert(data);
+    } else {
+      await db.from('home_sections').update(data).eq('id', id);
+    }
+  }
+
+  Future<void> deleteHomeSection(String id) => db.from('home_sections').delete().eq('id', id);
+
+  /// يحفظ ترتيب الأقسام حسب تسلسل القائمة
+  Future<void> reorderHomeSections(List<String> ids) async {
+    await Future.wait([
+      for (var i = 0; i < ids.length; i++) db.from('home_sections').update({'sort': (i + 1) * 10}).eq('id', ids[i]),
+    ]);
+  }
+
+  Future<void> saveHomeItem(String? id, Json data) async {
+    if (id == null) {
+      await db.from('home_items').insert(data);
+    } else {
+      await db.from('home_items').update(data).eq('id', id);
+    }
+  }
+
+  Future<void> deleteHomeItem(String id) => db.from('home_items').delete().eq('id', id);
+
+  // ---------- أكواد الخصم ----------
+  Future<List<PromoCode>> promoCodes() async {
+    final r = await db.from('promo_codes').select().order('created_at', ascending: false);
+    return r.map(PromoCode.fromJson).toList();
+  }
+
+  Future<void> savePromoCode(String? id, Json data) async {
+    if (id == null) {
+      await db.from('promo_codes').insert(data);
+    } else {
+      await db.from('promo_codes').update(data).eq('id', id);
+    }
+  }
+
+  Future<void> deletePromoCode(String id) => db.from('promo_codes').delete().eq('id', id);
+
+  // ---------- المحفظة والنمو ----------
+  /// يضيف (موجب) أو يخصم (سالب) رصيد لزبون. يرجّع الرصيد الجديد.
+  Future<int> walletAdjust(String userId, int amount, String note) async =>
+      ((await db.rpc('admin_wallet_adjust', params: {'p_user_id': userId, 'p_amount': amount, 'p_note': note})) as num).toInt();
+
+  Future<int> walletBalance(String userId) async {
+    final r = await db.from('wallet_ledger').select('amount').eq('user_id', userId);
+    return r.fold<int>(0, (a, e) => a + (e['amount'] as num).toInt());
+  }
+
+  Future<Map<String, dynamic>> growthStats() async => (await db.rpc('admin_growth_stats')) as Json;
 }
 
 // =====================================================================

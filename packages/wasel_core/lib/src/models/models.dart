@@ -365,6 +365,9 @@ class Order {
   final int subtotal;
   final int deliveryFee;
   final int total;
+  final int discount;
+  final int walletUsed;
+  final String? promoCode;
   final String customerNote;
   final String? cancelReason;
   final DateTime createdAt;
@@ -395,6 +398,9 @@ class Order {
     required this.subtotal,
     required this.deliveryFee,
     required this.total,
+    this.discount = 0,
+    this.walletUsed = 0,
+    this.promoCode,
     required this.customerNote,
     this.cancelReason,
     required this.createdAt,
@@ -428,6 +434,9 @@ class Order {
       subtotal: _i(j['subtotal']),
       deliveryFee: _i(j['delivery_fee']),
       total: _i(j['total']),
+      discount: _i(j['discount']),
+      walletUsed: _i(j['wallet_used']),
+      promoCode: j['promo_code'] as String?,
       customerNote: _s(j['customer_note']),
       cancelReason: j['cancel_reason'] as String?,
       createdAt: _t(j['created_at']),
@@ -467,6 +476,9 @@ class Order {
       subtotal: updated.subtotal,
       deliveryFee: updated.deliveryFee,
       total: updated.total,
+      discount: updated.discount,
+      walletUsed: updated.walletUsed,
+      promoCode: updated.promoCode,
       customerNote: updated.customerNote,
       cancelReason: updated.cancelReason,
       createdAt: updated.createdAt,
@@ -705,6 +717,7 @@ class Ride {
   final double? driverLng;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final int? rating;
 
   const Ride({
     required this.id,
@@ -729,6 +742,7 @@ class Ride {
     this.driverLng,
     required this.createdAt,
     this.completedAt,
+    this.rating,
   });
 
   factory Ride.fromJson(Json j) => Ride(
@@ -754,6 +768,7 @@ class Ride {
         driverLng: _dn(j['driver_lng']),
         createdAt: _t(j['created_at']),
         completedAt: _tn(j['completed_at']),
+        rating: (j['rating'] as num?)?.toInt(),
       );
 }
 
@@ -888,4 +903,336 @@ class AppNotification {
         isRead: j['is_read'] as bool? ?? false,
         createdAt: _t(j['created_at']),
       );
+}
+
+// =====================================================================
+// النمو (migration 0009): أقسام الرئيسية، المكافآت، أكواد الخصم
+// =====================================================================
+
+/// أنواع أقسام الرئيسية. النوع غير المعروف (نسخة أحدث من الخادم) يتحوّل [unknown] والتطبيق يتجاهله.
+enum HomeSectionType { categories, promotions, destinations, nearby, popular, reorder, slider, banner, cards, unknown }
+
+const kHomeSectionLabels = {
+  HomeSectionType.categories: 'شبكة الأقسام',
+  HomeSectionType.promotions: 'العروض',
+  HomeSectionType.destinations: 'وجهات مقترحة',
+  HomeSectionType.nearby: 'محلات قريبة',
+  HomeSectionType.popular: 'الأكثر طلباً',
+  HomeSectionType.reorder: 'اطلب مرة ثانية',
+  HomeSectionType.slider: 'سلايدر بانرات',
+  HomeSectionType.banner: 'بانر مفرد',
+  HomeSectionType.cards: 'كروت',
+};
+
+extension HomeSectionTypeX on HomeSectionType {
+  String get label => kHomeSectionLabels[this] ?? 'غير معروف';
+
+  /// أقسام محتواها من العناصر (الباقي جاهز داخل التطبيق)
+  bool get hasItems => this == HomeSectionType.slider || this == HomeSectionType.banner || this == HomeSectionType.cards;
+}
+
+enum HomeTone { plain, lime, ink, blue }
+
+class HomeItem {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String? imageUrl;
+  final String badge;
+  final HomeTone tone;
+  final String link;
+  final int sort;
+  final bool isActive;
+
+  const HomeItem({required this.id, this.title = '', this.subtitle = '', this.imageUrl, this.badge = '', this.tone = HomeTone.plain, this.link = '', this.sort = 0, this.isActive = true});
+
+  factory HomeItem.fromJson(Json j) => HomeItem(
+        id: j['id'] as String,
+        title: _s(j['title']),
+        subtitle: _s(j['subtitle']),
+        imageUrl: (j['image_url'] as String?)?.trim().isEmpty ?? true ? null : j['image_url'] as String,
+        badge: _s(j['badge']),
+        tone: HomeTone.values.asNameMap()[j['tone']] ?? HomeTone.plain,
+        link: _s(j['link']),
+        sort: _i(j['sort']),
+        isActive: j['is_active'] as bool? ?? true,
+      );
+}
+
+class HomeSection {
+  final String id;
+  final HomeSectionType type;
+  final String title;
+  final int sort;
+  final bool isActive;
+  final List<HomeItem> items;
+
+  const HomeSection({required this.id, required this.type, this.title = '', this.sort = 0, this.isActive = true, this.items = const []});
+
+  factory HomeSection.fromJson(Json j) => HomeSection(
+        id: j['id'] as String,
+        type: HomeSectionType.values.asNameMap()[j['type']] ?? HomeSectionType.unknown,
+        title: _s(j['title']),
+        sort: _i(j['sort']),
+        isActive: j['is_active'] as bool? ?? true,
+        items: ((j['items'] ?? j['home_items']) as List? ?? const []).map((e) => HomeItem.fromJson(e as Json)).toList()..sort((a, b) => a.sort.compareTo(b.sort)),
+      );
+
+  /// الترتيب المستخدم إذا الخادم ما رجّع شي (قاعدة بيانات قبل 0009 أو انقطاع)
+  static const fallback = [
+    HomeSection(id: 'categories', type: HomeSectionType.categories, title: 'الأقسام'),
+    HomeSection(id: 'promotions', type: HomeSectionType.promotions),
+    HomeSection(id: 'nearby', type: HomeSectionType.nearby),
+    HomeSection(id: 'popular', type: HomeSectionType.popular, title: 'الأكثر طلباً'),
+    HomeSection(id: 'reorder', type: HomeSectionType.reorder, title: 'اطلب مرة ثانية'),
+  ];
+}
+
+/// وجهة داخلية من رابط عنصر الرئيسية
+sealed class HomeLink {
+  const HomeLink();
+
+  /// يحلل `wasel://...` أو رابط ويب. يرجّع null إذا الرابط فارغ أو غير مفهوم (العنصر يبقى للعرض فقط).
+  static HomeLink? parse(String raw) {
+    final v = raw.trim();
+    if (v.isEmpty) return null;
+    final u = Uri.tryParse(v);
+    if (u == null) return null;
+    if (u.scheme == 'https' || u.scheme == 'http') return HomeLinkWeb(u);
+    if (u.scheme != 'wasel') return null;
+    final arg = u.pathSegments.where((e) => e.isNotEmpty).firstOrNull;
+    return switch (u.host) {
+      'category' when arg != null => HomeLinkCategory(arg),
+      'merchant' when arg != null => HomeLinkMerchant(arg),
+      'ride' => HomeLinkRide(arg == 'tuktuk' ? VehicleType.tuktuk : VehicleType.taxi),
+      'rewards' => const HomeLinkRewards(),
+      'invite' => const HomeLinkInvite(),
+      'search' => const HomeLinkSearch(),
+      _ => null,
+    };
+  }
+}
+
+class HomeLinkCategory extends HomeLink {
+  const HomeLinkCategory(this.categoryId);
+  final String categoryId;
+}
+
+class HomeLinkMerchant extends HomeLink {
+  const HomeLinkMerchant(this.merchantId);
+  final String merchantId;
+}
+
+class HomeLinkRide extends HomeLink {
+  const HomeLinkRide(this.vehicle);
+  final VehicleType vehicle;
+}
+
+class HomeLinkRewards extends HomeLink {
+  const HomeLinkRewards();
+}
+
+class HomeLinkInvite extends HomeLink {
+  const HomeLinkInvite();
+}
+
+class HomeLinkSearch extends HomeLink {
+  const HomeLinkSearch();
+}
+
+class HomeLinkWeb extends HomeLink {
+  const HomeLinkWeb(this.uri);
+  final Uri uri;
+}
+
+/// وجهة متكررة للزبون (من رحلاته المكتملة)
+class RideDestination {
+  final String text;
+  final double lat;
+  final double lng;
+  final VehicleType vehicle;
+  final int count;
+  const RideDestination({required this.text, required this.lat, required this.lng, required this.vehicle, required this.count});
+
+  factory RideDestination.fromJson(Json j) => RideDestination(
+        text: _s(j['text']),
+        lat: _d(j['lat']),
+        lng: _d(j['lng']),
+        vehicle: VehicleType.values.asNameMap()[j['vehicle']] ?? VehicleType.taxi,
+        count: _i(j['count']),
+      );
+}
+
+/// حركة بالمحفظة أو بالنقاط
+class LedgerEntry {
+  final int id;
+  final int amount; // موجب = إضافة، سالب = صرف
+  final String kind;
+  final String note;
+  final DateTime createdAt;
+  const LedgerEntry({required this.id, required this.amount, required this.kind, required this.note, required this.createdAt});
+
+  factory LedgerEntry.fromJson(Json j) => LedgerEntry(
+        id: _i(j['id']),
+        amount: _i(j['amount'] ?? j['points']),
+        kind: _s(j['kind']),
+        note: _s(j['note']),
+        createdAt: _t(j['created_at']),
+      );
+
+  String get label => switch (kind) {
+        'referral' => 'دعوة صديق',
+        'points' => 'تحويل نقاط',
+        'admin' => 'من إدارة واصل',
+        'order' => amount < 0 ? 'دفع طلب' : 'نقاط طلب',
+        'refund' => 'استرجاع',
+        'ride' => 'نقاط رحلة',
+        'redeem' => 'تحويل إلى رصيد',
+        _ => 'حركة',
+      };
+}
+
+/// ملخص مكافآت الزبون: الرصيد، النقاط، كود الدعوة، والإعدادات
+class Rewards {
+  final bool enabled;
+  final int wallet;
+  final int points;
+  final int pointsPer1000;
+  final int redeemPoints;
+  final int redeemValue;
+  final int referralInviter;
+  final int referralInvitee;
+  final int walletMaxPercent;
+  final String referralCode;
+  final bool canEnterCode;
+  final int invited;
+  final int invitedRewarded;
+  final List<LedgerEntry> walletHistory;
+  final List<LedgerEntry> pointsHistory;
+
+  const Rewards({
+    required this.enabled,
+    required this.wallet,
+    required this.points,
+    required this.pointsPer1000,
+    required this.redeemPoints,
+    required this.redeemValue,
+    required this.referralInviter,
+    required this.referralInvitee,
+    required this.walletMaxPercent,
+    required this.referralCode,
+    required this.canEnterCode,
+    required this.invited,
+    required this.invitedRewarded,
+    this.walletHistory = const [],
+    this.pointsHistory = const [],
+  });
+
+  factory Rewards.fromJson(Json j) => Rewards(
+        enabled: j['enabled'] as bool? ?? false,
+        wallet: _i(j['wallet']),
+        points: _i(j['points']),
+        pointsPer1000: _i(j['points_per_1000']),
+        redeemPoints: _i(j['redeem_points']),
+        redeemValue: _i(j['redeem_value']),
+        referralInviter: _i(j['referral_inviter']),
+        referralInvitee: _i(j['referral_invitee']),
+        walletMaxPercent: _i(j['wallet_max_percent']),
+        referralCode: _s(j['referral_code']),
+        canEnterCode: j['can_enter_code'] as bool? ?? false,
+        invited: _i(j['invited']),
+        invitedRewarded: _i(j['invited_rewarded']),
+        walletHistory: ((j['wallet_history'] as List?) ?? const []).map((e) => LedgerEntry.fromJson(e as Json)).toList(),
+        pointsHistory: ((j['points_history'] as List?) ?? const []).map((e) => LedgerEntry.fromJson(e as Json)).toList(),
+      );
+
+  /// كم رصيد تعطي النقاط الحالية إذا انحوّلت الآن
+  int get redeemableValue => redeemPoints <= 0 ? 0 : (points ~/ redeemPoints) * redeemValue;
+
+  /// النقاط الباقية حتى أول تحويل قادم
+  int get pointsToNext => redeemPoints <= 0 ? 0 : redeemPoints - (points % redeemPoints);
+
+  /// نسبة التقدم نحو التحويل القادم (0..1)
+  double get progress => redeemPoints <= 0 ? 0 : (points % redeemPoints) / redeemPoints;
+}
+
+/// عرض السعر قبل تأكيد الطلب (من الخادم)
+class CheckoutQuote {
+  final int subtotal;
+  final int deliveryFee;
+  final int discount;
+  final int walletUsed;
+  final int total;
+  final String? promoError;
+  final int walletBalance;
+  final int walletAvailable;
+  const CheckoutQuote({required this.subtotal, required this.deliveryFee, required this.discount, required this.walletUsed, required this.total, this.promoError, required this.walletBalance, required this.walletAvailable});
+
+  factory CheckoutQuote.fromJson(Json j) => CheckoutQuote(
+        subtotal: _i(j['subtotal']),
+        deliveryFee: _i(j['delivery_fee']),
+        discount: _i(j['discount']),
+        walletUsed: _i(j['wallet_used']),
+        total: _i(j['total']),
+        promoError: j['promo_error'] as String?,
+        walletBalance: _i(j['wallet_balance']),
+        walletAvailable: _i(j['wallet_available']),
+      );
+}
+
+class PromoCode {
+  final String id;
+  final String code;
+  final String description;
+  final bool isPercent;
+  final int value;
+  final int? maxDiscount;
+  final int minSubtotal;
+  final String? merchantId;
+  final int? usageLimit;
+  final int perUserLimit;
+  final bool firstOrderOnly;
+  final DateTime startsAt;
+  final DateTime? endsAt;
+  final bool isActive;
+  final int usedCount;
+
+  const PromoCode({
+    required this.id,
+    required this.code,
+    required this.description,
+    required this.isPercent,
+    required this.value,
+    this.maxDiscount,
+    required this.minSubtotal,
+    this.merchantId,
+    this.usageLimit,
+    required this.perUserLimit,
+    required this.firstOrderOnly,
+    required this.startsAt,
+    this.endsAt,
+    required this.isActive,
+    required this.usedCount,
+  });
+
+  factory PromoCode.fromJson(Json j) => PromoCode(
+        id: j['id'] as String,
+        code: j['code'] as String,
+        description: _s(j['description']),
+        isPercent: j['kind'] == 'percent',
+        value: _i(j['value']),
+        maxDiscount: (j['max_discount'] as num?)?.toInt(),
+        minSubtotal: _i(j['min_subtotal']),
+        merchantId: j['merchant_id'] as String?,
+        usageLimit: (j['usage_limit'] as num?)?.toInt(),
+        perUserLimit: j['per_user_limit'] == null ? 1 : _i(j['per_user_limit']),
+        firstOrderOnly: j['first_order_only'] as bool? ?? false,
+        startsAt: _t(j['starts_at']),
+        endsAt: _tn(j['ends_at']),
+        isActive: j['is_active'] as bool? ?? true,
+        usedCount: _i(j['used_count']),
+      );
+
+  bool get isExpired => endsAt != null && endsAt!.isBefore(DateTime.now());
+  bool get isExhausted => usageLimit != null && usedCount >= usageLimit!;
 }

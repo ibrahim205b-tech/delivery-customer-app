@@ -57,3 +57,13 @@ Future<void> openInMaps(double lat, double lng, {String? label}) async {
 }
 
 Future<void> callPhone(String phone) => launchUrl(Uri(scheme: 'tel', path: phone));
+
+/// يفتح واتساب برسالة جاهزة والمستخدم يختار لمن يرسلها
+Future<bool> shareViaWhatsapp(String text) =>
+    launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+
+/// يفتح رابط ويب بالمتصفح
+Future<bool> openWebLink(Uri uri) => launchUrl(uri, mode: LaunchMode.externalApplication);
+
+/// رابط موقع على الخريطة يفتح بأي جهاز
+String mapLinkFor(double lat, double lng) => 'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng#map=17/$lat/$lng';

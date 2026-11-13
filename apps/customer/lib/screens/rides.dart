@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import 'errand.dart';
 
 /// طلب رحلة تكسي/تكتك: انطلاق، وجهة، نوع المركبة، الأجرة التقديرية.
 class RideRequestScreen extends StatefulWidget {
-  const RideRequestScreen({super.key, required this.vehicle});
+  const RideRequestScreen({super.key, required this.vehicle, this.destination});
   final VehicleType vehicle;
+
+  /// وجهة معبّأة مسبقاً (من الوجهات المتكررة بالرئيسية)
+  final RideDestination? destination;
   @override
   State<RideRequestScreen> createState() => _RideRequestScreenState();
 }
@@ -16,7 +20,8 @@ class RideRequestScreen extends StatefulWidget {
 class _RideRequestScreenState extends State<RideRequestScreen> {
   late VehicleType _vehicle = widget.vehicle;
   final _pickup = PointValue(label: 'موقعي الحالي');
-  final _dropoff = PointValue();
+  late final _dropoff = widget.destination == null ? PointValue() : PointValue(point: LatLng(widget.destination!.lat, widget.destination!.lng), label: widget.destination!.text);
+  List<RideDestination> _frequent = const [];
   ({double distanceKm, int fare})? _estimate;
   Object? _estimateError;
   bool _sending = false;
@@ -26,6 +31,11 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   void initState() {
     super.initState();
     _useMyLocation();
+    if (widget.destination == null) {
+      customerApi.rideDestinations().then((list) {
+        if (mounted) setState(() => _frequent = list);
+      }, onError: (_) {});
+    }
   }
 
   Future<void> _useMyLocation() async {
@@ -115,6 +125,25 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
               setState(() {});
               _estimateFare();
             }),
+            if (d == null && _frequent.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('وجهاتك المتكررة', style: WText.overline),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final f in _frequent)
+                  ActionChip(
+                    avatar: Icon(Icons.history_rounded, size: 18, color: WColors.fg),
+                    label: Text(f.text, style: WText.label),
+                    onPressed: () {
+                      setState(() {
+                        _dropoff.point = LatLng(f.lat, f.lng);
+                        _dropoff.label = f.text;
+                      });
+                      _estimateFare();
+                    },
+                  ),
+              ]),
+            ],
             const SizedBox(height: 16),
             if (p != null && d != null)
               WCard(
@@ -210,9 +239,25 @@ class RideTrackingScreen extends StatelessWidget {
                           ]),
                         ),
                         if ((r.driverPhone ?? '').isNotEmpty && r.status.isActive)
-                          WIconButton(Icons.call_rounded, background: WColors.success, color: WColors.white, onPressed: () => callPhone(r.driverPhone!)),
+                          WIconButton(Icons.call_rounded, background: WColors.success, color: WColors.white, tooltip: 'اتصال بالسائق', onPressed: () => callPhone(r.driverPhone!)),
                       ]),
                     ),
+                  if (r.driverName != null && r.status.isActive) ...[
+                    const SizedBox(height: 10),
+                    WButton('شارك رحلتك ويا أهلك', kind: WButtonKind.secondary, icon: Icons.shield_outlined, onPressed: () => _shareRide(context, r)),
+                  ],
+                  if (r.status == RideStatus.completed && r.driverId != null) ...[
+                    const SizedBox(height: 12),
+                    if (r.rating == null)
+                      _RideRateCard(rideId: r.id, driverName: r.driverName ?? 'السائق')
+                    else
+                      WCard(
+                        child: Row(children: [
+                          Expanded(child: Text('تقييمك للسائق', style: WText.bodyStrong)),
+                          for (var i = 1; i <= 5; i++) Icon(i <= r.rating! ? Icons.star_rounded : Icons.star_outline_rounded, size: 22, color: i <= r.rating! ? WColors.fg : WColors.inkFaint),
+                        ]),
+                      ),
+                  ],
                   const SizedBox(height: 12),
                   WCard(
                     child: Column(children: [
@@ -239,5 +284,77 @@ class RideTrackingScreen extends StatelessWidget {
             ]);
           },
         ),
+      );
+}
+
+/// يشارك تفاصيل الرحلة (السائق، المركبة، المسار، موقع حي) بالواتساب، وإذا ما انفتح ينسخها.
+Future<void> _shareRide(BuildContext context, Ride r) async {
+  final at = r.driverLat != null ? mapLinkFor(r.driverLat!, r.driverLng!) : mapLinkFor(r.pickupLat, r.pickupLng);
+  final text = [
+    'أنا برحلة ${r.vehicle.label} ويا واصل.',
+    'السائق: ${r.driverName ?? ''}${(r.driverVehicle ?? '').isEmpty ? '' : ' · ${r.driverVehicle}'}',
+    if ((r.driverPhone ?? '').isNotEmpty) 'رقمه: ${r.driverPhone}',
+    'من: ${r.pickupText}',
+    'إلى: ${r.dropoffText}',
+    'آخر موقع: $at',
+  ].join('\n');
+  final ok = await shareViaWhatsapp(text).then((v) => v, onError: (_) => false);
+  if (ok) return;
+  await Clipboard.setData(ClipboardData(text: text));
+  if (context.mounted) showInfo(context, 'ما انفتح واتساب، فنسخنا تفاصيل الرحلة. الصقها بأي محادثة');
+}
+
+/// تقييم السائق بعد نهاية الرحلة
+class _RideRateCard extends StatefulWidget {
+  const _RideRateCard({required this.rideId, required this.driverName});
+  final String rideId;
+  final String driverName;
+  @override
+  State<_RideRateCard> createState() => _RideRateCardState();
+}
+
+class _RideRateCardState extends State<_RideRateCard> {
+  int _stars = 0;
+  final _comment = TextEditingController();
+  bool _busy = false;
+  bool _ok = false;
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => WCard(
+        child: Column(children: [
+          Text('شلون كانت رحلتك ويا ${widget.driverName}؟', style: WText.h3, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            for (var i = 1; i <= 5; i++)
+              IconButton(
+                tooltip: '$i من 5',
+                onPressed: () => setState(() => _stars = i),
+                icon: AnimatedScale(
+                  scale: i <= _stars ? 1.1 : 1,
+                  duration: WDurations.fast,
+                  child: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: i <= _stars ? WColors.fg : WColors.inkFaint, size: 34),
+                ),
+              ),
+          ]),
+          TextField(controller: _comment, maxLength: 500, decoration: const InputDecoration(hintText: 'ملاحظاتك (اختياري)', counterText: '')),
+          const SizedBox(height: 10),
+          WButton('إرسال التقييم', loading: _busy, success: _ok, onPressed: _stars == 0
+              ? null
+              : () async {
+                  setState(() => _busy = true);
+                  final ok = await runAction(context, () => customerApi.rateRide(widget.rideId, _stars, _comment.text.trim()), success: 'شكراً لتقييمك');
+                  if (!mounted) return;
+                  setState(() {
+                    _busy = false;
+                    _ok = ok;
+                  });
+                }),
+        ]),
       );
 }
