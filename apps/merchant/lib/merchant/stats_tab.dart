@@ -73,6 +73,7 @@ class StatsTab extends StatelessWidget {
     final pct = (c['percent'] as num?) ?? 0;
     final pctText = pct == pct.roundToDouble() ? '${pct.toInt()}%' : '${pct.toStringAsFixed(1)}%';
     final due = (c['due'] as num?)?.toInt() ?? 0;
+    final credit = (c['credit_total'] as num?)?.toInt() ?? 0;
     final settlements = ((c['settlements'] as List?) ?? const []).cast<Map<String, dynamic>>();
     return WCard(
       padding: const EdgeInsets.all(16),
@@ -91,8 +92,13 @@ class StatsTab extends StatelessWidget {
         const SizedBox(height: 12),
         Row(children: [
           Expanded(child: _fig('المدفوع لواصل', iqd((c['settled_total'] as num?)?.toInt() ?? 0))),
-          Expanded(child: _fig('المتبقي عليك', iqd(due), strong: due > 0)),
+          Expanded(child: due < 0 ? _fig('إلك على واصل', iqd(-due), strong: true) : _fig('المتبقي عليك', iqd(due), strong: due > 0)),
         ]),
+        if (credit > 0) ...[
+          const SizedBox(height: 12),
+          _fig('خصومات تحملتها واصل عن زبائنك', iqd(credit)),
+          Text('أكواد خصم ورصيد محافظ دفع بيها الزبائن. محسوبة إلك ومطروحة من العمولة.', style: WText.caption),
+        ],
         if (settlements.isNotEmpty) ...[
           const Divider(height: 24),
           Text('آخر الدفعات', style: WText.label.copyWith(color: WColors.inkMuted)),

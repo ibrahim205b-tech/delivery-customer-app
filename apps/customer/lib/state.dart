@@ -26,6 +26,37 @@ class CustomerState extends ChangeNotifier {
   final List<CartLine> cart = [];
   String cartNote = '';
   String cartRef = newClientRef(); // مرجع ثابت للطلب حتى لو انضغط الزر مرتين
+  String? cartPromo; // كود خصم مقبول من الخادم
+  bool cartUseWallet = false;
+
+  /// الرصيد والنقاط وكود الدعوة. null قبل التحميل أو إذا الخادم ما يدعم المكافآت.
+  Rewards? rewards;
+
+  Future<void> loadRewards() async {
+    try {
+      rewards = await customerApi.rewards();
+      notifyListeners();
+    } catch (_) {
+      // المكافآت إضافة: فشلها ما يوقف التطبيق
+    }
+  }
+
+  void setRewards(Rewards r) {
+    rewards = r;
+    notifyListeners();
+  }
+
+  List<Map<String, dynamic>> get cartItemsPayload => cart.map((l) => {'product_id': l.product.id, 'qty': l.qty, 'note': l.note}).toList();
+
+  void setCartPromo(String? code) {
+    cartPromo = (code == null || code.trim().isEmpty) ? null : code.trim().toUpperCase();
+    notifyListeners();
+  }
+
+  void setCartUseWallet(bool v) {
+    cartUseWallet = v;
+    notifyListeners();
+  }
 
   Address? get selectedAddress {
     if (addresses.isEmpty) return null;
@@ -56,6 +87,7 @@ class CustomerState extends ChangeNotifier {
       loadError = e;
     }
     notifyListeners();
+    loadRewards();
     if (addresses.isEmpty && deviceLocation == null) {
       final l = await currentLocation();
       if (l.position != null) {
@@ -150,6 +182,8 @@ class CustomerState extends ChangeNotifier {
     cartMerchant = null;
     cartNote = '';
     cartRef = newClientRef();
+    cartPromo = null;
+    cartUseWallet = false;
     notifyListeners();
   }
 
@@ -159,11 +193,15 @@ class CustomerState extends ChangeNotifier {
     final order = await customerApi.placeOrder(
       merchantId: m.id,
       addressId: a.id,
-      items: cart.map((l) => {'product_id': l.product.id, 'qty': l.qty, 'note': l.note}).toList(),
+      items: cartItemsPayload,
       note: cartNote,
       clientRef: cartRef,
+      promoCode: cartPromo,
+      useWallet: cartUseWallet,
     );
+    final spentRewards = cartUseWallet;
     clearCart();
+    if (spentRewards) loadRewards();
     return order;
   }
 }

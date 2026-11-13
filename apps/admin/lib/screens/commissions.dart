@@ -117,9 +117,9 @@ class _CommissionsScreenState extends State<CommissionsScreen> {
                       ]),
                       const Divider(height: 22),
                       Row(children: [
-                        Text('المتبقي عليه', style: WText.small),
+                        Text((m['due'] as num) < 0 ? 'إله على واصل' : 'المتبقي عليه', style: WText.small),
                         const SizedBox(width: 8),
-                        Text(iqd((m['due'] as num).toInt()), style: WText.price.copyWith(color: (m['due'] as num) > 0 ? WColors.fg : WColors.inkMuted)),
+                        Text(iqd((m['due'] as num).toInt().abs()), style: WText.price.copyWith(color: (m['due'] as num) > 0 ? WColors.fg : ((m['due'] as num) < 0 ? WColors.warning : WColors.inkMuted))),
                         const Spacer(),
                         WButton('تسجيل دفعة', kind: WButtonKind.secondary, compact: true, expand: false, onPressed: () => _settle(m)),
                       ]),

@@ -270,6 +270,24 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           const SizedBox(height: 6),
           const InfoRow(icon: Icons.payments_outlined, text: 'نقداً عند الاستلام'),
           const Divider(height: 24),
+          if (o.discount + o.walletUsed > 0) ...[
+            Row(children: [Expanded(child: Text('المنتجات', style: WText.small)), Text(iqd(o.subtotal), style: WText.small)]),
+            const SizedBox(height: 4),
+            if (o.discount > 0) ...[
+              Row(children: [
+                Expanded(child: Text('خصم الكود ${o.promoCode ?? ''}', style: WText.small.copyWith(color: WColors.success))),
+                Text('− ${iqd(o.discount)}', style: WText.small.copyWith(color: WColors.success)),
+              ]),
+              const SizedBox(height: 4),
+            ],
+            if (o.walletUsed > 0) ...[
+              Row(children: [
+                Expanded(child: Text('من رصيدك', style: WText.small.copyWith(color: WColors.success))),
+                Text('− ${iqd(o.walletUsed)}', style: WText.small.copyWith(color: WColors.success)),
+              ]),
+              const SizedBox(height: 4),
+            ],
+          ],
           Row(children: [Expanded(child: Text('التوصيل', style: WText.small)), Text(iqd(o.deliveryFee), style: WText.small)]),
           const SizedBox(height: 4),
           Row(children: [Expanded(child: Text('المبلغ النهائي', style: WText.h3)), Text(iqd(o.total), style: WText.price.copyWith(fontSize: 18))]),

@@ -4,6 +4,7 @@ import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
 import 'commissions.dart';
+import 'growth.dart';
 import 'support_inbox.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -33,7 +34,13 @@ class MoreScreen extends StatelessWidget {
             const Divider(indent: 72),
             tile(Icons.map_outlined, 'المناطق', 'مناطق التشغيل ونطاقها', const AreasScreen()),
             const Divider(indent: 72),
+            tile(Icons.dashboard_customize_outlined, 'الصفحة الرئيسية', 'ترتيب الأقسام، البانرات، السلايدر، والكروت', const HomeLayoutScreen()),
+            const Divider(indent: 72),
             tile(Icons.local_offer_outlined, 'العروض', 'عروض الصفحة الرئيسية', const PromotionsScreen()),
+            const Divider(indent: 72),
+            tile(Icons.confirmation_number_outlined, 'أكواد الخصم', 'إنشاء الأكواد ومتابعة استخدامها', const PromoCodesScreen()),
+            const Divider(indent: 72),
+            tile(Icons.stars_outlined, 'المكافآت', 'النقاط، رصيد المحافظ، ودعوة الأصدقاء', const RewardsSettingsScreen()),
             const Divider(indent: 72),
             tile(Icons.category_outlined, 'الأقسام والخدمات', 'تفعيل الأقسام وأنواع الخدمات المنزلية', const CatalogSettingsScreen()),
             const Divider(indent: 72),
@@ -103,6 +110,11 @@ class _UsersScreenState extends State<UsersScreen> {
               ]),
               Text('تاجر: اربطه بمحل من شاشة المحلات. سائق: أضفه من شاشة السائقين.', style: WText.caption),
               const SizedBox(height: 12),
+              WButton('رصيد المحفظة', kind: WButtonKind.secondary, icon: Icons.account_balance_wallet_outlined, onPressed: () {
+                Navigator.pop(c);
+                showWalletSheet(context, u);
+              }),
+              const SizedBox(height: 10),
               WButton('طلبات هذا المستخدم', kind: WButtonKind.secondary, icon: Icons.receipt_long_outlined, onPressed: () {
                 Navigator.pop(c);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => _UserOrders(user: u)));

@@ -399,5 +399,148 @@ with x as (insert into merchants (category_id, name, lat, lng) values ('restaura
 select admin_delete_merchant(t.id('empty'));
 select t.ok(not exists (select 1 from merchants where id = t.id('empty')), 'المحل الجديد بدون طلبات ينحذف');
 
+-- ---------------------------------------------------------------------
+-- 17) النمو: الرئيسية، النقاط والمحفظة، أكواد الخصم، الدعوات، تقييم الرحلات
+-- ---------------------------------------------------------------------
+-- القسم السابق يكمّل بدور المالك (reset role)، فنرجع لدور التطبيق حتى تكون RLS فعّالة
+set role authenticated;
+-- الرئيسية
+select t.login(t.id('cust'));
+select t.ok(jsonb_array_length(home_layout()) = 7, 'الرئيسية ترجع الأقسام الافتراضية');
+select t.ok(home_layout()->0->>'type' = 'destinations', 'أقسام الرئيسية مرتبة حسب sort');
+select t.ok((select jsonb_array_length(s->'items') from jsonb_array_elements(home_layout()) s where s->>'type' = 'cards') = 2, 'قسم الكروت يرجع عناصره');
+select t.fails($$insert into home_sections (type) values ('banner')$$, 'row-level security', 'الزبون ما يعدّل الرئيسية');
+select t.login(t.id('admin'));
+with x as (insert into home_sections (type, title, sort, is_active) values ('slider', 'مخفي', 5, false) returning id) insert into t.ids select 'hidden_sec', id from x;
+with x as (insert into home_sections (type, title, sort) values ('slider', '', 1) returning id) insert into t.ids select 'slider', id from x;
+insert into home_items (section_id, title, link, tone) values (t.id('slider'), 'توصيل مجاني', 'wasel://category/restaurants', 'lime');
+insert into home_items (section_id, title, is_active) values (t.id('slider'), 'عنصر موقوف', false);
+select t.fails($$insert into home_sections (type) values ('unknown')$$, 'check constraint', 'نوع قسم غير معروف مرفوض');
+select t.login(t.id('cust'));
+select t.ok(jsonb_array_length(home_layout()) = 8, 'القسم الجديد يظهر والمخفي ما يظهر');
+select t.ok(home_layout()->0->>'type' = 'slider' and jsonb_array_length(home_layout()->0->'items') = 1, 'السلايدر أول قسم وعناصره المفعّلة فقط');
+
+-- النقاط: تُمنح عند التسليم / اكتمال الرحلة فقط
+select t.ok((select points from points_ledger where kind = 'order' and ref_id = t.id('corder')) = 14, 'نقاط الطلب المسلَّم: نقطة لكل 1000 من المنتجات');
+select t.ok(exists (select 1 from points_ledger where kind = 'ride' and ref_id = t.id('ride')), 'الرحلة المكتملة تعطي نقاط');
+select t.ok(not exists (select 1 from points_ledger where ref_id in (t.id('order2'), t.id('order3'), t.id('ride2'))), 'الملغي ما يعطي نقاط');
+select t.fails($$insert into points_ledger (user_id, points, kind) values (auth.uid(), 1000, 'admin')$$, 'permission denied', 'ما تنكتب النقاط مباشرة');
+select t.fails($$insert into wallet_ledger (user_id, amount, kind) values (auth.uid(), 100000, 'admin')$$, 'permission denied', 'ما ينكتب الرصيد مباشرة');
+select t.fails($$select _wallet_balance(auth.uid())$$, 'permission denied', 'الدوال الداخلية مقفولة على التطبيقات');
+select t.fails($$select redeem_points()$$, 'points_not_enough', 'التحويل يحتاج حد أدنى من النقاط');
+select t.login(t.id('admin'));
+update app_settings set value = value || '{"redeem_points": 10}' where key = 'rewards';
+select t.login(t.id('cust'));
+select (my_rewards()->>'points')::int as p0 \gset
+select redeem_points();
+select t.ok((my_rewards()->>'points')::int = :p0 % 10, 'التحويل يصرف مضاعفات الحد فقط');
+select t.ok((my_rewards()->>'wallet')::int = (:p0 / 10) * 1000, 'النقاط تتحول لرصيد بالسعر المضبوط');
+select (my_rewards()->>'wallet')::int as w0 \gset
+
+-- الإدارة تضبط الرصيد على 5000 بالضبط
+select t.fails(format($$select admin_wallet_adjust(%L, 1000, 'x')$$, t.id('cust')), 'forbidden', 'الزبون ما يضيف رصيد لنفسه');
+select t.login(t.id('admin'));
+select admin_wallet_adjust(t.id('cust'), 5000 - :w0 + 250, 'تسوية');
+select admin_wallet_adjust(t.id('cust'), -250, 'تسوية');
+select t.fails(format($$select admin_wallet_adjust(%L, -999999, '')$$, t.id('cust')), 'wallet_insufficient', 'الرصيد ما ينزل تحت الصفر');
+select t.login(t.id('cust'));
+select t.ok((my_rewards()->>'wallet')::int = 5000, 'رصيد المحفظة بعد إضافة الإدارة');
+
+-- الدفع من الرصيد + الاسترجاع عند الإلغاء
+select t.ok((checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, null, true)->>'total')::int = 14000 + 1500 - 5000, 'عرض السعر يطرح الرصيد');
+select t.ok((checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, null, false)->>'total')::int = 15500, 'بدون اختيار الرصيد السعر كامل');
+insert into t.ids select 'worder', (place_order(t.id('rest'), t.id('addr'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, '', gen_random_uuid(), null, true)).id;
+select t.ok((select total from orders where id = t.id('worder')) = 10500 and (select wallet_used from orders where id = t.id('worder')) = 5000, 'الطلب ينقص بمبلغ الرصيد');
+select t.ok((my_rewards()->>'wallet')::int = 0, 'الرصيد انصرف');
+select customer_cancel_order(t.id('worder'));
+select t.ok((my_rewards()->>'wallet')::int = 5000, 'الإلغاء يرجّع الرصيد');
+
+-- أكواد الخصم
+select t.login(t.id('admin'));
+insert into promo_codes (code, kind, value, max_discount, min_subtotal) values ('wasel20', 'percent', 20, 2500, 10000);
+insert into promo_codes (code, kind, value, ends_at) values ('OLD', 'fixed', 1000, now() + interval '1 second');
+update promo_codes set ends_at = now() - interval '1 hour', starts_at = now() - interval '2 hours' where code = 'OLD';
+select t.ok(exists (select 1 from promo_codes where code = 'WASEL20'), 'الكود يتخزن بحروف كبيرة');
+select t.login(t.id('cust'));
+select t.ok((select count(*) from promo_codes) = 0, 'الزبون ما يشوف قائمة الأكواد');
+select t.ok((checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, ' wasel20 ', false)->>'discount')::int = 2500, 'خصم النسبة مع السقف');
+select t.ok(checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, 'NOPE', false)->>'promo_error' = 'promo_invalid', 'كود غير موجود يرجع خطأ بدون ما يفشل العرض');
+select t.ok(checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":1}]', t.id('p1'))::jsonb, 'WASEL20', false)->>'promo_error' like 'promo_min%', 'الحد الأدنى للكود مطبّق');
+select t.ok(checkout_quote(t.id('rest'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, 'OLD', false)->>'promo_error' = 'promo_expired', 'الكود المنتهي مرفوض');
+select t.fails(format($$select place_order(%L, %L, '[{"product_id":"%s","qty":2}]', '', gen_random_uuid(), 'NOPE')$$, t.id('rest'), t.id('addr'), t.id('p1')), 'promo_invalid', 'الطلب بكود خطأ ما ينرسل');
+insert into t.ids select 'porder', (place_order(t.id('rest'), t.id('addr'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, '', gen_random_uuid(), 'wasel20')).id;
+select t.ok((select total from orders where id = t.id('porder')) = 13000 and (select promo_code from orders where id = t.id('porder')) = 'WASEL20', 'الخصم على المنتجات فقط وأجرة التوصيل كاملة');
+select t.fails(format($$select place_order(%L, %L, '[{"product_id":"%s","qty":2}]', '', gen_random_uuid(), 'WASEL20')$$, t.id('rest'), t.id('addr'), t.id('p1')), 'promo_used', 'الكود مرة وحدة لكل زبون');
+select customer_cancel_order(t.id('porder'));
+select t.login(t.id('admin'));
+select t.ok((select used_count from promo_codes where code = 'WASEL20') = 0, 'إلغاء الطلب يحرّر استخدام الكود');
+update promo_codes set used_count = 99 where code = 'WASEL20';
+select t.ok((select used_count from promo_codes where code = 'WASEL20') = 0, 'عدّاد الاستخدام ما يتغيّر يدوياً');
+
+-- كود + رصيد سوية، ثم التسليم: واصل تتحمل الخصم مو المحل
+select t.login(t.id('cust'));
+insert into t.ids select 'gorder', (place_order(t.id('rest'), t.id('addr'), format('[{"product_id":"%s","qty":2}]', t.id('p1'))::jsonb, '', gen_random_uuid(), 'WASEL20', true)).id;
+select t.ok((select total from orders where id = t.id('gorder')) = 14000 + 1500 - 2500 - 5000, 'الكود والرصيد ينطبقان سوية');
+reset role;
+update orders set status = 'delivered' where id = t.id('gorder');
+set role authenticated;
+select t.login(t.id('cust'));
+select t.ok((select points from points_ledger where kind = 'order' and ref_id = t.id('gorder')) = 11, 'النقاط على المبلغ بعد الخصم');
+select t.login(t.id('owner'));
+select t.ok((merchant_commission_summary(t.id('rest'))->>'credit_total')::int = 7500, 'الخصم والرصيد يتسجلان للمحل على واصل');
+select t.ok((merchant_commission_summary(t.id('rest'))->>'due')::int = 400 + 700 - 7500, 'المستحق = العمولة − المدفوع − ما تحملته واصل');
+select t.ok((select count(*) from wallet_ledger) = 0, 'التاجر ما يشوف محافظ الزبائن');
+
+-- الدعوات
+select t.login(t.id('admin'));
+update users set is_active = true where id = t.id('cust2');
+select t.login(t.id('cust2'));
+select my_rewards()->>'referral_code' as code2 \gset
+select t.login(t.id('cust'));
+select my_rewards()->>'referral_code' as code1 \gset
+select t.ok(length(:'code1') = 7 and :'code1' <> :'code2', 'كل زبون إله كود دعوة خاص');
+select t.ok(my_rewards()->>'referral_code' = :'code1', 'كود الدعوة ثابت');
+select t.fails(format($$select apply_referral_code(%L)$$, :'code2'), 'referral_not_new', 'الدعوة للزبائن الجدد فقط');
+select t.login(t.id('cust2'));
+select t.fails(format($$select apply_referral_code(%L)$$, :'code2'), 'referral_self', 'ما يدعو نفسه');
+select t.fails($$select apply_referral_code('WZZZZZZ9')$$, 'referral_invalid', 'كود دعوة خطأ');
+select apply_referral_code(lower(:'code1'));
+select t.fails(format($$select apply_referral_code(%L)$$, :'code1'), 'referral_already_used', 'كود الدعوة مرة وحدة');
+select t.ok((my_rewards()->>'wallet')::int = 0, 'المكافأة ما تنصرف قبل أول طلب مُسلَّم');
+with x as (insert into addresses (user_id, label, lat, lng) values (auth.uid(), 'الشغل', 33.3030, 44.4360) returning id) insert into t.ids select 'addr2', id from x;
+insert into t.ids select 'rorder', (place_order(t.id('rest'), t.id('addr2'), format('[{"product_id":"%s","qty":1}]', t.id('p1'))::jsonb, '', gen_random_uuid())).id;
+select t.login(t.id('admin'));
+update app_settings set value = value || '{"points_max_order": 5}' where key = 'rewards';
+reset role;
+update orders set status = 'delivered' where id = t.id('rorder');
+set role authenticated;
+select t.login(t.id('cust2'));
+select t.ok((my_rewards()->>'points')::int = 5, 'سقف النقاط للطلب الواحد مطبّق (7 تصير 5)');
+select t.ok((my_rewards()->>'wallet')::int = 2000, 'المدعو ياخذ رصيد بعد أول طلب مُسلَّم');
+select t.ok(not (my_rewards()->>'can_enter_code')::boolean, 'بعدها ما يگدر يدخل كود ثاني');
+select t.login(t.id('cust'));
+select t.ok((my_rewards()->>'wallet')::int = 2000 and (my_rewards()->>'invited_rewarded')::int = 1, 'صاحب الدعوة ياخذ رصيد');
+select t.ok(exists (select 1 from notifications where user_id = auth.uid() and data->>'type' = 'rewards'), 'إشعار بوصول الرصيد');
+
+-- المندوب يعرف المبلغ المطلوب من الزبون
+select t.login(t.id('admin'));
+select t.ok((select notes from delivery_tasks where id = t.id('task')) like 'المطلوب من الزبون: 17000 د.ع%', 'مهمة التوصيل تذكر المبلغ المطلوب من الزبون');
+select t.login(t.id('cust'));
+
+-- تقييم الرحلات والوجهات المتكررة
+select rate_ride(t.id('ride'), 5, 'سائق ممتاز');
+select t.ok((select rating from rides where id = t.id('ride')) = 5, 'الزبون يقيّم الرحلة المكتملة');
+select t.fails(format($$select rate_ride(%L, 4, '')$$, t.id('ride2')), 'cannot_rate', 'الرحلة الملغية ما تتقيّم');
+select t.fails(format($$select rate_ride(%L, 9, '')$$, t.id('ride')), 'invalid_rating', 'التقييم من 1 إلى 5');
+select t.ok(jsonb_array_length(my_ride_destinations(4)) = 1 and my_ride_destinations(4)->0->>'text' = 'السعدون', 'الوجهات المتكررة من الرحلات المكتملة');
+select t.login(t.id('cust2'));
+select t.fails(format($$select rate_ride(%L, 1, '')$$, t.id('ride')), 'cannot_rate', 'ما يقيّم رحلة غيره');
+select t.ok(jsonb_array_length(my_ride_destinations(4)) = 0, 'كل زبون يشوف وجهاته فقط');
+select t.login(t.id('admin'));
+select t.ok((select rating_avg from drivers where id = t.id('taxi')) = 5 and (select rating_count from drivers where id = t.id('taxi')) = 1, 'تقييم السائق يتحدّث');
+select t.ok((admin_growth_stats()->>'referrals_rewarded')::int = 1 and (admin_growth_stats()->>'merchant_credit')::int = 7500, 'ملخص النمو للإدارة');
+select t.login(t.id('cust'));
+select t.fails($$select admin_growth_stats()$$, 'forbidden', 'المستهلك ما يشوف ملخص النمو');
+
 reset role;
 select 'ALL TESTS PASSED' as result;
