@@ -12,34 +12,34 @@ abstract final class WColors {
   static Color _m(Color light, Color dark) => isDark ? dark : light;
 
   // ---- الهوية (ثابتة) ----
-  static const ink = Color(0xFF111923); // Primary Ink — أسطح داكنة مميِّزة + نص فوق الليموني
-  static const graphite = Color(0xFF303943); // Graphite
-  static const lime = Color(0xFFD8F36A); // Electric Lime
-  static const limeDeep = Color(0xFF9DB82C);
+  static const ink = Color(0xFF17191B); // Primary Ink — أسطح داكنة مميِّزة + نص فوق الليموني
+  static const graphite = Color(0xFF2E3135); // Graphite
+  static const lime = Color(0xFFC7F464); // Electric Lime
+  static const limeDeep = Color(0xFF8FB02B);
   static const white = Color(0xFFFFFFFF); // نص/أيقونات فوق الأسطح الداكنة
-  static const inkSurface = Color(0xFF1B2531); // سطح فوق الحبر
+  static const inkSurface = Color(0xFF232629); // سطح فوق الحبر
   static const success = Color(0xFF1E8A5A);
   static const warning = Color(0xFFB57514);
   static const danger = Color(0xFFD2412F);
-  static const blue = Color(0xFF4058E8); // Electric Blue — تعبئة (أزرار، علامات، بلاطات)
+  static const blue = Color(0xFF3979E8); // Electric Blue — تعبئة (أزرار، علامات، بلاطات)
 
   // ---- تتغيّر حسب الوضع ----
-  static Color get fg => _m(ink, const Color(0xFFEEF0EA)); // النص الأساسي
-  static Color get link => _m(blue, const Color(0xFF8C9DFF)); // نص أزرق (روابط، أسعار) — أفتح بالليل للتباين
-  static Color get paper => _m(const Color(0xFFF4F2EC), const Color(0xFF0A0F14)); // الخلفية
-  static Color get surface => _m(white, const Color(0xFF151D26)); // البطاقات والحقول
-  static Color get surfaceAlt => _m(const Color(0xFFEBE8DF), const Color(0xFF1F2933));
-  static Color get line => _m(const Color(0xFFE3E0D7), const Color(0xFF2A3540));
-  static Color get inkMuted => _m(const Color(0xFF5B6570), const Color(0xFFA3ACB5));
-  static Color get inkFaint => _m(const Color(0xFF98A0A8), const Color(0xFF6E7883));
-  static Color get limeSoft => _m(const Color(0xFFF0F9CF), const Color(0xFF2A3315));
-  static Color get blueSoft => _m(const Color(0xFFE6E9FC), const Color(0xFF1E2550));
+  static Color get fg => _m(ink, const Color(0xFFEFEDE6)); // النص الأساسي
+  static Color get link => _m(blue, const Color(0xFF86AEF5)); // نص أزرق (روابط، أسعار) — أفتح بالليل للتباين
+  static Color get paper => _m(const Color(0xFFF3F0E8), const Color(0xFF0D0E0F)); // الخلفية
+  static Color get surface => _m(white, const Color(0xFF17191B)); // البطاقات والحقول
+  static Color get surfaceAlt => _m(const Color(0xFFE9E5DA), const Color(0xFF222427));
+  static Color get line => _m(const Color(0xFFE2DED3), const Color(0xFF2D3034));
+  static Color get inkMuted => _m(const Color(0xFF5E6368), const Color(0xFFA5A9AE));
+  static Color get inkFaint => _m(const Color(0xFF9A9EA3), const Color(0xFF6F7378));
+  static Color get limeSoft => _m(const Color(0xFFEDF8CB), const Color(0xFF283214));
+  static Color get blueSoft => _m(const Color(0xFFE2ECFC), const Color(0xFF16264A));
   static Color get successSoft => _m(const Color(0xFFDDF1E6), const Color(0xFF12301F));
   static Color get warningSoft => _m(const Color(0xFFF7EBD3), const Color(0xFF33270F));
   static Color get dangerSoft => _m(const Color(0xFFFAE3DF), const Color(0xFF3A1A15));
 
   /// الأسطح الداكنة المميِّزة (البطاقة الرئيسية، الشريط الجانبي): بالليل أفتح شوية من الخلفية حتى تبين
-  static Color get night => _m(ink, const Color(0xFF1A2430));
+  static Color get night => _m(ink, const Color(0xFF1F2124));
 }
 
 /// المسافات على شبكة 4
@@ -68,8 +68,8 @@ abstract final class WRadius {
 
 /// ظل واحد خفيف للعناصر الطافية فقط (شريط السلة، الأوراق السفلية)
 abstract final class WShadow {
-  static List<BoxShadow> get soft => [BoxShadow(color: WColors.isDark ? const Color(0x66000000) : const Color(0x14111923), blurRadius: 16, offset: const Offset(0, 6))];
-  static List<BoxShadow> get lifted => [BoxShadow(color: WColors.isDark ? const Color(0x99000000) : const Color(0x26111923), blurRadius: 30, offset: const Offset(0, 12))];
+  static List<BoxShadow> get soft => [BoxShadow(color: WColors.isDark ? const Color(0x66000000) : const Color(0x1417191B), blurRadius: 16, offset: const Offset(0, 6))];
+  static List<BoxShadow> get lifted => [BoxShadow(color: WColors.isDark ? const Color(0x99000000) : const Color(0x2617191B), blurRadius: 30, offset: const Offset(0, 12))];
 }
 
 abstract final class WDurations {

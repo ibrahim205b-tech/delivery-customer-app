@@ -31,7 +31,7 @@ ThemeData buildWaselTheme() {
     surfaceContainerHigh: WColors.surfaceAlt,
     surfaceContainerHighest: WColors.surfaceAlt,
     surfaceTint: Colors.transparent,
-    shadow: const Color(0x33111923),
+    shadow: const Color(0x3317191B),
   );
 
   final textTheme = TextTheme(
@@ -191,9 +191,9 @@ ThemeData buildWaselTheme() {
       backgroundColor: WColors.night,
       indicatorColor: WColors.lime,
       selectedIconTheme: const IconThemeData(color: WColors.ink),
-      unselectedIconTheme: const IconThemeData(color: Color(0xFF98A0A8)),
+      unselectedIconTheme: const IconThemeData(color: Color(0xFF9A9EA3)),
       selectedLabelTextStyle: WText.label.copyWith(color: WColors.white),
-      unselectedLabelTextStyle: WText.label.copyWith(color: const Color(0xFF98A0A8)),
+      unselectedLabelTextStyle: WText.label.copyWith(color: const Color(0xFF9A9EA3)),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.ink : WColors.white),

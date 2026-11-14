@@ -73,7 +73,7 @@ class WaselNotifier {
             icon: 'ic_stat_wasel',
             importance: channel == WChannel.updates ? Importance.defaultImportance : Importance.max,
             priority: channel == WChannel.updates ? Priority.defaultPriority : Priority.high,
-            color: const Color(0xFF111923),
+            color: const Color(0xFF17191B),
             category: AndroidNotificationCategory.message,
           ),
         ),

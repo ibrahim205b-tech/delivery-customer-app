@@ -21,12 +21,12 @@ from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
-INK = "#111923"
-LIME = "#D8F36A"
-PAPER = "#F4F2EC"
-BLUE = "#4058E8"
+INK = "#17191B"
+LIME = "#C7F464"
+PAPER = "#F3F0E8"
+BLUE = "#3979E8"
 WHITE = "#FFFFFF"
-GRAPHITE = "#303943"
+GRAPHITE = "#2E3135"
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "svg"
 

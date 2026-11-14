@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import 'main.dart';
@@ -56,17 +57,73 @@ class _CustomerShellState extends State<CustomerShell> {
           const FavoritesScreen(),
           const AccountScreen(),
         ]),
-        bottomNavigationBar: DecoratedBox(
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: WColors.line))),
-          child: NavigationBar(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-              NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'طلباتي'),
-              NavigationDestination(icon: Icon(Icons.favorite_outline_rounded), selectedIcon: Icon(Icons.favorite_rounded), label: 'المفضلة'),
-              NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
-            ],
+        bottomNavigationBar: _WaselNav(
+          index: _tab,
+          onSelect: (i) => setState(() => _tab = i),
+          items: const [
+            (Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
+            (Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'طلباتي'),
+            (Icons.favorite_outline_rounded, Icons.favorite_rounded, 'المفضلة'),
+            (Icons.person_outline_rounded, Icons.person_rounded, 'حسابي'),
+          ],
+        ),
+      );
+}
+
+/// شريط التنقل: كبسولة داكنة طافية. التبويب المختار يتمدد لزر ليموني مع اسمه، والباقي أيقونات.
+class _WaselNav extends StatelessWidget {
+  const _WaselNav({required this.index, required this.onSelect, required this.items});
+  final int index;
+  final ValueChanged<int> onSelect;
+  final List<(IconData, IconData, String)> items;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+        color: WColors.paper,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+            child: Container(
+              height: 64,
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(22)),
+              child: Row(children: [
+                for (var i = 0; i < items.length; i++)
+                  Expanded(
+                    flex: i == index ? 5 : 3,
+                    child: Semantics(
+                      selected: i == index,
+                      button: true,
+                      label: items[i].$3,
+                      onTap: () => onSelect(i),
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (i != index) HapticFeedback.selectionClick();
+                          onSelect(i);
+                        },
+                        child: AnimatedContainer(
+                          duration: WDurations.base,
+                          curve: WDurations.curve,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(color: i == index ? WColors.lime : Colors.transparent, borderRadius: WRadius.all(16)),
+                          child: Center(
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.ink : const Color(0xFF9A9EA3)),
+                              if (i == index) ...[
+                                const SizedBox(width: 6),
+                                Flexible(child: Text(items[i].$3, maxLines: 1, overflow: TextOverflow.fade, softWrap: false, style: WText.label.copyWith(color: WColors.ink, fontWeight: FontWeight.w700))),
+                              ],
+                            ]),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]),
+            ),
           ),
         ),
       );
