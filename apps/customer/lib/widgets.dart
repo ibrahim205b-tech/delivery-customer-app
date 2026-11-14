@@ -266,7 +266,7 @@ class QtyStepper extends StatelessWidget {
                   child: InkWell(
                     borderRadius: WRadius.all(12),
                     onTap: onAdd,
-                    child: const SizedBox(width: 40, height: 40, child: Icon(Icons.add_rounded, color: WColors.lime, size: 22)),
+                    child: SizedBox(width: 40, height: 40, child: Icon(Icons.add_rounded, color: WColors.lime, size: 22)),
                   ),
                 ),
               )

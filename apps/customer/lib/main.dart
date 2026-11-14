@@ -8,6 +8,8 @@ late final AuthController auth;
 late final CustomerState app;
 
 Future<void> main() async {
+  // هوية تطبيق الزبون (نيلي واصل + أصفر التكسي). تطبيقا التاجر والإدارة يبقون على الهوية الأصلية.
+  WColors.palette = WPalette.customer;
   final ready = await bootstrapWasel();
   if (ready) {
     auth = AuthController();

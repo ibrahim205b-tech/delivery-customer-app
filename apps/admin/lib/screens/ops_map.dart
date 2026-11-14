@@ -85,7 +85,7 @@ class _OpsMapScreenState extends State<OpsMapScreen> {
                   child: Row(children: [
                     Text('خريطة العمليات', style: WText.h3.copyWith(color: WColors.white)),
                     const Spacer(),
-                    if (d == null && _error == null) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: WColors.lime)),
+                    if (d == null && _error == null) SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: WColors.lime)),
                     if (d != null) Text('${fresh.length} سائق · ${d.activeOrders.length} طلب', style: WText.caption.copyWith(color: WColors.lime)),
                   ]),
                 ),

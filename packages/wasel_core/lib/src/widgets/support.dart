@@ -319,7 +319,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                       height: 48,
                       child: _sending
                           ? Padding(padding: EdgeInsets.all(14), child: CircularProgressIndicator(strokeWidth: 2, color: WColors.ink))
-                          : const Icon(Icons.send_rounded, color: WColors.ink, textDirection: TextDirection.rtl),
+                          : Icon(Icons.send_rounded, color: WColors.ink, textDirection: TextDirection.rtl),
                     ),
                   ),
                 ),

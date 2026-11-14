@@ -498,7 +498,7 @@ class MerchantLogo extends StatelessWidget {
   final double size;
 
   // ألوان الهوية فقط
-  static const _palette = [WColors.ink, WColors.blue, WColors.graphite, WColors.lime];
+  static List<Color> get _palette => [WColors.ink, WColors.blue, WColors.graphite, WColors.lime];
 
   @override
   Widget build(BuildContext context) {
@@ -583,12 +583,12 @@ class WaselWordmark extends StatelessWidget {
 
 /// العلامة مرسومة بالكود: مسار متموّج (W) ينتهي بحلقة وصول. نفس هندسة brand/tools/build_brand.py
 class WaselMark extends StatelessWidget {
-  const WaselMark({super.key, this.size = 48, this.route, this.ring = WColors.blue});
+  const WaselMark({super.key, this.size = 48, this.route, this.ring});
   final double size;
   final Color? route;
-  final Color ring;
+  final Color? ring;
   @override
-  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route ?? WColors.fg, ring));
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route ?? WColors.fg, ring ?? WColors.blue));
 }
 
 class _MarkPainter extends CustomPainter {

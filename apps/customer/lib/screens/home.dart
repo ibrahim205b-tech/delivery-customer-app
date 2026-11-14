@@ -107,13 +107,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     return CustomScrollView(slivers: [
                       SliverToBoxAdapter(child: _Header(unread: widget.unread, onAddress: () => pickAddressSheet(context, onAddNew: _addAddress))),
                       SliverPersistentHeader(pinned: true, delegate: _SearchHeader()),
-                      SliverToBoxAdapter(child: _AreaTabs(onSelect: _selectArea)),
                       if (active != null) SliverToBoxAdapter(child: reveal(_LiveOrder(order: active, onClosed: () => setState(() => _data = _load())))),
+                      // الأقسام الأربعة الرئيسية — أهم عنصر بالصفحة
+                      SliverToBoxAdapter(child: reveal(const _ServiceGrid())),
+                      SliverToBoxAdapter(child: reveal(const _MoreServices())),
                       if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
                       if (d == null && !s.hasError) const SliverToBoxAdapter(child: _Loading()),
                       if (d != null && d.promotions.isNotEmpty) SliverToBoxAdapter(child: reveal(_OfferDeck(promos: d.promotions))),
-                      SliverToBoxAdapter(child: reveal(const _MoveDock())),
-                      if (d != null) SliverToBoxAdapter(child: reveal(_Markets(data: d))),
                       if (d != null) ..._stores(d, reveal),
                       if (d != null && d.recent.where((o) => !o.status.isActive).isNotEmpty) SliverToBoxAdapter(child: reveal(_Reorder(orders: d.recent.where((o) => !o.status.isActive).toList()))),
                       const SliverToBoxAdapter(child: _Footer()),
@@ -129,10 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _stores(_HomeData d, Widget Function(Widget) reveal) {
     final storeCatIds = app.categories.where((c) => c.kind == CategoryKind.store).map((c) => c.id).toSet();
     if (!d.merchants.any((m) => storeCatIds.contains(m.categoryId))) {
-      return const [
-        SliverToBoxAdapter(
+      return [
+        SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 24), child: _AreaTabs(onSelect: _selectArea))),
+        const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.only(top: 24),
+            padding: EdgeInsets.only(top: 12),
             child: EmptyView(icon: Icons.storefront_outlined, title: 'ما اكو محلات بهذه المنطقة بعد', message: 'المحلات تظهر هنا بعد ما تعتمدها إدارة واصل.'),
           ),
         ),
@@ -150,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final popular = picks.where((m) => m.orderCount > 0).toList()..sort((a, b) => b.orderCount.compareTo(a.orderCount));
     final free = picks.where((m) => m.deliveryFee == 0 && m.isOpenNow).toList();
     return [
-      SliverToBoxAdapter(child: reveal(_Picks(merchants: picks.take(10).toList(), nearby: ref != null))),
+      SliverToBoxAdapter(child: reveal(_Picks(merchants: picks.take(10).toList(), nearby: ref != null, onArea: _selectArea))),
       if (popular.length >= 2) SliverToBoxAdapter(child: reveal(_Leaderboard(merchants: popular.take(6).toList()))),
       if (free.isNotEmpty) SliverToBoxAdapter(child: reveal(_FreeDelivery(merchants: free.take(8).toList()))),
     ];
@@ -269,7 +270,7 @@ class _Header extends StatelessWidget {
                     height: 22,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(7)),
-                    child: const Icon(Icons.near_me_rounded, size: 14, color: WColors.ink),
+                    child: Icon(Icons.near_me_rounded, size: 14, color: WColors.ink),
                   ),
                   const SizedBox(width: 8),
                   Flexible(child: Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.h3.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -328,16 +329,16 @@ class _SearchHeader extends SliverPersistentHeaderDelegate {
         child: Pressable(
           onTap: () => _open(context),
           child: Container(
-            height: 56,
-            padding: const EdgeInsetsDirectional.only(start: 18, end: 6),
-            decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(18)),
+            height: 54,
+            padding: const EdgeInsetsDirectional.only(start: 16, end: 5),
+            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(17), border: Border.all(color: WColors.line, width: 1.2)),
             child: Row(children: [
-              Expanded(child: Text('دوّر على مطعم، منتج أو محل', style: WText.body.copyWith(color: const Color(0xFFB9BCC0)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text('دوّر على مطعم، منتج أو محل', style: WText.body.copyWith(color: WColors.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(14)),
-                child: const Icon(Icons.search_rounded, color: WColors.ink),
+                decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(13)),
+                child: const Icon(Icons.search_rounded, color: WColors.white),
               ),
             ]),
           ),
@@ -436,7 +437,7 @@ class _LiveOrder extends StatelessWidget {
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Text('تتبّع', style: WText.label.copyWith(color: WColors.ink, fontWeight: FontWeight.w700)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_back_rounded, size: 16, color: WColors.ink),
+                    Icon(Icons.arrow_back_rounded, size: 16, color: WColors.ink),
                   ]),
                 ),
               ]),
@@ -581,7 +582,7 @@ class _OfferCard extends StatelessWidget {
     final (bg, fg, sub, tagBg, tagFg) = switch (style) {
       0 => (WColors.lime, WColors.ink, const Color(0xFF3B4A12), WColors.ink, WColors.lime),
       1 => (WColors.night, WColors.white, const Color(0xFFB9BCC0), WColors.lime, WColors.ink),
-      _ => (WColors.blue, WColors.white, const Color(0xFFDCE7FB), WColors.white, WColors.blue),
+      _ => (WColors.coral, WColors.white, const Color(0xFFFFE3DC), WColors.white, WColors.coral),
     };
     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       _Tag(p.merchantId == null ? 'عرض واصل' : 'عرض', bg: hasImg ? WColors.lime : tagBg, fg: hasImg ? WColors.ink : tagFg),
@@ -621,177 +622,189 @@ class _OfferCard extends StatelessWidget {
 }
 
 // =====================================================================
-// 6) المشاوير — لوحة تحكم داكنة بأربع خانات
+// 5) الأقسام الأربعة الرئيسية — بطاقات مربعة برسومات أصلية
+//    التكسي الأبرز: تعبئة صفراء كاملة + زر "اطلب" + حركة خفيفة للسيارة.
+//    كل بطاقة مربوطة بقسم حقيقي من قاعدة البيانات، وتختفي إذا القسم معطّل من الإدارة.
 // =====================================================================
-class _MoveDock extends StatelessWidget {
-  const _MoveDock();
+MerchantCategory? _cat(String id) => app.categories.where((c) => c.id == id).firstOrNull;
 
-  String _label(MerchantCategory c) => switch (c.id) { 'courier' => 'مندوب', 'parcel' => 'أغراض', _ => c.name.replaceFirst('ال', '') };
-  String _hint(MerchantCategory c) => switch (c.kind) {
-        CategoryKind.ride => 'مشوار',
-        CategoryKind.courier => 'يشتري لك',
-        CategoryKind.parcel => 'يوصّل غرض',
-        _ => '',
-      };
+/// أقسام المحلات (غير المطاعم) — تظهر تحت بطاقة "المحلات"
+List<MerchantCategory> get _shopCategories => app.categories.where((c) => c.kind == CategoryKind.store && c.id != 'restaurants').toList();
+
+class _ServiceGrid extends StatelessWidget {
+  const _ServiceGrid();
 
   @override
   Widget build(BuildContext context) {
-    final items = app.categories.where((c) => c.kind == CategoryKind.ride || c.kind == CategoryKind.courier || c.kind == CategoryKind.parcel).toList();
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _SectionHead('مشاوير وتوصيل', sub: 'تكسي، تكتك، أو مندوب لأي غرض'),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(WRadius.xl)),
-          child: IntrinsicHeight(
-            child: Row(children: [
-              for (var i = 0; i < items.length; i++) ...[
-                if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 14), color: WColors.white.withValues(alpha: 0.08)),
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: items[i].name,
-                    onTap: () => openCategory(context, items[i]),
-                    excludeSemantics: true,
-                    child: _DockButton(icon: categoryIcon(items[i].icon), label: _label(items[i]), hint: _hint(items[i]), onTap: () => openCategory(context, items[i])),
-                  ),
-                ),
-              ],
-            ]),
-          ),
+    final taxi = _cat('taxi');
+    final food = _cat('restaurants');
+    final parcel = _cat('parcel');
+    final shops = _shopCategories;
+    final cards = <Widget>[
+      if (taxi != null)
+        _ServiceCard(
+          id: 'taxi',
+          title: 'تكسي',
+          sub: 'تكسي أو تكتك',
+          asset: 'assets/illustrations/taxi.png',
+          featured: true,
+          bg: WColors.lime,
+          onTap: () => openCategory(context, taxi),
         ),
-      ),
-    ]);
+      if (food != null)
+        _ServiceCard(
+          id: 'food',
+          title: 'طعام',
+          sub: 'مطاعم منطقتك',
+          asset: 'assets/illustrations/food.png',
+          bg: WColors.isDark ? const Color(0xFF3A1F1A) : const Color(0xFFFFE8E2),
+          accent: WColors.coral,
+          onTap: () => openCategory(context, food),
+        ),
+      if (parcel != null)
+        _ServiceCard(
+          id: 'parcel',
+          title: 'ودّي أغراضك',
+          sub: 'بأمان، من باب لباب',
+          asset: 'assets/illustrations/parcel.png',
+          bg: WColors.isDark ? const Color(0xFF0F2E27) : const Color(0xFFDDF4EC),
+          accent: WColors.mint,
+          onTap: () => openCategory(context, parcel),
+        ),
+      if (shops.isNotEmpty)
+        _ServiceCard(
+          id: 'shops',
+          title: 'المحلات',
+          sub: shops.take(2).map((c) => c.name).join('، '),
+          asset: 'assets/illustrations/shops.png',
+          bg: WColors.blueSoft,
+          accent: WColors.blue,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopsHubScreen())),
+        ),
+    ];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(WSpace.page, 14, WSpace.page, 0),
+      child: LayoutBuilder(builder: (context, box) {
+        const gap = 12.0;
+        final side = (box.maxWidth - gap) / 2;
+        return Wrap(spacing: gap, runSpacing: gap, children: [for (final c in cards) SizedBox(width: side, height: side, child: c)]);
+      }),
+    );
   }
 }
 
-class _DockButton extends StatefulWidget {
-  const _DockButton({required this.icon, required this.label, required this.hint, required this.onTap});
-  final IconData icon;
-  final String label;
-  final String hint;
+class _ServiceCard extends StatefulWidget {
+  const _ServiceCard({required this.id, required this.title, required this.sub, required this.asset, required this.bg, required this.onTap, this.accent, this.featured = false});
+  final String id;
+  final String title;
+  final String sub;
+  final String asset;
+  final Color bg;
+  final Color? accent;
+  final bool featured;
   final VoidCallback onTap;
   @override
-  State<_DockButton> createState() => _DockButtonState();
+  State<_ServiceCard> createState() => _ServiceCardState();
 }
 
-class _DockButtonState extends State<_DockButton> {
+class _ServiceCardState extends State<_ServiceCard> with SingleTickerProviderStateMixin {
   bool _down = false;
+  // حركة "تنفّس" خفيفة لسيارة التكسي فقط
+  late final AnimationController _bob = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  void initState() {
+    super.initState();
+    if (widget.featured) _bob.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _bob.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final f = widget.featured;
+    final titleColor = f ? WColors.ink : WColors.fg;
+    final subColor = f ? WColors.ink.withValues(alpha: 0.72) : WColors.inkMuted;
+    return Semantics(
+      button: true,
+      label: '${widget.title}، ${widget.sub}',
+      onTap: widget.onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _down = true),
         onTapCancel: () => setState(() => _down = false),
         onTapUp: (_) {
           setState(() => _down = false);
-          HapticFeedback.selectionClick();
+          HapticFeedback.lightImpact();
           widget.onTap();
         },
-        child: AnimatedContainer(
+        child: AnimatedScale(
+          scale: _down ? 0.96 : 1,
           duration: WDurations.fast,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-          decoration: BoxDecoration(color: _down ? WColors.lime : Colors.transparent, borderRadius: WRadius.all(WRadius.lg)),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(widget.icon, size: 28, color: _down ? WColors.ink : WColors.lime),
-            const SizedBox(height: 8),
-            FittedBox(fit: BoxFit.scaleDown, child: Text(widget.label, style: WText.bodyStrong.copyWith(color: _down ? WColors.ink : WColors.white, fontWeight: FontWeight.w700))),
-            if (widget.hint.isNotEmpty) FittedBox(fit: BoxFit.scaleDown, child: Text(widget.hint, style: WText.caption.copyWith(fontSize: 11, color: _down ? WColors.ink : const Color(0xFF8E9297)))),
-          ]),
-        ),
-      );
-}
-
-// =====================================================================
-// 7) الأسواق — رف أقسام بأحجام وألوان مختلفة
-// =====================================================================
-class _Markets extends StatelessWidget {
-  const _Markets({required this.data});
-  final _HomeData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final stores = app.categories.where((c) => c.kind == CategoryKind.store).toList();
-    final homeSvc = app.categories.where((c) => c.kind == CategoryKind.homeService).firstOrNull;
-    if (stores.isEmpty && homeSvc == null) return const SizedBox.shrink();
-    final byCat = <String, List<Merchant>>{};
-    for (final m in data.merchants) {
-      byCat.putIfAbsent(m.categoryId, () => []).add(m);
-    }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _SectionHead('الأسواق', sub: 'كل شي تحتاجه، من محلات منطقتك'),
-      if (stores.isNotEmpty)
-        SizedBox(
-          height: 204,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-            itemCount: stores.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, i) => _ShelfCard(category: stores[i], stores: byCat[stores[i].id] ?? const [], featured: i == 0, tone: i == 0 ? 0 : (i % 3) + 1),
-          ),
-        ),
-      if (homeSvc != null) Padding(padding: const EdgeInsets.fromLTRB(WSpace.page, 12, WSpace.page, 0), child: _HomeServicesBanner(category: homeSvc, services: data.homeServices)),
-    ]);
-  }
-}
-
-class _ShelfCard extends StatelessWidget {
-  const _ShelfCard({required this.category, required this.stores, required this.featured, required this.tone});
-  final MerchantCategory category;
-  final List<Merchant> stores;
-  final bool featured;
-  final int tone; // 0 حبر (المميّز)، 1 سطح، 2 أزرق، 3 ليموني
-
-  @override
-  Widget build(BuildContext context) {
-    final c = category;
-    final open = stores.where((m) => m.isOpenNow).length;
-    final (bg, fg, sub, iconBg, iconFg, border) = switch (tone) {
-      0 => (WColors.night, WColors.white, const Color(0xFFB9BCC0), WColors.lime, WColors.ink, null),
-      2 => (WColors.blue, WColors.white, const Color(0xFFDCE7FB), WColors.white, WColors.blue, null),
-      3 => (WColors.lime, WColors.ink, const Color(0xFF3B4A12), WColors.ink, WColors.lime, null),
-      _ => (WColors.surface, WColors.fg, WColors.inkMuted, WColors.paper, WColors.fg, WColors.line),
-    };
-    final tagBg = switch (tone) { 0 => const Color(0x1AFFFFFF), 2 => const Color(0x33FFFFFF), 3 => const Color(0x1A17191B), _ => WColors.paper };
-    // صور حقيقية: شعارات/أغلفة محلات هذا القسم (إذا موجودة)
-    final faces = stores.map((m) => m.logoUrl ?? m.coverUrl).whereType<String>().where((u) => u.isNotEmpty).take(3).toList();
-    final names = stores.take(2).map((m) => m.name).join('، ');
-    return SizedBox(
-      width: featured ? 228 : 148,
-      child: Semantics(
-        button: true,
-        label: c.name,
-        onTap: () => openCategory(context, c),
-        excludeSemantics: true,
-        child: Pressable(
-          onTap: () => openCategory(context, c),
+          curve: WDurations.curve,
           child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: bg, borderRadius: WRadius.all(WRadius.xl), border: border == null ? null : Border.all(color: border)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: featured ? 48 : 40,
-                  height: featured ? 48 : 40,
-                  decoration: BoxDecoration(color: iconBg, borderRadius: WRadius.all(featured ? 15 : 13)),
-                  child: Icon(categoryIcon(c.icon), color: iconFg, size: featured ? 26 : 22),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: widget.bg,
+              borderRadius: WRadius.all(26),
+              boxShadow: f ? [BoxShadow(color: WColors.lime.withValues(alpha: WColors.isDark ? 0.0 : 0.45), blurRadius: 22, offset: const Offset(0, 10))] : null,
+            ),
+            child: LayoutBuilder(builder: (context, box) {
+              final s = box.maxWidth;
+              return Stack(children: [
+                // الرسم بالنص السفلي فقط (ما يغطي العنوان ولا الزر)
+                PositionedDirectional(
+                  end: f ? -s * 0.03 : -s * 0.06,
+                  bottom: -s * 0.03,
+                  width: s * (f ? 0.86 : 0.8),
+                  child: AnimatedBuilder(
+                    animation: _bob,
+                    builder: (context, child) => Transform.translate(offset: Offset(0, f ? -3 * Curves.easeInOut.transform(_bob.value) : 0), child: child),
+                    child: Image.asset(widget.asset, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+                  ),
                 ),
-                const Spacer(),
-                if (stores.isNotEmpty) _Tag(open > 0 ? '$open مفتوح' : '${stores.length} محل', bg: tagBg, fg: fg),
-              ]),
-              const Spacer(),
-              Text(c.name, style: WText.h1.copyWith(fontSize: featured ? 26 : 19, height: 1.15, color: fg), maxLines: 2, overflow: TextOverflow.ellipsis),
-              if (featured && names.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(names, style: WText.caption.copyWith(color: sub), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ],
-              if (faces.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                _FaceStack(urls: faces, ring: bg),
-              ],
-            ]),
+                Padding(
+                  padding: EdgeInsets.all(s * 0.085),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(widget.title, style: WText.display.copyWith(fontSize: f ? 30 : 23, height: 1.05, color: titleColor)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // زر واضح للتكسي، وسهم صغير للبقية — بالزاوية العليا حتى ما يغطي الرسم
+                      f && s >= 150
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                              decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(13)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text('اطلب', style: WText.label.copyWith(color: WColors.lime, fontWeight: FontWeight.w700, fontSize: 13)),
+                                const SizedBox(width: 4),
+                                Icon(Icons.arrow_back_rounded, size: 15, color: WColors.lime),
+                              ]),
+                            )
+                          : Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(color: f ? WColors.ink : (widget.accent ?? WColors.blue), borderRadius: WRadius.all(11)),
+                              child: Icon(Icons.arrow_back_rounded, size: 17, color: f ? WColors.lime : WColors.white),
+                            ),
+                    ]),
+                    const SizedBox(height: 3),
+                    Text(widget.sub, style: WText.caption.copyWith(color: subColor, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ]),
+                ),
+              ]);
+            }),
           ),
         ),
       ),
@@ -799,83 +812,125 @@ class _ShelfCard extends StatelessWidget {
   }
 }
 
-/// صور محلات القسم متراكبة (حقيقية من الخادم)
-class _FaceStack extends StatelessWidget {
-  const _FaceStack({required this.urls, required this.ring});
-  final List<String> urls;
-  final Color ring;
+/// خدمات ثانية (حتى ما تضيع أي خدمة): مندوب، تكتك، الأعمال المنزلية
+class _MoreServices extends StatelessWidget {
+  const _MoreServices();
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 30,
-        width: 30.0 + (urls.length - 1) * 20,
-        child: Stack(children: [
-          for (var i = 0; i < urls.length; i++)
-            PositionedDirectional(
-              start: i * 20.0,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(color: ring, borderRadius: WRadius.all(10)),
-                child: WImage(urls[i], width: 26, height: 26, radius: 8),
+  Widget build(BuildContext context) {
+    final items = <(MerchantCategory, String, IconData)>[
+      if (_cat('courier') case final c?) (c, 'مندوب يشتري لك', Icons.directions_bike_rounded),
+      if (_cat('tuktuk') case final c?) (c, 'تكتك', Icons.electric_rickshaw_rounded),
+      for (final c in app.categories.where((c) => c.kind == CategoryKind.homeService)) (c, c.name, Icons.handyman_rounded),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: SizedBox(
+        height: 46,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, i) {
+            final (c, label, icon) = items[i];
+            return Semantics(
+              button: true,
+              label: label,
+              onTap: () => openCategory(context, c),
+              excludeSemantics: true,
+              child: Material(
+                color: WColors.surface,
+                borderRadius: WRadius.all(14),
+                child: InkWell(
+                  borderRadius: WRadius.all(14),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    openCategory(context, c);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(borderRadius: WRadius.all(14), border: Border.all(color: WColors.line)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(icon, size: 20, color: WColors.link),
+                      const SizedBox(width: 8),
+                      Text(label, style: WText.bodyStrong.copyWith(fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
               ),
-            ),
-        ]),
-      );
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
-class _HomeServicesBanner extends StatelessWidget {
-  const _HomeServicesBanner({required this.category, required this.services});
-  final MerchantCategory category;
-  final List<HomeService> services;
+/// شاشة "المحلات": كل أقسام المحلات (غير المطاعم) من قاعدة البيانات
+class ShopsHubScreen extends StatelessWidget {
+  const ShopsHubScreen({super.key});
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: category.name,
-        onTap: () => openCategory(context, category),
-        excludeSemantics: true,
-        child: Pressable(
-          onTap: () => openCategory(context, category),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.xl), border: Border.all(color: WColors.line)),
-            child: Row(children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(16)),
-                child: const Icon(Icons.handyman_rounded, color: WColors.white, size: 26),
+  Widget build(BuildContext context) {
+    final cats = _shopCategories;
+    final tints = [WColors.blueSoft, WColors.limeSoft, WColors.isDark ? const Color(0xFF0F2E27) : const Color(0xFFDDF4EC), WColors.isDark ? const Color(0xFF3A1F1A) : const Color(0xFFFFE8E2)];
+    final accents = [WColors.blue, WColors.limeDeep, WColors.mint, WColors.coral];
+    return Scaffold(
+      appBar: AppBar(title: const Text('المحلات')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(WSpace.page, 4, WSpace.page, 32), children: [
+        Text('شنو تحتاج؟', style: WText.h1),
+        Text('اختار القسم وشوف محلات منطقتك', style: WText.small),
+        const SizedBox(height: 16),
+        if (cats.isEmpty) const EmptyView(icon: Icons.storefront_outlined, title: 'ما اكو أقسام محلات مفعّلة'),
+        LayoutBuilder(builder: (context, box) {
+          final side = (box.maxWidth - 12) / 2;
+          return Wrap(spacing: 12, runSpacing: 12, children: [
+            for (var i = 0; i < cats.length; i++)
+              SizedBox(
+                width: side,
+                height: side * 0.72,
+                child: Semantics(
+                  button: true,
+                  label: cats[i].name,
+                  child: Pressable(
+                    onTap: () => openCategory(context, cats[i]),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: tints[i % 4], borderRadius: WRadius.all(22)),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(color: accents[i % 4], borderRadius: WRadius.all(13)),
+                          child: Icon(categoryIcon(cats[i].icon), color: WColors.white, size: 22),
+                        ),
+                        const Spacer(),
+                        Text(cats[i].name, style: WText.h3.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ]),
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(category.name, style: WText.h3.copyWith(fontWeight: FontWeight.w700)),
-                  if (services.isNotEmpty)
-                    Text(services.take(4).map((s) => s.name).join(' · '), style: WText.small, maxLines: 1, overflow: TextOverflow.ellipsis)
-                  else
-                    Text('فني يوصلك للبيت', style: WText.small),
-                ]),
-              ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: WColors.paper, borderRadius: WRadius.all(12)),
-                child: Icon(Icons.arrow_back_rounded, size: 18, color: WColors.fg),
-              ),
-            ]),
-          ),
-        ),
-      );
+          ]);
+        }),
+      ]),
+    );
+  }
 }
 
 // =====================================================================
 // 8) مقترح لك — بطاقات محلات كبيرة
 // =====================================================================
 class _Picks extends StatelessWidget {
-  const _Picks({required this.merchants, required this.nearby});
+  const _Picks({required this.merchants, required this.nearby, required this.onArea});
   final List<Merchant> merchants;
   final bool nearby;
+  final ValueChanged<String?> onArea;
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _SectionHead(nearby ? 'قريب منك' : 'مقترح لك', sub: nearby ? 'المفتوح والأقرب أولاً' : 'المفتوح أولاً'),
+        _SectionHead(nearby ? 'مطاعم ومحلات قريبة' : 'مطاعم ومحلات مقترحة', sub: nearby ? 'المفتوح والأقرب أولاً' : 'المفتوح أولاً'),
+        _AreaTabs(onSelect: onArea),
+        const SizedBox(height: 8),
         SizedBox(
           height: 252,
           child: ListView.separated(
@@ -906,8 +961,8 @@ class _StoreCard extends StatelessWidget {
                 child: Stack(clipBehavior: Clip.none, children: [
                   Positioned.fill(child: WImage(m.coverUrl, radius: WRadius.xl, fallbackIcon: categoryIcon(m.categoryId), fallbackColor: WColors.surfaceAlt)),
                   if (!m.isOpenNow) Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: WColors.paper.withValues(alpha: 0.5), borderRadius: WRadius.all(WRadius.xl)))),
-                  PositionedDirectional(top: 12, start: 12, child: m.isOpenNow ? const _Tag('مفتوح', bg: WColors.ink, fg: WColors.lime) : _Tag('مسكّر', bg: WColors.surface, fg: WColors.fg)),
-                  if (m.deliveryFee == 0) const PositionedDirectional(top: 12, end: 12, child: _Tag('توصيل مجاني', bg: WColors.lime, fg: WColors.ink)),
+                  PositionedDirectional(top: 12, start: 12, child: m.isOpenNow ? _Tag('مفتوح', bg: WColors.ink, fg: WColors.lime) : _Tag('مسكّر', bg: WColors.surface, fg: WColors.fg)),
+                  if (m.deliveryFee == 0) PositionedDirectional(top: 12, end: 12, child: _Tag('توصيل مجاني', bg: WColors.lime, fg: WColors.ink)),
                   PositionedDirectional(
                     bottom: -18,
                     start: 14,
@@ -992,7 +1047,7 @@ class _Leaderboard extends StatelessWidget {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const _Tag('الأكثر طلباً', bg: WColors.ink, fg: WColors.lime),
+                    _Tag('الأكثر طلباً', bg: WColors.ink, fg: WColors.lime),
                     const SizedBox(height: 6),
                     Text(top.name, style: WText.h2.copyWith(color: WColors.ink, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                     Text('${top.orderCount} طلب${top.ratingCount > 0 ? ' · ★ ${top.ratingAvg.toStringAsFixed(1)}' : ''}', style: WText.small.copyWith(color: const Color(0xFF3B4A12))),
@@ -1046,7 +1101,7 @@ class _FreeDelivery extends StatelessWidget {
                           Text(m.name, style: WText.bodyStrong.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 4),
                           Row(children: [
-                            const _Tag('مجاني', bg: WColors.lime, fg: WColors.ink),
+                            _Tag('مجاني', bg: WColors.lime, fg: WColors.ink),
                             const SizedBox(width: 6),
                             Flexible(child: Text('${m.etaMinutes(d ?? 2)} د${d == null ? '' : ' · ${kmAr(d)}'}', style: WText.caption, maxLines: 1)),
                           ]),

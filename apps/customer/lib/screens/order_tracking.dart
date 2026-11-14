@@ -212,7 +212,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(14)),
-            child: const Icon(Icons.two_wheeler_rounded, color: WColors.lime),
+            child: Icon(Icons.two_wheeler_rounded, color: WColors.lime),
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -107,7 +107,7 @@ class _AdminShellState extends State<AdminShell> {
             selectedIndex: _tab,
             onDestinationSelected: go,
             labelType: NavigationRailLabelType.all,
-            leading: const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: WaselMark(size: 36, route: WColors.lime, ring: WColors.white)),
+            leading: Padding(padding: EdgeInsets.symmetric(vertical: 18), child: WaselMark(size: 36, route: WColors.lime, ring: WColors.white)),
             destinations: [
               for (final d in dests) NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3)),
             ],

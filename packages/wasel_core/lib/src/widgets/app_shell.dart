@@ -109,7 +109,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(children: [
-                        const Icon(Icons.wifi_off_rounded, color: WColors.lime, size: 18),
+                        Icon(Icons.wifi_off_rounded, color: WColors.lime, size: 18),
                         const SizedBox(width: 8),
                         Expanded(child: Text('ما اكو إنترنت. راح نكمّل تلقائياً لما يرجع الاتصال.', style: WText.caption.copyWith(color: WColors.white))),
                       ]),
@@ -146,7 +146,7 @@ class SplashView extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Image.asset('assets/brand/splash-lockup.png', package: 'wasel_core', width: 180),
             const SizedBox(height: 36),
-            const SizedBox(width: 120, child: LinearProgressIndicator(minHeight: 3, color: WColors.lime, backgroundColor: WColors.inkSurface)),
+            SizedBox(width: 120, child: LinearProgressIndicator(minHeight: 3, color: WColors.lime, backgroundColor: WColors.inkSurface)),
             if (caption != null) ...[const SizedBox(height: 12), Text(caption!, style: WText.caption.copyWith(color: WColors.inkFaint))],
           ]),
         ),

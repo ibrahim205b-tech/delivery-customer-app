@@ -462,7 +462,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                           separatorBuilder: (_, __) => const Divider(indent: 52),
                           itemBuilder: (context, i) => ListTile(
                             dense: true,
-                            leading: const Icon(Icons.place_outlined, color: WColors.ink),
+                            leading: Icon(Icons.place_outlined, color: WColors.ink),
                             title: Text(_results[i].label, maxLines: 2, overflow: TextOverflow.ellipsis),
                             onTap: () {
                               FocusScope.of(context).unfocus();

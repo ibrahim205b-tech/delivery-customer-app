@@ -190,7 +190,7 @@ ThemeData buildWaselTheme() {
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: WColors.night,
       indicatorColor: WColors.lime,
-      selectedIconTheme: const IconThemeData(color: WColors.ink),
+      selectedIconTheme: IconThemeData(color: WColors.ink),
       unselectedIconTheme: const IconThemeData(color: Color(0xFF9A9EA3)),
       selectedLabelTextStyle: WText.label.copyWith(color: WColors.white),
       unselectedLabelTextStyle: WText.label.copyWith(color: const Color(0xFF9A9EA3)),
@@ -203,7 +203,7 @@ ThemeData buildWaselTheme() {
     radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.link : WColors.inkFaint)),
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? WColors.lime : Colors.transparent),
-      checkColor: const WidgetStatePropertyAll(WColors.ink),
+      checkColor: WidgetStatePropertyAll(WColors.ink),
       side: BorderSide(color: WColors.inkMuted, width: 1.6),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: WColors.link, linearTrackColor: WColors.line, circularTrackColor: Colors.transparent),

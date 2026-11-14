@@ -87,7 +87,7 @@ class _WaselNav extends StatelessWidget {
             child: Container(
               height: 64,
               padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(22)),
+              decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(22), border: Border.all(color: WColors.line), boxShadow: WShadow.soft),
               child: Row(children: [
                 for (var i = 0; i < items.length; i++)
                   Expanded(
@@ -108,13 +108,13 @@ class _WaselNav extends StatelessWidget {
                           duration: WDurations.base,
                           curve: WDurations.curve,
                           margin: const EdgeInsets.symmetric(horizontal: 2),
-                          decoration: BoxDecoration(color: i == index ? WColors.lime : Colors.transparent, borderRadius: WRadius.all(16)),
+                          decoration: BoxDecoration(color: i == index ? WColors.night : Colors.transparent, borderRadius: WRadius.all(16)),
                           child: Center(
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.ink : const Color(0xFF9A9EA3)),
+                              Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.white : WColors.inkFaint),
                               if (i == index) ...[
                                 const SizedBox(width: 6),
-                                Flexible(child: Text(items[i].$3, maxLines: 1, overflow: TextOverflow.fade, softWrap: false, style: WText.label.copyWith(color: WColors.ink, fontWeight: FontWeight.w700))),
+                                Flexible(child: Text(items[i].$3, maxLines: 1, overflow: TextOverflow.fade, softWrap: false, style: WText.label.copyWith(color: WColors.white, fontWeight: FontWeight.w700))),
                               ],
                             ]),
                           ),

@@ -107,10 +107,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderColor: Colors.transparent,
         onTap: widget.onOpenMerchants,
         child: Row(children: [
-          const Icon(Icons.pending_actions_rounded, color: WColors.ink),
+          Icon(Icons.pending_actions_rounded, color: WColors.ink),
           const SizedBox(width: 10),
           Expanded(child: Text('$count محل بانتظار الاعتماد', style: WText.h3.copyWith(color: WColors.ink))),
-          const Icon(Icons.arrow_back_rounded, color: WColors.ink),
+          Icon(Icons.arrow_back_rounded, color: WColors.ink),
         ]),
       );
 
@@ -264,7 +264,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             width: 96,
             height: 96,
             decoration: BoxDecoration(color: WColors.night, borderRadius: BorderRadiusDirectional.horizontal(start: Radius.circular(WRadius.lg))),
-            child: const Icon(Icons.map_rounded, color: WColors.lime, size: 36),
+            child: Icon(Icons.map_rounded, color: WColors.lime, size: 36),
           ),
           const SizedBox(width: 14),
           Expanded(
