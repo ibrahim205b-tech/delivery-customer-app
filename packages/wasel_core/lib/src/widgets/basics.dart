@@ -581,7 +581,7 @@ class WaselWordmark extends StatelessWidget {
       Image.asset(onDark || WColors.isDark ? 'assets/brand/logo-ar-white.png' : 'assets/brand/logo-ar-ink.png', package: 'wasel_core', height: height);
 }
 
-/// العلامة مرسومة بالكود: شيفرون "<" (الحركة للأمام). نفس هندسة brand/tools/build_brand.py
+/// العلامة مرسومة بالكود: شيفرون ">" البرتقالي من شعار «واصل». نفس هندسة brand/tools/build_brand.py
 class WaselMark extends StatelessWidget {
   const WaselMark({super.key, this.size = 48, this.route, this.ring});
   final double size;
@@ -599,19 +599,17 @@ class _MarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.width / 100;
+    // نفس هندسة brand/tools/build_brand.py (الإصدار 7): شيفرون ">" عريض، أطرافه مقطوعة ورأسه مدوّر
     final p = Paint()
       ..color = route
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12.5 * s
-      ..strokeCap = StrokeCap.round;
-    // نفس هندسة brand/tools/build_brand.py (الإصدار 6): شيفرون "<" عريض بزوايا مدوّرة
-    p
-      ..strokeWidth = 19 * s
+      ..strokeWidth = 24 * s
+      ..strokeCap = StrokeCap.butt
       ..strokeJoin = StrokeJoin.round;
     final path = Path()
-      ..moveTo(66 * s, 16 * s)
-      ..lineTo(30 * s, 50 * s)
-      ..lineTo(66 * s, 84 * s);
+      ..moveTo(30 * s, 14 * s)
+      ..lineTo(70 * s, 50 * s)
+      ..lineTo(30 * s, 86 * s);
     canvas.drawPath(path, p);
   }
 

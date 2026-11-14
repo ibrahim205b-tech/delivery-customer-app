@@ -78,33 +78,33 @@ class WPalette {
   /// البرتقالي الغامق = العلامة والأسطح المميِّزة والروابط، الأصفر = الفعل السريع والتكسي، والإسبريسو للنص.
   static const customer = WPalette(
     name: 'customer',
-    ink: Color(0xFF24160E), // إسبريسو — النص الأساسي، ونص فوق الأصفر
-    lime: Color(0xFFFFC53D), // أصفر مشمس — تعبئة الأزرار السريعة والتكسي
-    blue: Color(0xFFB23C0B), // برتقالي واصل الغامق — الروابط والتعبئات بنص أبيض
-    graphite: Color(0xFF4A3326),
-    inkSurface: Color(0xFFC9531B), // سطح فوق البرتقالي
-    limeDeep: Color(0xFFC98F00),
-    night: Color(0xFFB23C0B), // الأسطح المميِّزة = برتقالي واصل الغامق
-    nightDark: Color(0xFF8C2E07),
-    fgDark: Color(0xFFFBF1E8),
-    linkDark: Color(0xFFFF9B62),
-    paper: Color(0xFFFFF8F2), // أبيض دافئ
-    paperDark: Color(0xFF140C08),
-    surfaceDark: Color(0xFF1F140E),
-    surfaceAlt: Color(0xFFF8ECE1),
-    surfaceAltDark: Color(0xFF2A1C14),
-    line: Color(0xFFF0E1D3),
-    lineDark: Color(0xFF3A281D),
-    inkMuted: Color(0xFF7B6656),
-    inkMutedDark: Color(0xFFC2AE9F),
-    inkFaint: Color(0xFFB39E8E),
-    inkFaintDark: Color(0xFF85705F),
-    limeSoft: Color(0xFFFFF1CC),
-    limeSoftDark: Color(0xFF3A2B08),
-    blueSoft: Color(0xFFFFE6D6),
-    blueSoftDark: Color(0xFF3D1C0C),
-    coral: Color(0xFFE8432E), // الطعام
-    mint: Color(0xFF1F9A73), // الأغراض
+    ink: Color(0xFF0B1B33),
+    lime: Color(0xFFFD5A17),
+    blue: Color(0xFF003060),
+    graphite: Color(0xFF23344F),
+    inkSurface: Color(0xFF0A2A55),
+    limeDeep: Color(0xFFD9470B),
+    night: Color(0xFF003060),
+    nightDark: Color(0xFF0A2A55),
+    fgDark: Color(0xFFF2F5FA),
+    linkDark: Color(0xFFFF8A57),
+    paper: Color(0xFFF5F7FB),
+    paperDark: Color(0xFF071324),
+    surfaceDark: Color(0xFF0D1D35),
+    surfaceAlt: Color(0xFFEAF0F8),
+    surfaceAltDark: Color(0xFF142843),
+    line: Color(0xFFE1E8F2),
+    lineDark: Color(0xFF22385A),
+    inkMuted: Color(0xFF5A6B85),
+    inkMutedDark: Color(0xFFA7B6CC),
+    inkFaint: Color(0xFF98A6BA),
+    inkFaintDark: Color(0xFF6B7C96),
+    limeSoft: Color(0xFFFFE7DC),
+    limeSoftDark: Color(0xFF3D1A0A),
+    blueSoft: Color(0xFFE1EAF7),
+    blueSoftDark: Color(0xFF10294D),
+    coral: Color(0xFFE8432E),
+    mint: Color(0xFF1F9A73),
   );
 }
 

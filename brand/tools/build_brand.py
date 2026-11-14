@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-مولّد الهوية البصرية لواصل | WASEL — الإصدار الثاني (Bold Contemporary)
---------------------------------------------------------------------------
-العلامة: مسار متصل على شكل موجة (W) يبدأ من نقطة وينتهي بحلقة وصول.
-الفكرة: الحركة + المسار + لحظة الوصول. بدون دبوس خرائط وبدون أسهم.
+مولّد الهوية البصرية لواصل | WASEL — الإصدار 7
+------------------------------------------------
+الشعار: كلمة «واصل» بخط عريض مائل قليلاً + شيفرون برتقالي «>» يمين الكلمة، وتحتها WASEL بحروف متباعدة.
+الألوان: كحلي #003060 · برتقالي #FD5A17 · أبيض.
 
-الخط: Alexandria (SIL OFL) للعربي والإنگليزي، محوّل لمسارات SVG عبر HarfBuzz.
+الخطوط (SIL OFL، بمجلد brand/fonts): Alexandria ExtraBold للعربي، Montserrat ExtraBold Italic للإنگليزي.
+تتحوّل لمسارات SVG عبر HarfBuzz، فالملفات الناتجة ما تحتاج الخط.
 
 الاستخدام:
   pip install uharfbuzz fonttools
-  python3 brand/tools/build_brand.py --font Alexandria_700Bold.ttf
-  node brand/tools/render_png.js
+  python3 brand/tools/build_brand.py
+  NODE_PATH=$(npm root -g) node brand/tools/render_png.js
 """
-import argparse
+import math
 import pathlib
 import shutil
 
@@ -21,24 +22,27 @@ from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+OUT = ROOT / "svg"
+AR_FONT = ROOT / "fonts" / "Alexandria-ExtraBold.ttf"
+EN_FONT = ROOT / "fonts" / "Montserrat-ExtraBoldItalic.ttf"
+
+NAVY = "#003060"
+ORANGE = "#FD5A17"
+WHITE = "#FFFFFF"
 INK = "#17191B"
 LIME = "#C7F464"
-PAPER = "#F3F0E8"
 BLUE = "#3979E8"
-WHITE = "#FFFFFF"
-GRAPHITE = "#2E3135"
 
-OUT = pathlib.Path(__file__).resolve().parent.parent / "svg"
-
-# العلامة (الإصدار 6): شيفرون "<" عريض بزوايا مدوّرة — الحركة للأمام باتجاه القراءة العربية.
-# داخل مربع 100×100 (نفسه بالكود: WaselMark في wasel_core)
-CHEVRON = "M66 16 L30 50 L66 84"
-ORANGE_DEEP = "#B23C0B"   # برتقالي غامق جداً — لون العلامة
-CREAM = "#FFF8F2"
+# العلامة: شيفرون ">" عريض، أطرافه مقطوعة ورأسه مدوّر قليلاً — داخل مربع 100×100
+# (نفس الهندسة بالكود: _MarkPainter في wasel_core)
+CHEVRON = "M30 14 L70 50 L30 86"
+CHEVRON_SW = 24
+SLANT = math.tan(math.radians(7))  # ميلان الكلمة العربية
 
 
-def text_path(font_path, text, size, rtl, tracking=0.0):
-    blob = hb.Blob.from_file_path(font_path)
+def text_path(font_path, text, size, rtl, tracking=0.0, slant=0.0):
+    blob = hb.Blob.from_file_path(str(font_path))
     font = hb.Font(hb.Face(blob))
     buf = hb.Buffer()
     buf.add_str(text)
@@ -54,7 +58,7 @@ def text_path(font_path, text, size, rtl, tracking=0.0):
     pen = SVGPathPen(gs)
     x = 0.0
     for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-        t = (scale, 0, 0, -scale, (x + pos.x_offset) * scale, -pos.y_offset * scale)
+        t = (scale, 0, slant * scale, -scale, (x + pos.x_offset) * scale, -pos.y_offset * scale)
         gs[order[info.codepoint]].draw(TransformPen(pen, t))
         x += pos.x_advance + tracking * upem
     x -= tracking * upem
@@ -63,17 +67,16 @@ def text_path(font_path, text, size, rtl, tracking=0.0):
     bp = BoundsPen(gs)
     x2 = 0.0
     for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-        t = (scale, 0, 0, -scale, (x2 + pos.x_offset) * scale, -pos.y_offset * scale)
+        t = (scale, 0, slant * scale, -scale, (x2 + pos.x_offset) * scale, -pos.y_offset * scale)
         gs[order[info.codepoint]].draw(TransformPen(bp, t))
         x2 += pos.x_advance + tracking * upem
     xmin, ymin, xmax, ymax = bp.bounds
     return pen.getCommands(), (xmin, ymin, xmax, ymax)
 
 
-def mark(route, ring=None, sw=19):
-    # ring محفوظ للتوافق؛ العلامة شيفرون واحد بلون واحد
-    return f'<path d="{CHEVRON}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round"/>'
-
+def mark(color, ring=None, sw=CHEVRON_SW):
+    # ring محفوظ للتوافق مع الاستدعاءات القديمة
+    return f'<path d="{CHEVRON}" fill="none" stroke="{color}" stroke-width="{sw}" stroke-linecap="butt" stroke-linejoin="round"/>'
 
 
 def svg(w, h, body, bg=None, rx=0):
@@ -88,87 +91,83 @@ def write(name, content):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--font", required=True, help="Alexandria Bold TTF")
-    a = ap.parse_args()
-
     if OUT.exists():
         shutil.rmtree(OUT)
 
-    ar_d, (axmin, aymin, axmax, aymax) = text_path(a.font, "واصل", 120, rtl=True)
-    en_d, (exmin, eymin, exmax, eymax) = text_path(a.font, "WASEL", 44, rtl=False, tracking=0.08)
+    ar_d, (axmin, aymin, axmax, aymax) = text_path(AR_FONT, "واصل", 120, rtl=True, slant=SLANT)
+    en_d, (exmin, eymin, exmax, eymax) = text_path(EN_FONT, "WASEL", 38, rtl=False, tracking=0.42)
     ar_w, ar_h = axmax - axmin, aymax - aymin
     en_w, en_h = exmax - exmin, eymax - eymin
 
-    # ---- العلامة ----
-    write("mark-orange.svg", svg(100, 100, mark(ORANGE_DEEP)))
-    write("mark-ink.svg", svg(100, 100, mark(INK)))
-    write("mark-white.svg", svg(100, 100, mark(WHITE)))
+    def place(d, xmin, ymin, x, y, fill, extra=""):
+        return f'<path transform="translate({x - xmin:.2f},{y - ymin:.2f})" d="{d}" fill="{fill}"{extra}/>'
 
-    def place_text(d, xmin, ymin, x, y):
-        # يضع النص بحيث تبدأ حدوده الفعلية عند (x, y)
-        return f'<path transform="translate({x - xmin:.2f},{y - ymin:.2f})" d="{d}"'
+    # الشيفرون بالشعار: ارتفاعه المرئي ≈ 80% من ارتفاع الكلمة، يبدأ فوق رأس الألف بقليل
+    ms = ar_h * 0.80 / 0.86          # 86% من مربع العلامة مرئي
+    ch_x0, ch_x1 = 0.20 * ms, 0.80 * ms  # الحدود الأفقية المرئية تقريباً
+    gap = ar_h * 0.07
 
-    # ---- الشعار العربي الأفقي: "<واصل" — الشيفرون يسار الكلمة ----
-    def lockup_ar(text_c, route_c, ring_c, bg=None):
-        # الشيفرون يشغل من 20.5% إلى 75.5% من مربعه؛ نكبّره لارتفاع الحروف ونقصّ الفراغ
-        pad, gap = 28, 14
-        ms = ar_h * 1.18
-        cw = ms * 0.55
-        h = max(ar_h, ms * 0.78) + pad * 2
-        w = pad + cw + gap + ar_w + pad
-        body = (
-            f'<g transform="translate({pad - ms * 0.205:.2f},{(h - ms) / 2:.2f}) scale({ms / 100:.4f})">{mark(route_c, ring_c, sw=21)}</g>'
-            + place_text(ar_d, axmin, aymin, pad + cw + gap, (h - ar_h) / 2) + f' fill="{text_c}"/>'
-        )
+    def word_group(x, y, text_c, chev_c):
+        """الكلمة + الشيفرون، تبدأ حدودهم من (x, y). يرجع (svg, w, h)."""
+        cy = y - ar_h * 0.06 - 0.07 * ms
+        cx = x + ar_w + gap - ch_x0
+        body = place(ar_d, axmin, aymin, x, y, text_c)
+        body += f'<g transform="translate({cx:.2f},{cy:.2f}) scale({ms / 100:.4f})">{mark(chev_c)}</g>'
+        return body, ar_w + gap + (ch_x1 - ch_x0), ar_h
+
+    def lockup(text_c, chev_c, en_c=None, bg=None, pad=30):
+        wg_w = ar_w + gap + (ch_x1 - ch_x0)
+        top = pad + ar_h * 0.06
+        h = top + ar_h + pad
+        if en_c:
+            en_gap = ar_h * 0.10
+            h += en_gap + en_h
+        w = wg_w + pad * 2
+        body, _, _ = word_group(pad, top, text_c, chev_c)
+        if en_c:
+            # WASEL في منتصف الكلمة العربية
+            body += place(en_d, exmin, eymin, pad + (ar_w - en_w) / 2, top + ar_h + en_gap, en_c)
         return svg(round(w), round(h), body, bg, rx=32 if bg else 0)
 
-    write("logo-ar-ink.svg", lockup_ar(INK, ORANGE_DEEP, None))
-    write("logo-ar-white.svg", lockup_ar(WHITE, "#FF9A5C", None))
-    write("logo-ar-on-ink.svg", lockup_ar(WHITE, "#FF9A5C", None, bg=INK))
-    write("logo-ar-on-orange.svg", lockup_ar(WHITE, WHITE, None, bg=ORANGE_DEEP))
-    write("logo-ar-on-cream.svg", lockup_ar(INK, ORANGE_DEEP, None, bg=CREAM))
+    # ---- العلامة وحدها ----
+    write("mark-orange.svg", svg(100, 100, mark(ORANGE)))
+    write("mark-navy.svg", svg(100, 100, mark(NAVY)))
+    write("mark-white.svg", svg(100, 100, mark(WHITE)))
 
-    # ---- الشعار الإنگليزي: [العلامة][WASEL] ----
-    def lockup_en(text_c, route_c, ring_c, bg=None):
-        pad, ms, gap = 20, 64, 16
-        h = ms + pad * 2
-        w = pad + ms + gap + en_w + pad
-        body = (
-            f'<g transform="translate({pad},{pad}) scale({ms / 100})">{mark(route_c, ring_c)}</g>'
-            + place_text(en_d, exmin, eymin, pad + ms + gap, (h - en_h) / 2) + f' fill="{text_c}"/>'
-        )
-        return svg(round(w), round(h), body, bg, rx=24 if bg else 0)
+    # ---- الشعار: الكلمة + الشيفرون ----
+    write("logo-ar-ink.svg", lockup(NAVY, ORANGE))          # على خلفية فاتحة
+    write("logo-ar-white.svg", lockup(WHITE, ORANGE))       # على خلفية داكنة
+    write("logo-ar-on-navy.svg", lockup(WHITE, ORANGE, bg=NAVY))
+    write("logo-ar-on-orange.svg", lockup(WHITE, WHITE, bg=ORANGE))
 
-    write("logo-en-ink.svg", lockup_en(INK, ORANGE_DEEP, None))
-    write("logo-en-white.svg", lockup_en(WHITE, "#FF9A5C", None))
+    # ---- الشعار الكامل مع WASEL ----
+    write("logo-full-ink.svg", lockup(NAVY, ORANGE, en_c=NAVY))
+    write("logo-full-white.svg", lockup(WHITE, ORANGE, en_c=WHITE))
+    write("logo-full-on-navy.svg", lockup(WHITE, ORANGE, en_c=WHITE, bg=NAVY))
+    write("splash-lockup.svg", lockup(WHITE, ORANGE, en_c=WHITE, pad=20))
 
-    # ---- شاشة البداية: علامة كبيرة + واصل + WASEL ----
-    pad, ms = 40, 150
-    w = max(ar_w, en_w, ms) + pad * 2
-    y_ar = pad + ms + 30
-    y_en = y_ar + ar_h + 22
-    h = y_en + en_h + pad
-    body = (
-        f'<g transform="translate({(w - ms) / 2},{pad}) scale({ms / 100})">{mark(WHITE)}</g>'
-        + place_text(ar_d, axmin, aymin, (w - ar_w) / 2, y_ar) + f' fill="{WHITE}"/>'
-        + place_text(en_d, exmin, eymin, (w - en_w) / 2, y_en) + f' fill="{WHITE}" fill-opacity="0.75"/>'
-    )
-    write("splash-lockup.svg", svg(round(w), round(h), body))
+    # ---- أيقونات التطبيقات (1024) ----
+    def icon_word(width_pct):
+        wg_w = ar_w + gap + (ch_x1 - ch_x0)
+        k = 1024 * width_pct / 100 / wg_w
+        body, _, _ = word_group(0, 0, WHITE, ORANGE)
+        tx = (1024 - wg_w * k) / 2
+        ty = (1024 - ar_h * k) / 2
+        return f'<g transform="translate({tx:.2f},{ty:.2f}) scale({k:.4f})">{body}</g>'
 
-    # ---- أيقونات التطبيقات (1024): كاملة + طبقة أمامية للأيقونة المتكيّفة ----
-    apps = {
-        "customer": (CREAM, ORANGE_DEEP, None),   # الزبون: كريمي + شيفرون برتقالي غامق
-        "merchant": (LIME, INK, BLUE),    # التاجر: ليموني + حبر
-        "admin": (BLUE, WHITE, LIME),     # الإدارة: أزرق + أبيض
-    }
-    for app, (bg, route_c, ring_c) in apps.items():
-        def body(pct):
-            s = 1024 * pct / 100
-            off = (1024 - s) / 2
-            return f'<g transform="translate({off},{off}) scale({s / 100})">{mark(route_c, ring_c)}</g>'
-        write(f"icon-{app}-full.svg", svg(1024, 1024, body(64), bg))
-        write(f"icon-{app}-foreground.svg", svg(1024, 1024, body(48)))
+    def icon_mark(color, pct):
+        s = 1024 * pct / 100
+        off = (1024 - s) / 2
+        return f'<g transform="translate({off + s * 0.02:.2f},{off}) scale({s / 100})">{mark(color)}</g>'
+
+    # الزبون: كحلي + «واصل» أبيض + شيفرون برتقالي (نفس الشعار)
+    write("icon-customer-full.svg", svg(1024, 1024, icon_word(74), NAVY))
+    write("icon-customer-foreground.svg", svg(1024, 1024, icon_word(54)))
+    write("icon-customer-background.svg", svg(1024, 1024, "", NAVY))
+    # التاجر والإدارة: نفس الشيفرون بألوانهم
+    for app, (bg, c) in {"merchant": (LIME, INK), "admin": (BLUE, WHITE)}.items():
+        write(f"icon-{app}-full.svg", svg(1024, 1024, icon_mark(c, 60), bg))
+        write(f"icon-{app}-foreground.svg", svg(1024, 1024, icon_mark(c, 44)))
         write(f"icon-{app}-background.svg", svg(1024, 1024, "", bg))
 
 

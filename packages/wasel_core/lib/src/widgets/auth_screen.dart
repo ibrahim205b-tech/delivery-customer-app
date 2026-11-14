@@ -171,8 +171,11 @@ class _RouteLinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
+    // معكوس أفقياً: يبدأ من اليسار وينتهي يمين بشيفرون ">" مثل الشعار
+    canvas.save();
+    canvas.translate(w, 0);
+    canvas.scale(-1, 1);
     final path = Path()..moveTo(w - 4, h * 0.3);
-    // RTL: يبدأ من اليمين وينتهي يسار
     final seg = (w - 40) / 4;
     var x = w - 4;
     for (var i = 0; i < 4; i++) {
@@ -182,10 +185,11 @@ class _RouteLinePainter extends CustomPainter {
       x = nx;
     }
     canvas.drawPath(path, p);
-    // النهاية: شيفرون العلامة "<" (الوصول للأمام)
+    // النهاية: شيفرون العلامة (بعد العكس يصير ">")
     final y = h * 0.3, r = h * 0.32;
     canvas.drawPath(Path()..moveTo(x - 6 + r, y - r)..lineTo(x - 6, y)..lineTo(x - 6 + r, y + r), p..strokeWidth = 6..strokeJoin = StrokeJoin.round);
     canvas.drawCircle(Offset(w - 4, h * 0.3), 4, Paint()..color = WColors.lime);
+    canvas.restore();
   }
 
   @override
