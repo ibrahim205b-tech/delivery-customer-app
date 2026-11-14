@@ -105,13 +105,20 @@ class _WaselNav extends StatelessWidget {
                           onSelect(i);
                         },
                         child: AnimatedContainer(
-                          duration: WDurations.base,
-                          curve: WDurations.curve,
+                          duration: const Duration(milliseconds: 380),
+                          curve: Curves.easeOutBack,
                           margin: const EdgeInsets.symmetric(horizontal: 2),
                           decoration: BoxDecoration(color: i == index ? WColors.night : Colors.transparent, borderRadius: WRadius.all(16)),
                           child: Center(
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.white : WColors.inkFaint),
+                              TweenAnimationBuilder<double>(
+                                key: ValueKey('nav-$i-${i == index}'),
+                                tween: Tween(begin: i == index ? 0.6 : 1, end: 1),
+                                duration: const Duration(milliseconds: 520),
+                                curve: Curves.elasticOut,
+                                builder: (context, v, child) => Transform.scale(scale: v, child: child),
+                                child: Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.white : WColors.inkFaint),
+                              ),
                               if (i == index) ...[
                                 const SizedBox(width: 6),
                                 Flexible(child: Text(items[i].$3, maxLines: 1, overflow: TextOverflow.fade, softWrap: false, style: WText.label.copyWith(color: WColors.white, fontWeight: FontWeight.w700))),

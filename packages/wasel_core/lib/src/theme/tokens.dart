@@ -74,35 +74,37 @@ class WPalette {
     blueSoftDark: Color(0xFF16264A),
   );
 
-  /// هوية تطبيق الزبون الجديدة: نيلي واصل + أصفر التكسي، على خلفية سحابية هادئة.
-  /// النيلي = الثقة والحركة (الأسطح المميِّزة والروابط)، الأصفر = الفعل والطاقة (الأزرار والتكسي).
+  /// هوية تطبيق الزبون (الإصدار 6): برتقالي واصل الغامق + أصفر مشمس، على أبيض دافئ.
+  /// البرتقالي الغامق = العلامة والأسطح المميِّزة والروابط، الأصفر = الفعل السريع والتكسي، والإسبريسو للنص.
   static const customer = WPalette(
     name: 'customer',
-    ink: Color(0xFF15142B), // نيلي شبه أسود
-    lime: Color(0xFFFFC83A), // أصفر التكسي — تعبئة نصها نيلي داكن
-    blue: Color(0xFF4433E0), // نيلي واصل — الروابط والتعبئات بنص أبيض
-    graphite: Color(0xFF34325A),
-    inkSurface: Color(0xFF5546EA), // سطح فوق النيلي
-    limeDeep: Color(0xFFC79000),
-    night: Color(0xFF4433E0), // الأسطح المميِّزة = نيلي واصل
-    nightDark: Color(0xFF2E2694),
-    fgDark: Color(0xFFF1F0FA),
-    linkDark: Color(0xFFA79FFF),
-    paper: Color(0xFFF5F4FA), // خلفية سحابية
-    paperDark: Color(0xFF0E0D1C),
-    surfaceDark: Color(0xFF1A1930),
-    surfaceAlt: Color(0xFFECEAF6),
-    surfaceAltDark: Color(0xFF24223D),
-    line: Color(0xFFE4E2F0),
-    lineDark: Color(0xFF302E4D),
-    inkMuted: Color(0xFF68668A),
-    inkMutedDark: Color(0xFFB0AECB),
-    inkFaint: Color(0xFFA2A0BC),
-    inkFaintDark: Color(0xFF75738F),
-    limeSoft: Color(0xFFFFF3D1),
-    limeSoftDark: Color(0xFF3A2F0E),
-    blueSoft: Color(0xFFE9E7FD),
-    blueSoftDark: Color(0xFF231F57),
+    ink: Color(0xFF24160E), // إسبريسو — النص الأساسي، ونص فوق الأصفر
+    lime: Color(0xFFFFC53D), // أصفر مشمس — تعبئة الأزرار السريعة والتكسي
+    blue: Color(0xFFB23C0B), // برتقالي واصل الغامق — الروابط والتعبئات بنص أبيض
+    graphite: Color(0xFF4A3326),
+    inkSurface: Color(0xFFC9531B), // سطح فوق البرتقالي
+    limeDeep: Color(0xFFC98F00),
+    night: Color(0xFFB23C0B), // الأسطح المميِّزة = برتقالي واصل الغامق
+    nightDark: Color(0xFF8C2E07),
+    fgDark: Color(0xFFFBF1E8),
+    linkDark: Color(0xFFFF9B62),
+    paper: Color(0xFFFFF8F2), // أبيض دافئ
+    paperDark: Color(0xFF140C08),
+    surfaceDark: Color(0xFF1F140E),
+    surfaceAlt: Color(0xFFF8ECE1),
+    surfaceAltDark: Color(0xFF2A1C14),
+    line: Color(0xFFF0E1D3),
+    lineDark: Color(0xFF3A281D),
+    inkMuted: Color(0xFF7B6656),
+    inkMutedDark: Color(0xFFC2AE9F),
+    inkFaint: Color(0xFFB39E8E),
+    inkFaintDark: Color(0xFF85705F),
+    limeSoft: Color(0xFFFFF1CC),
+    limeSoftDark: Color(0xFF3A2B08),
+    blueSoft: Color(0xFFFFE6D6),
+    blueSoftDark: Color(0xFF3D1C0C),
+    coral: Color(0xFFE8432E), // الطعام
+    mint: Color(0xFF1F9A73), // الأغراض
   );
 }
 

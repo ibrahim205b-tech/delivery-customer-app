@@ -581,14 +581,14 @@ class WaselWordmark extends StatelessWidget {
       Image.asset(onDark || WColors.isDark ? 'assets/brand/logo-ar-white.png' : 'assets/brand/logo-ar-ink.png', package: 'wasel_core', height: height);
 }
 
-/// العلامة مرسومة بالكود: مسار متموّج (W) ينتهي بحلقة وصول. نفس هندسة brand/tools/build_brand.py
+/// العلامة مرسومة بالكود: شيفرون "<" (الحركة للأمام). نفس هندسة brand/tools/build_brand.py
 class WaselMark extends StatelessWidget {
   const WaselMark({super.key, this.size = 48, this.route, this.ring});
   final double size;
   final Color? route;
   final Color? ring;
   @override
-  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route ?? WColors.fg, ring ?? WColors.blue));
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _MarkPainter(route ?? WColors.night, ring ?? WColors.blue));
 }
 
 class _MarkPainter extends CustomPainter {
@@ -604,15 +604,15 @@ class _MarkPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12.5 * s
       ..strokeCap = StrokeCap.round;
-    // نفس هندسة brand/tools/build_brand.py (الإصدار 3): W كمسار، والطرف الأخير يلف ويصير حلقة الوصول
+    // نفس هندسة brand/tools/build_brand.py (الإصدار 6): شيفرون "<" عريض بزوايا مدوّرة
+    p
+      ..strokeWidth = 19 * s
+      ..strokeJoin = StrokeJoin.round;
     final path = Path()
-      ..moveTo(11.5 * s, 38.5 * s)
-      ..cubicTo(17.5 * s, 60.5 * s, 21.5 * s, 78.5 * s, 29.5 * s, 78.5 * s)
-      ..cubicTo(37.5 * s, 78.5 * s, 40.5 * s, 55.5 * s, 47.5 * s, 55.5 * s)
-      ..cubicTo(54.5 * s, 55.5 * s, 57.5 * s, 78.5 * s, 65.5 * s, 78.5 * s)
-      ..cubicTo(73.5 * s, 78.5 * s, 80.76 * s, 51.39 * s, 86.76 * s, 41 * s)
-      ..arcToPoint(Offset(64.24 * s, 41 * s), radius: Radius.circular(13 * s), largeArc: true, clockwise: false);
-    canvas.drawPath(path, p..strokeJoin = StrokeJoin.round);
+      ..moveTo(66 * s, 16 * s)
+      ..lineTo(30 * s, 50 * s)
+      ..lineTo(66 * s, 84 * s);
+    canvas.drawPath(path, p);
   }
 
   @override

@@ -30,11 +30,11 @@ GRAPHITE = "#2E3135"
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "svg"
 
-# مسار العلامة داخل مربع 100×100 (نفسه مستخدم بالكود: WaselMark في wasel_core)
-# الإصدار 3: نفس الـW كمسار، والطرف الأخير يلف على نفسه ويصير هو حلقة الوصول (خط واحد متصل، لون واحد).
-# القوس: مركز (75.5, 34.5) نصف قطر 13، من 30° يلف عكس عقارب الساعة 240° — يترك فتحة حتى ما يلمس الخط الصاعد.
-ROUTE = ("M11.5 38.5 C17.5 60.5 21.5 78.5 29.5 78.5 C37.5 78.5 40.5 55.5 47.5 55.5 "
-         "C54.5 55.5 57.5 78.5 65.5 78.5 C73.5 78.5 80.76 51.39 86.76 41 A13 13 0 1 0 64.24 41")
+# العلامة (الإصدار 6): شيفرون "<" عريض بزوايا مدوّرة — الحركة للأمام باتجاه القراءة العربية.
+# داخل مربع 100×100 (نفسه بالكود: WaselMark في wasel_core)
+CHEVRON = "M66 16 L30 50 L66 84"
+ORANGE_DEEP = "#B23C0B"   # برتقالي غامق جداً — لون العلامة
+CREAM = "#FFF8F2"
 
 
 def text_path(font_path, text, size, rtl, tracking=0.0):
@@ -70,9 +70,9 @@ def text_path(font_path, text, size, rtl, tracking=0.0):
     return pen.getCommands(), (xmin, ymin, xmax, ymax)
 
 
-def mark(route, ring=None, sw=12.5):
-    # ring محفوظ للتوافق؛ العلامة الآن خط واحد بلون واحد
-    return f'<path d="{ROUTE}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round"/>'
+def mark(route, ring=None, sw=19):
+    # ring محفوظ للتوافق؛ العلامة شيفرون واحد بلون واحد
+    return f'<path d="{CHEVRON}" fill="none" stroke="{route}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round"/>'
 
 
 
@@ -101,29 +101,33 @@ def main():
     en_w, en_h = exmax - exmin, eymax - eymin
 
     # ---- العلامة ----
-    write("mark-ink.svg", svg(100, 100, mark(INK, BLUE)))
-    write("mark-lime.svg", svg(100, 100, mark(LIME, WHITE)))
-    write("mark-white.svg", svg(100, 100, mark(WHITE, LIME)))
+    write("mark-orange.svg", svg(100, 100, mark(ORANGE_DEEP)))
+    write("mark-ink.svg", svg(100, 100, mark(INK)))
+    write("mark-white.svg", svg(100, 100, mark(WHITE)))
 
     def place_text(d, xmin, ymin, x, y):
         # يضع النص بحيث تبدأ حدوده الفعلية عند (x, y)
         return f'<path transform="translate({x - xmin:.2f},{y - ymin:.2f})" d="{d}"'
 
-    # ---- الشعار العربي الأفقي: [واصل][العلامة] ----
+    # ---- الشعار العربي الأفقي: "<واصل" — الشيفرون يسار الكلمة ----
     def lockup_ar(text_c, route_c, ring_c, bg=None):
-        pad, ms, gap = 28, 128, 26
-        h = max(ar_h, ms) + pad * 2
-        w = pad + ar_w + gap + ms + pad
+        # الشيفرون يشغل من 20.5% إلى 75.5% من مربعه؛ نكبّره لارتفاع الحروف ونقصّ الفراغ
+        pad, gap = 28, 14
+        ms = ar_h * 1.18
+        cw = ms * 0.55
+        h = max(ar_h, ms * 0.78) + pad * 2
+        w = pad + cw + gap + ar_w + pad
         body = (
-            f'<g transform="translate({pad + ar_w + gap},{(h - ms) / 2}) scale({ms / 100})">{mark(route_c, ring_c)}</g>'
-            + place_text(ar_d, axmin, aymin, pad, (h - ar_h) / 2) + f' fill="{text_c}"/>'
+            f'<g transform="translate({pad - ms * 0.205:.2f},{(h - ms) / 2:.2f}) scale({ms / 100:.4f})">{mark(route_c, ring_c, sw=21)}</g>'
+            + place_text(ar_d, axmin, aymin, pad + cw + gap, (h - ar_h) / 2) + f' fill="{text_c}"/>'
         )
         return svg(round(w), round(h), body, bg, rx=32 if bg else 0)
 
-    write("logo-ar-ink.svg", lockup_ar(INK, INK, BLUE))
-    write("logo-ar-white.svg", lockup_ar(WHITE, LIME, WHITE))
-    write("logo-ar-on-ink.svg", lockup_ar(WHITE, LIME, WHITE, bg=INK))
-    write("logo-ar-on-lime.svg", lockup_ar(INK, INK, BLUE, bg=LIME))
+    write("logo-ar-ink.svg", lockup_ar(INK, ORANGE_DEEP, None))
+    write("logo-ar-white.svg", lockup_ar(WHITE, "#FF9A5C", None))
+    write("logo-ar-on-ink.svg", lockup_ar(WHITE, "#FF9A5C", None, bg=INK))
+    write("logo-ar-on-orange.svg", lockup_ar(WHITE, WHITE, None, bg=ORANGE_DEEP))
+    write("logo-ar-on-cream.svg", lockup_ar(INK, ORANGE_DEEP, None, bg=CREAM))
 
     # ---- الشعار الإنگليزي: [العلامة][WASEL] ----
     def lockup_en(text_c, route_c, ring_c, bg=None):
@@ -136,8 +140,8 @@ def main():
         )
         return svg(round(w), round(h), body, bg, rx=24 if bg else 0)
 
-    write("logo-en-ink.svg", lockup_en(INK, INK, BLUE))
-    write("logo-en-white.svg", lockup_en(WHITE, LIME, WHITE))
+    write("logo-en-ink.svg", lockup_en(INK, ORANGE_DEEP, None))
+    write("logo-en-white.svg", lockup_en(WHITE, "#FF9A5C", None))
 
     # ---- شاشة البداية: علامة كبيرة + واصل + WASEL ----
     pad, ms = 40, 150
@@ -146,15 +150,15 @@ def main():
     y_en = y_ar + ar_h + 22
     h = y_en + en_h + pad
     body = (
-        f'<g transform="translate({(w - ms) / 2},{pad}) scale({ms / 100})">{mark(LIME, WHITE)}</g>'
+        f'<g transform="translate({(w - ms) / 2},{pad}) scale({ms / 100})">{mark(WHITE)}</g>'
         + place_text(ar_d, axmin, aymin, (w - ar_w) / 2, y_ar) + f' fill="{WHITE}"/>'
-        + place_text(en_d, exmin, eymin, (w - en_w) / 2, y_en) + f' fill="{LIME}" fill-opacity="0.8"/>'
+        + place_text(en_d, exmin, eymin, (w - en_w) / 2, y_en) + f' fill="{WHITE}" fill-opacity="0.75"/>'
     )
     write("splash-lockup.svg", svg(round(w), round(h), body))
 
     # ---- أيقونات التطبيقات (1024): كاملة + طبقة أمامية للأيقونة المتكيّفة ----
     apps = {
-        "customer": (INK, LIME, WHITE),   # الأساسي: حبر + ليموني
+        "customer": (CREAM, ORANGE_DEEP, None),   # الزبون: كريمي + شيفرون برتقالي غامق
         "merchant": (LIME, INK, BLUE),    # التاجر: ليموني + حبر
         "admin": (BLUE, WHITE, LIME),     # الإدارة: أزرق + أبيض
     }

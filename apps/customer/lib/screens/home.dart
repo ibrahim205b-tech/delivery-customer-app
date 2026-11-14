@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
@@ -92,10 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
           listenable: app,
           builder: (context, _) {
             if (app.loadError != null && !app.loaded) return SafeArea(child: ErrorView(error: app.loadError!, onRetry: _refresh));
-            return SafeArea(
-              bottom: false,
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
               child: RefreshIndicator(
-                color: WColors.fg,
+                color: WColors.night,
+                edgeOffset: MediaQuery.paddingOf(context).top,
                 onRefresh: _refresh,
                 child: FutureBuilder<_HomeData>(
                   future: _data,
@@ -105,12 +107,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     var i = 0;
                     Widget reveal(Widget w) => _Reveal(index: i++, child: w);
                     return CustomScrollView(slivers: [
-                      SliverToBoxAdapter(child: _Header(unread: widget.unread, onAddress: () => pickAddressSheet(context, onAddNew: _addAddress))),
-                      SliverPersistentHeader(pinned: true, delegate: _SearchHeader()),
-                      if (active != null) SliverToBoxAdapter(child: reveal(_LiveOrder(order: active, onClosed: () => setState(() => _data = _load())))),
-                      // الأقسام الأربعة الرئيسية — أهم عنصر بالصفحة
-                      SliverToBoxAdapter(child: reveal(const _ServiceGrid())),
+                      // الرأس البرتقالي + الأقسام الأربعة (تطلع فوق حافة الرأس) — أهم شي بالصفحة
+                      SliverToBoxAdapter(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          _Hero(unread: widget.unread, onAddress: () => pickAddressSheet(context, onAddNew: _addAddress)),
+                          const _PullUp(amount: _Hero.overlap, child: _ServiceGrid()),
+                        ]),
+                      ),
                       SliverToBoxAdapter(child: reveal(const _MoreServices())),
+                      if (active != null) SliverToBoxAdapter(child: reveal(_LiveOrder(order: active, onClosed: () => setState(() => _data = _load())))),
                       if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
                       if (d == null && !s.hasError) const SliverToBoxAdapter(child: _Loading()),
                       if (d != null && d.promotions.isNotEmpty) SliverToBoxAdapter(child: reveal(_OfferDeck(promos: d.promotions))),
@@ -202,7 +207,7 @@ class _RevealState extends State<_Reveal> {
   @override
   void initState() {
     super.initState();
-    _t = Timer(Duration(milliseconds: 40 + 55 * math.min(widget.index, 6)), () {
+    _t = Timer(Duration(milliseconds: 380 + 80 * math.min(widget.index, 6)), () {
       if (mounted) setState(() => _shown = true);
     });
   }
@@ -216,9 +221,14 @@ class _RevealState extends State<_Reveal> {
   @override
   Widget build(BuildContext context) => AnimatedOpacity(
         opacity: _shown ? 1 : 0,
-        duration: WDurations.slow,
-        curve: WDurations.curve,
-        child: AnimatedSlide(offset: _shown ? Offset.zero : const Offset(0, 0.04), duration: WDurations.slow, curve: WDurations.curve, child: widget.child),
+        duration: const Duration(milliseconds: 520),
+        curve: Curves.easeOut,
+        child: AnimatedSlide(
+          offset: _shown ? Offset.zero : const Offset(0, 0.14),
+          duration: const Duration(milliseconds: 620),
+          curve: Curves.easeOutCubic,
+          child: AnimatedScale(scale: _shown ? 1 : 0.97, duration: const Duration(milliseconds: 620), curve: Curves.easeOutBack, child: widget.child),
+        ),
       );
 }
 
@@ -237,12 +247,14 @@ class _Tag extends StatelessWidget {
 }
 
 // =====================================================================
-// 1) الرأس: العنوان + التنبيهات
+// 1) الرأس البرتقالي: العنوان، التنبيهات، الترحيب، البحث
+//    حافته السفلية تختفي تحت الأقسام الأربعة (تداخل يعطي عمق وحركة)
 // =====================================================================
-class _Header extends StatelessWidget {
-  const _Header({required this.unread, required this.onAddress});
+class _Hero extends StatelessWidget {
+  const _Hero({required this.unread, required this.onAddress});
   final int unread;
   final VoidCallback onAddress;
+  static const overlap = 64.0;
 
   @override
   Widget build(BuildContext context) {
@@ -250,107 +262,128 @@ class _Header extends StatelessWidget {
     final h = DateTime.now().hour;
     final greet = h < 5 ? 'سهرانين؟' : (h < 12 ? 'صباح الخير' : 'مساء الخير');
     final first = (auth.profile?.fullName ?? '').split(' ').first;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(WSpace.page, 12, WSpace.page, 4),
-      child: Row(children: [
-        Expanded(
-          child: Semantics(
-            button: true,
-            label: 'تغيير عنوان التوصيل',
-            onTap: onAddress,
-            excludeSemantics: true,
-            child: Pressable(
-              onTap: onAddress,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(first.isEmpty ? greet : '$greet، $first', style: WText.caption),
-                const SizedBox(height: 2),
-                Row(children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(7)),
-                    child: Icon(Icons.near_me_rounded, size: 14, color: WColors.ink),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(child: Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.h3.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  Icon(Icons.keyboard_arrow_down_rounded, color: WColors.fg, size: 22),
-                ]),
-              ]),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Stack(clipBehavior: Clip.none, children: [
-          WIconButton(Icons.notifications_none_rounded, bordered: true, tooltip: 'الإشعارات', onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-          }),
-          if (unread > 0)
-            PositionedDirectional(
-              top: -5,
-              end: -5,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(8), border: Border.all(color: WColors.paper, width: 2)),
-                child: Text('${unread > 9 ? '9+' : unread}', textAlign: TextAlign.center, style: WText.number.copyWith(fontSize: 10.5, color: WColors.white)),
+    const soft = Color(0xFFFFD9C2);
+    return Container(
+      decoration: BoxDecoration(color: WColors.night, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(34))),
+      padding: EdgeInsets.fromLTRB(WSpace.page, MediaQuery.paddingOf(context).top + 10, WSpace.page, 22 + overlap),
+      child: Stack(clipBehavior: Clip.none, children: [
+        // شيفرون العلامة كبير وشفاف بزاوية الرأس — حركة بصرية بدون صور
+        PositionedDirectional(end: -70, top: -10, child: IgnorePointer(child: Opacity(opacity: 0.10, child: WaselMark(size: 230, route: WColors.white)))),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'تغيير عنوان التوصيل',
+                onTap: onAddress,
+                excludeSemantics: true,
+                child: Pressable(
+                  onTap: onAddress,
+                  child: Row(children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: WColors.white.withValues(alpha: 0.16), borderRadius: WRadius.all(10)),
+                      child: const Icon(Icons.near_me_rounded, size: 17, color: WColors.white),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('التوصيل إلى', style: WText.caption.copyWith(color: soft, fontSize: 11)),
+                        Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.bodyStrong.copyWith(color: WColors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ]),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded, color: WColors.white, size: 22),
+                  ]),
+                ),
               ),
             ),
+            const SizedBox(width: 10),
+            Stack(clipBehavior: Clip.none, children: [
+              WIconButton(Icons.notifications_none_rounded, background: WColors.white.withValues(alpha: 0.16), color: WColors.white, tooltip: 'الإشعارات', onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+              }),
+              if (unread > 0)
+                PositionedDirectional(
+                  top: -5,
+                  end: -5,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(8), border: Border.all(color: WColors.night, width: 2)),
+                    child: Text('${unread > 9 ? '9+' : unread}', textAlign: TextAlign.center, style: WText.number.copyWith(fontSize: 10.5, color: WColors.ink)),
+                  ),
+                ),
+            ]),
+          ]),
+          const SizedBox(height: 20),
+          Text(first.isEmpty ? greet : '$greet، $first', style: WText.body.copyWith(color: soft)),
+          Text('وين نوصّلك اليوم؟', style: WText.display.copyWith(color: WColors.white, fontSize: 28, height: 1.25)),
+          const SizedBox(height: 16),
+          Semantics(
+            button: true,
+            label: 'بحث',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+            excludeSemantics: true,
+            child: Pressable(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+              child: Container(
+                height: 52,
+                padding: const EdgeInsetsDirectional.only(start: 16, end: 5),
+                decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(16)),
+                child: Row(children: [
+                  Expanded(child: Text('دوّر على مطعم، منتج أو محل', style: WText.body.copyWith(color: WColors.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(12)),
+                    child: Icon(Icons.search_rounded, color: WColors.ink),
+                  ),
+                ]),
+              ),
+            ),
+          ),
         ]),
       ]),
     );
   }
 }
 
-// =====================================================================
-// 2) البحث — يثبت فوق عند التمرير
-// =====================================================================
-class _SearchHeader extends SliverPersistentHeaderDelegate {
-  static const _h = 76.0;
+/// يسحب الابن لفوق بمقدار [amount] (يتداخل ويا العنصر اللي قبله) ويقلّل ارتفاعه بنفس المقدار.
+/// الضغط يشتغل حتى على الجزء المتداخل.
+class _PullUp extends SingleChildRenderObjectWidget {
+  const _PullUp({required this.amount, required super.child});
+  final double amount;
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderPullUp(amount);
+  @override
+  void updateRenderObject(BuildContext context, _RenderPullUp renderObject) => renderObject.amount = amount;
+}
 
-  @override
-  double get minExtent => _h;
-  @override
-  double get maxExtent => _h;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final pinned = overlapsContent || shrinkOffset > 0;
-    return AnimatedContainer(
-      duration: WDurations.fast,
-      color: WColors.paper,
-      padding: const EdgeInsets.fromLTRB(WSpace.page, 10, WSpace.page, 10),
-      foregroundDecoration: BoxDecoration(border: Border(bottom: BorderSide(color: pinned ? WColors.line : Colors.transparent))),
-      child: Semantics(
-        button: true,
-        label: 'بحث',
-        onTap: () => _open(context),
-        excludeSemantics: true,
-        child: Pressable(
-          onTap: () => _open(context),
-          child: Container(
-            height: 54,
-            padding: const EdgeInsetsDirectional.only(start: 16, end: 5),
-            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(17), border: Border.all(color: WColors.line, width: 1.2)),
-            child: Row(children: [
-              Expanded(child: Text('دوّر على مطعم، منتج أو محل', style: WText.body.copyWith(color: WColors.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: WColors.blue, borderRadius: WRadius.all(13)),
-                child: const Icon(Icons.search_rounded, color: WColors.white),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
+class _RenderPullUp extends RenderShiftedBox {
+  _RenderPullUp(this._amount) : super(null);
+  double _amount;
+  set amount(double v) {
+    if (v == _amount) return;
+    _amount = v;
+    markNeedsLayout();
   }
 
-  void _open(BuildContext context) => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+  @override
+  void performLayout() {
+    final c = child;
+    if (c == null) {
+      size = constraints.smallest;
+      return;
+    }
+    c.layout(constraints, parentUsesSize: true);
+    (c.parentData! as BoxParentData).offset = Offset(0, -_amount);
+    size = constraints.constrain(Size(c.size.width, math.max(0, c.size.height - _amount)));
+  }
 
   @override
-  bool shouldRebuild(covariant _SearchHeader old) => false;
+  bool hitTest(BoxHitTestResult result, {required Offset position}) => hitTestChildren(result, position: position);
 }
 
 // =====================================================================
@@ -420,17 +453,17 @@ class _LiveOrder extends StatelessWidget {
           },
           child: Container(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-            decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(WRadius.xl)),
+            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.xl), border: Border.all(color: WColors.line), boxShadow: WShadow.soft),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 const _LivePulse(),
                 const SizedBox(width: 8),
-                Expanded(child: Text('طلبك الحالي · ${o.merchantName ?? ''}', style: WText.label.copyWith(color: const Color(0xFFB9BCC0)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                Text(o.code, style: WText.label.copyWith(color: WColors.lime)),
+                Expanded(child: Text('طلبك الحالي · ${o.merchantName ?? ''}', style: WText.label.copyWith(color: WColors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                Text(o.code, style: WText.label.copyWith(color: WColors.link, fontWeight: FontWeight.w700)),
               ]),
               const SizedBox(height: 10),
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Expanded(child: Text(o.status.label, style: WText.h1.copyWith(color: WColors.white, fontSize: 22))),
+                Expanded(child: Text(o.status.label, style: WText.h1.copyWith(fontSize: 22))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(12)),
@@ -447,13 +480,9 @@ class _LiveOrder extends StatelessWidget {
                   if (i > 0) const SizedBox(width: 6),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      AnimatedContainer(
-                        duration: WDurations.slow,
-                        height: 6,
-                        decoration: BoxDecoration(color: i <= group ? WColors.lime : WColors.white.withValues(alpha: 0.12), borderRadius: WRadius.all(3)),
-                      ),
+                      _StepBar(done: i < group, current: i == group),
                       const SizedBox(height: 6),
-                      Text(steps[i], style: WText.caption.copyWith(fontSize: 11, color: i <= group ? WColors.white : const Color(0xFF7D8186))),
+                      Text(steps[i], style: WText.caption.copyWith(fontSize: 11, color: i <= group ? WColors.fg : WColors.inkFaint, fontWeight: i == group ? FontWeight.w700 : FontWeight.w400)),
                     ]),
                   ),
                 ],
@@ -464,6 +493,51 @@ class _LiveOrder extends StatelessWidget {
       ),
     );
   }
+}
+
+/// خطوة بشريط التتبع: المكتملة برتقالية، والحالية يمر عليها ضوء (تبيّن إنها شغّالة)
+class _StepBar extends StatefulWidget {
+  const _StepBar({required this.done, required this.current});
+  final bool done;
+  final bool current;
+  @override
+  State<_StepBar> createState() => _StepBarState();
+}
+
+class _StepBarState extends State<_StepBar> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+  @override
+  void initState() {
+    super.initState();
+    if (widget.current) _c.repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: WRadius.all(3),
+        child: SizedBox(
+          height: 6,
+          child: widget.current
+              ? AnimatedBuilder(
+                  animation: _c,
+                  builder: (context, _) => DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [WColors.night, WColors.lime, WColors.night],
+                        stops: [(_c.value - 0.3).clamp(0.0, 1.0), _c.value, (_c.value + 0.3).clamp(0.0, 1.0)],
+                      ),
+                    ),
+                  ),
+                )
+              : ColoredBox(color: widget.done ? WColors.night : WColors.line),
+        ),
+      );
 }
 
 class _LivePulse extends StatefulWidget {
@@ -483,7 +557,7 @@ class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) => FadeTransition(
         opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
-        child: Container(width: 8, height: 8, decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(2))),
+        child: Container(width: 8, height: 8, decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(2))),
       );
 }
 
@@ -543,9 +617,18 @@ class _OfferDeckState extends State<_OfferDeck> {
               padEnds: false,
               itemCount: promos.length,
               onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (context, i) => Padding(
-                padding: EdgeInsetsDirectional.only(start: i == 0 ? WSpace.page : 6, end: i == promos.length - 1 ? WSpace.page : 6),
-                child: _OfferCard(p: promos[i], style: i % 3, onTap: () => _open(promos[i])),
+              itemBuilder: (context, i) => AnimatedBuilder(
+                animation: _pc,
+                builder: (context, child) {
+                  // البطاقات الجانبية أصغر وأخفت — عمق وحركة أثناء التقليب
+                  final page = _pc.hasClients && _pc.position.haveDimensions ? (_pc.page ?? _page.toDouble()) : _page.toDouble();
+                  final d = (page - i).abs().clamp(0.0, 1.0);
+                  return Opacity(opacity: 1 - 0.35 * d, child: Transform.scale(scale: 1 - 0.07 * d, child: child));
+                },
+                child: Padding(
+                  padding: EdgeInsetsDirectional.only(start: i == 0 ? WSpace.page : 6, end: i == promos.length - 1 ? WSpace.page : 6),
+                  child: _OfferCard(p: promos[i], style: i % 3, onTap: () => _open(promos[i])),
+                ),
               ),
             ),
           ),
@@ -582,7 +665,7 @@ class _OfferCard extends StatelessWidget {
     final (bg, fg, sub, tagBg, tagFg) = switch (style) {
       0 => (WColors.lime, WColors.ink, const Color(0xFF3B4A12), WColors.ink, WColors.lime),
       1 => (WColors.night, WColors.white, const Color(0xFFB9BCC0), WColors.lime, WColors.ink),
-      _ => (WColors.coral, WColors.white, const Color(0xFFFFE3DC), WColors.white, WColors.coral),
+      _ => (WColors.mint, WColors.white, const Color(0xFFD9F2E8), WColors.white, WColors.mint),
     };
     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       _Tag(p.merchantId == null ? 'عرض واصل' : 'عرض', bg: hasImg ? WColors.lime : tagBg, fg: hasImg ? WColors.ink : tagFg),
@@ -634,8 +717,12 @@ List<MerchantCategory> get _shopCategories => app.categories.where((c) => c.kind
 class _ServiceGrid extends StatelessWidget {
   const _ServiceGrid();
 
+  // يستمع لبيانات التطبيق مباشرة: الأقسام توصل من الخادم بعد أول رسم،
+  // ولأن الودجت ثابت (const) ما ينعاد رسمه من الأب — بدون هذا كان يبقى فارغ.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(listenable: app, builder: (context, _) => _build(context));
+
+  Widget _build(BuildContext context) {
     final taxi = _cat('taxi');
     final food = _cat('restaurants');
     final parcel = _cat('parcel');
@@ -644,6 +731,7 @@ class _ServiceGrid extends StatelessWidget {
       if (taxi != null)
         _ServiceCard(
           id: 'taxi',
+          index: 0,
           title: 'تكسي',
           sub: 'تكسي أو تكتك',
           asset: 'assets/illustrations/taxi.png',
@@ -654,6 +742,7 @@ class _ServiceGrid extends StatelessWidget {
       if (food != null)
         _ServiceCard(
           id: 'food',
+          index: 1,
           title: 'طعام',
           sub: 'مطاعم منطقتك',
           asset: 'assets/illustrations/food.png',
@@ -664,6 +753,7 @@ class _ServiceGrid extends StatelessWidget {
       if (parcel != null)
         _ServiceCard(
           id: 'parcel',
+          index: 2,
           title: 'ودّي أغراضك',
           sub: 'بأمان، من باب لباب',
           asset: 'assets/illustrations/parcel.png',
@@ -674,6 +764,7 @@ class _ServiceGrid extends StatelessWidget {
       if (shops.isNotEmpty)
         _ServiceCard(
           id: 'shops',
+          index: 3,
           title: 'المحلات',
           sub: shops.take(2).map((c) => c.name).join('، '),
           asset: 'assets/illustrations/shops.png',
@@ -695,7 +786,7 @@ class _ServiceGrid extends StatelessWidget {
 }
 
 class _ServiceCard extends StatefulWidget {
-  const _ServiceCard({required this.id, required this.title, required this.sub, required this.asset, required this.bg, required this.onTap, this.accent, this.featured = false});
+  const _ServiceCard({required this.id, required this.title, required this.sub, required this.asset, required this.bg, required this.onTap, this.accent, this.featured = false, this.index = 0});
   final String id;
   final String title;
   final String sub;
@@ -703,25 +794,33 @@ class _ServiceCard extends StatefulWidget {
   final Color bg;
   final Color? accent;
   final bool featured;
+  final int index;
   final VoidCallback onTap;
   @override
   State<_ServiceCard> createState() => _ServiceCardState();
 }
 
-class _ServiceCardState extends State<_ServiceCard> with SingleTickerProviderStateMixin {
+class _ServiceCardState extends State<_ServiceCard> with TickerProviderStateMixin {
   bool _down = false;
-  // حركة "تنفّس" خفيفة لسيارة التكسي فقط
-  late final AnimationController _bob = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+  // دخول بنابض (متتابع حسب ترتيب البطاقة)
+  late final AnimationController _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 820));
+  // حركة مستمرة هادئة: طفو الرسم، وخطوط سرعة التكسي
+  late final AnimationController _loop = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat();
+  Timer? _start;
 
   @override
   void initState() {
     super.initState();
-    if (widget.featured) _bob.repeat(reverse: true);
+    _start = Timer(Duration(milliseconds: 120 + widget.index * 110), () {
+      if (mounted) _enter.forward();
+    });
   }
 
   @override
   void dispose() {
-    _bob.dispose();
+    _start?.cancel();
+    _enter.dispose();
+    _loop.dispose();
     super.dispose();
   }
 
@@ -730,81 +829,128 @@ class _ServiceCardState extends State<_ServiceCard> with SingleTickerProviderSta
     final f = widget.featured;
     final titleColor = f ? WColors.ink : WColors.fg;
     final subColor = f ? WColors.ink.withValues(alpha: 0.72) : WColors.inkMuted;
+    final phase = widget.index * 0.23; // كل رسم يطفو بتوقيت مختلف
     return Semantics(
       button: true,
       label: '${widget.title}، ${widget.sub}',
       onTap: widget.onTap,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _down = true),
-        onTapCancel: () => setState(() => _down = false),
-        onTapUp: (_) {
-          setState(() => _down = false);
-          HapticFeedback.lightImpact();
-          widget.onTap();
+      child: AnimatedBuilder(
+        animation: _enter,
+        builder: (context, child) {
+          final t = _enter.value;
+          final pop = Curves.easeOutBack.transform(t);
+          return Opacity(
+            opacity: Curves.easeOut.transform(t.clamp(0, 1)),
+            child: Transform.translate(offset: Offset(0, 28 * (1 - Curves.easeOutCubic.transform(t))), child: Transform.scale(scale: 0.86 + 0.14 * pop, child: child)),
+          );
         },
-        child: AnimatedScale(
-          scale: _down ? 0.96 : 1,
-          duration: WDurations.fast,
-          curve: WDurations.curve,
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: widget.bg,
-              borderRadius: WRadius.all(26),
-              boxShadow: f ? [BoxShadow(color: WColors.lime.withValues(alpha: WColors.isDark ? 0.0 : 0.45), blurRadius: 22, offset: const Offset(0, 10))] : null,
-            ),
-            child: LayoutBuilder(builder: (context, box) {
-              final s = box.maxWidth;
-              return Stack(children: [
-                // الرسم بالنص السفلي فقط (ما يغطي العنوان ولا الزر)
-                PositionedDirectional(
-                  end: f ? -s * 0.03 : -s * 0.06,
-                  bottom: -s * 0.03,
-                  width: s * (f ? 0.86 : 0.8),
-                  child: AnimatedBuilder(
-                    animation: _bob,
-                    builder: (context, child) => Transform.translate(offset: Offset(0, f ? -3 * Curves.easeInOut.transform(_bob.value) : 0), child: child),
-                    child: Image.asset(widget.asset, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => setState(() => _down = true),
+          onTapCancel: () => setState(() => _down = false),
+          onTapUp: (_) {
+            setState(() => _down = false);
+            HapticFeedback.lightImpact();
+            widget.onTap();
+          },
+          child: AnimatedScale(
+            scale: _down ? 0.94 : 1,
+            duration: Duration(milliseconds: _down ? 90 : 420),
+            curve: _down ? Curves.easeOut : Curves.elasticOut,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: widget.bg,
+                borderRadius: WRadius.all(26),
+                boxShadow: WColors.isDark
+                    ? null
+                    : [BoxShadow(color: (f ? WColors.lime : WColors.ink).withValues(alpha: f ? 0.5 : 0.08), blurRadius: f ? 24 : 18, offset: const Offset(0, 10))],
+              ),
+              child: LayoutBuilder(builder: (context, box) {
+                final s = box.maxWidth;
+                return Stack(children: [
+                  // الرسم بالنص السفلي، يطفو بهدوء؛ التكسي يدخل من الجانب
+                  PositionedDirectional(
+                    end: f ? -s * 0.03 : -s * 0.06,
+                    bottom: -s * 0.03,
+                    width: s * (f ? 0.86 : 0.8),
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_enter, _loop]),
+                      builder: (context, child) {
+                        final wave = math.sin((_loop.value + phase) * 2 * math.pi);
+                        final drive = f ? (1 - Curves.easeOutCubic.transform(((_enter.value - 0.15) / 0.85).clamp(0.0, 1.0))) : 0.0;
+                        // RTL: السيارة تتجه يسار، فتدخل من اليمين
+                        final dx = drive * s * 0.7 * (Directionality.of(context) == TextDirection.rtl ? 1 : -1);
+                        return Transform.translate(
+                          offset: Offset(dx, (f ? 2.5 : 4) * wave),
+                          child: Transform.rotate(angle: f ? 0 : 0.025 * wave, child: child),
+                        );
+                      },
+                      child: Image.asset(widget.asset, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(s * 0.085),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                      Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(widget.title, style: WText.display.copyWith(fontSize: f ? 30 : 23, height: 1.05, color: titleColor)),
-                        ),
+                  // خطوط السرعة خلف التكسي (تتحرك باستمرار)
+                  if (f)
+                    PositionedDirectional(
+                      start: s * 0.04,
+                      bottom: s * 0.26,
+                      child: AnimatedBuilder(
+                        animation: _loop,
+                        builder: (context, _) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          for (var k = 0; k < 3; k++)
+                            Builder(builder: (context) {
+                              final v = (_loop.value * 2 + k * 0.33) % 1.0;
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: s * 0.03),
+                                child: Opacity(
+                                  opacity: (1 - v) * 0.9,
+                                  child: Transform.translate(
+                                    offset: Offset((Directionality.of(context) == TextDirection.rtl ? -1 : 1) * v * s * 0.08, 0),
+                                    child: Container(width: s * (0.10 + 0.05 * ((k + 1) % 2)), height: 5, decoration: BoxDecoration(color: WColors.ink.withValues(alpha: 0.55), borderRadius: WRadius.all(3))),
+                                  ),
+                                ),
+                              );
+                            }),
+                        ]),
                       ),
-                      const SizedBox(width: 6),
-                      // زر واضح للتكسي، وسهم صغير للبقية — بالزاوية العليا حتى ما يغطي الرسم
-                      f && s >= 150
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-                              decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(13)),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                Text('اطلب', style: WText.label.copyWith(color: WColors.lime, fontWeight: FontWeight.w700, fontSize: 13)),
-                                const SizedBox(width: 4),
-                                Icon(Icons.arrow_back_rounded, size: 15, color: WColors.lime),
-                              ]),
-                            )
-                          : Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(color: f ? WColors.ink : (widget.accent ?? WColors.blue), borderRadius: WRadius.all(11)),
-                              child: Icon(Icons.arrow_back_rounded, size: 17, color: f ? WColors.lime : WColors.white),
-                            ),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.all(s * 0.085),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(widget.title, style: WText.display.copyWith(fontSize: f ? 30 : 23, height: 1.05, color: titleColor)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        f && s >= 150
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                                decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(13)),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Text('اطلب', style: WText.label.copyWith(color: WColors.lime, fontWeight: FontWeight.w700, fontSize: 13)),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.arrow_back_rounded, size: 15, color: WColors.lime),
+                                ]),
+                              )
+                            : Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(color: f ? WColors.ink : (widget.accent ?? WColors.blue), borderRadius: WRadius.all(11)),
+                                child: Icon(Icons.arrow_back_rounded, size: 17, color: f ? WColors.lime : WColors.white),
+                              ),
+                      ]),
+                      const SizedBox(height: 3),
+                      Text(widget.sub, style: WText.caption.copyWith(color: subColor, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ]),
-                    const SizedBox(height: 3),
-                    Text(widget.sub, style: WText.caption.copyWith(color: subColor, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ]),
-                ),
-              ]);
-            }),
+                  ),
+                ]);
+              }),
+            ),
           ),
         ),
       ),
@@ -815,8 +961,12 @@ class _ServiceCardState extends State<_ServiceCard> with SingleTickerProviderSta
 /// خدمات ثانية (حتى ما تضيع أي خدمة): مندوب، تكتك، الأعمال المنزلية
 class _MoreServices extends StatelessWidget {
   const _MoreServices();
+  // يستمع لبيانات التطبيق مباشرة: الأقسام توصل من الخادم بعد أول رسم،
+  // ولأن الودجت ثابت (const) ما ينعاد رسمه من الأب — بدون هذا كان يبقى فارغ.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(listenable: app, builder: (context, _) => _build(context));
+
+  Widget _build(BuildContext context) {
     final items = <(MerchantCategory, String, IconData)>[
       if (_cat('courier') case final c?) (c, 'مندوب يشتري لك', Icons.directions_bike_rounded),
       if (_cat('tuktuk') case final c?) (c, 'تكتك', Icons.electric_rickshaw_rounded),

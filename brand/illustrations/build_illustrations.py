@@ -7,21 +7,23 @@ import pathlib
 
 OUT = pathlib.Path(__file__).resolve().parent
 
-INK = "#15142B"
-YELLOW = "#FFC83A"
-YELLOW_SH = "#F0A800"
+INK = "#24160E"
+YELLOW = "#FFC53D"
+YELLOW_SH = "#EFA300"
 YELLOW_HI = "#FFE08A"
-INDIGO = "#4433E0"
-INDIGO_SH = "#2F22B8"
-INDIGO_HI = "#7A6DF2"
-CORAL = "#FF6A4D"
-CORAL_SH = "#E24B30"
-MINT = "#14B88F"
-MINT_SH = "#0C9A76"
-CREAM = "#FFF4DE"
+INDIGO = "#13808A"  # فيروزي (تباين مع البرتقالي)
+INDIGO_SH = "#0B6670"
+INDIGO_HI = "#5DB8BF"
+CORAL = "#E8432E"
+CORAL_SH = "#C3311E"
+MINT = "#1F9A73"
+MINT_SH = "#167A5A"
+CREAM = "#FFF4E6"
 KRAFT = "#F3BF7A"
 KRAFT_SH = "#DE9F55"
-SKY = "#E9E7FD"
+SKY = "#FFE6D6"
+ORANGE = "#B23C0B"
+ORANGE_HI = "#D9601F"
 WHITE = "#FFFFFF"
 
 
@@ -125,16 +127,16 @@ def food():
 def parcel():
     b = shadow(300, 410, 220, 20)
     # عربة نقل صغيرة
-    b += f'<rect x="96" y="356" width="370" height="22" rx="11" fill="{INDIGO}"/>'
-    b += f'<path d="M96 368 L74 236" stroke="{INDIGO}" stroke-width="16" stroke-linecap="round"/>'
-    b += f'<rect x="58" y="218" width="44" height="22" rx="11" fill="{INDIGO_SH}"/>'
+    b += f'<rect x="96" y="356" width="370" height="22" rx="11" fill="{ORANGE}"/>'
+    b += f'<path d="M96 368 L74 236" stroke="{ORANGE}" stroke-width="16" stroke-linecap="round"/>'
+    b += f'<rect x="58" y="218" width="44" height="22" rx="11" fill="{ORANGE_HI}"/>'
     b += wheel(150, 386, 26) + wheel(416, 386, 26)
     # الصندوق
     b += f'<path d="M130 176 L430 176 L430 338 C430 348 422 356 412 356 L148 356 C138 356 130 348 130 338 Z" fill="{KRAFT}"/>'
     b += f'<path d="M352 176 L430 176 L430 338 C430 348 422 356 412 356 L352 356 Z" fill="{KRAFT_SH}"/>'
     b += f'<path d="M118 150 L442 150 C448 150 452 154 452 160 L452 176 L108 176 L108 160 C108 154 112 150 118 150 Z" fill="{KRAFT_SH}"/>'
     # شريط اللاصق
-    b += f'<rect x="254" y="150" width="52" height="206" fill="{INDIGO}" opacity=".9"/>'
+    b += f'<rect x="254" y="150" width="52" height="206" fill="{ORANGE}" opacity=".92"/>'
     b += f'<rect x="254" y="150" width="14" height="206" fill="{WHITE}" opacity=".18"/>'
     # الوجه
     b += f'<ellipse cx="190" cy="262" rx="11" ry="14" fill="{INK}"/><ellipse cx="226" cy="262" rx="11" ry="14" fill="{INK}"/>'
@@ -159,7 +161,7 @@ def shops():
     for i in range(6):
         x = 86 + i * 54
         b += f'<path d="M{x} 150 L{x + 54} 150 L{x + 54} 186 C{x + 54} 202 {x + 40} 212 {x + 27} 212 C{x + 14} 212 {x} 202 {x} 186 Z" fill="{YELLOW if i % 2 == 0 else WHITE}"/>'
-    b += f'<rect x="80" y="118" width="336" height="40" rx="14" fill="{INDIGO}"/>'
+    b += f'<rect x="80" y="118" width="336" height="40" rx="14" fill="{ORANGE}"/>'
     # الكيس الكبير (أمام يمين)
     b += f'<path d="M318 236 C318 196 340 176 368 176 C396 176 418 196 418 236" fill="none" stroke="{INK}" stroke-width="11" stroke-linecap="round"/>'
     b += f'<path d="M290 230 L446 230 L462 392 C463 402 456 410 446 410 L290 410 C280 410 273 402 274 392 Z" fill="{MINT}"/>'
