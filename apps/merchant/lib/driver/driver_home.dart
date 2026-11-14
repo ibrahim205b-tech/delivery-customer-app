@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
+import 'captain_account.dart';
 
 /// لوحة السائق/المندوب: متاح أو لا، المهام المتاحة، المهمة الحالية، والسجل.
 /// يرى فقط ما تسمح به سياسات الخادم لنوع مركبته (RLS).
@@ -24,7 +25,18 @@ class _DriverHomeState extends State<DriverHome> {
   final Set<String> _hidden = {}; // مهام أخذها غيري
   Stream<List<DeliveryTask>>? _tasks;
   Stream<List<Ride>>? _rides;
+  // آخر قيمة من كل ستريم: الستريم عام (broadcast) فالتبويب اللي يفتح بعد ما يوصل له الحدث الأخير
+  List<DeliveryTask>? _tasksNow;
+  List<Ride>? _ridesNow;
+  StreamSubscription<List<DeliveryTask>>? _subT;
+  StreamSubscription<List<Ride>>? _subR;
   int _lastAvailableCount = -1;
+  final Set<String> _expired = {};          // طلبات انتهى وقت قبولها على شاشتي فقط
+  final Map<String, DateTime> _seenAt = {}; // أول ظهور لكل طلب (لعدّاد القبول)
+  static const _offerWindow = Duration(seconds: 30);
+  Future<CaptainStatement>? _account;
+  String _histStatus = 'all'; // all · completed · cancelled
+  int _histPeriod = 3;        // 0 اليوم · 1 الأسبوع · 2 الشهر · 3 الكل
 
   bool get _doesTasks => _me != null && _me!.vehicleType != VehicleType.taxi;
   bool get _doesRides => _me != null && _me!.vehicleType != VehicleType.courier;
@@ -39,6 +51,8 @@ class _DriverHomeState extends State<DriverHome> {
   @override
   void dispose() {
     _locTimer?.cancel();
+    _subT?.cancel();
+    _subR?.cancel();
     super.dispose();
   }
 
@@ -51,10 +65,25 @@ class _DriverHomeState extends State<DriverHome> {
         _tasks = driverApi.watchTasks().asBroadcastStream();
         _rides = driverApi.watchRides().asBroadcastStream();
       });
+      _subT?.cancel();
+      _subR?.cancel();
+      _subT = _tasks!.listen((v) {
+        if (mounted) setState(() => _tasksNow = v);
+      }, onError: (_) {});
+      _subR = _rides!.listen((v) {
+        if (mounted) setState(() => _ridesNow = v);
+      }, onError: (_) {});
+      _reloadAccount();
       if (me?.isAvailable == true) _startTracking();
     } catch (e) {
       setState(() => _error = e);
     }
+  }
+
+  void _reloadAccount() => setState(() => _account = driverApi.account());
+
+  void _expire(String id) {
+    if (mounted) setState(() => _expired.add(id));
   }
 
   void _startTracking() {
@@ -124,14 +153,24 @@ class _DriverHomeState extends State<DriverHome> {
       body: SafeArea(
         child: Column(children: [
           _header(me),
-          Expanded(child: _tab == 0 ? _jobs() : _history()),
+          Expanded(
+            child: switch (_tab) {
+              0 => _jobs(),
+              1 => CaptainAccountTab(future: _account, onRefresh: _reloadAccount),
+              _ => _history(),
+            },
+          ),
         ]),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: (i) {
+          setState(() => _tab = i);
+          if (i == 1) _reloadAccount();
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route_rounded), label: 'المهام'),
+          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'الحساب'),
           NavigationDestination(icon: Icon(Icons.history_rounded), label: 'السجل'),
         ],
       ),
@@ -177,8 +216,10 @@ class _DriverHomeState extends State<DriverHome> {
   // ---------------- المهام ----------------
   Widget _jobs() => StreamBuilder<List<DeliveryTask>>(
         stream: _doesTasks ? _tasks : Stream.value(const []),
+        initialData: _doesTasks ? _tasksNow : const <DeliveryTask>[],
         builder: (context, ts) => StreamBuilder<List<Ride>>(
           stream: _doesRides ? _rides : Stream.value(const []),
+          initialData: _doesRides ? _ridesNow : const <Ride>[],
           builder: (context, rs) {
             if (ts.hasError) return ErrorView(error: ts.error!, onRetry: _load);
             if (rs.hasError) return ErrorView(error: rs.error!, onRetry: _load);
@@ -186,8 +227,11 @@ class _DriverHomeState extends State<DriverHome> {
             final uid = auth.userId;
             final myTask = ts.data!.where((t) => t.driverId == uid && t.status.isActive).firstOrNull;
             final myRide = rs.data!.where((r) => r.driverId == uid && r.status.isActive).firstOrNull;
-            final availTasks = ts.data!.where((t) => t.status == TaskStatus.requested && t.driverId == null && !_hidden.contains(t.id)).toList();
-            final availRides = rs.data!.where((r) => r.status == RideStatus.requested && r.driverId == null && !_hidden.contains(r.id)).toList();
+            final availTasks = ts.data!.where((t) => t.status == TaskStatus.requested && t.driverId == null && !_hidden.contains(t.id) && !_expired.contains(t.id)).toList();
+            final availRides = rs.data!.where((r) => r.status == RideStatus.requested && r.driverId == null && !_hidden.contains(r.id) && !_expired.contains(r.id)).toList();
+            for (final id in [...availTasks.map((t) => t.id), ...availRides.map((r) => r.id)]) {
+              _seenAt.putIfAbsent(id, DateTime.now);
+            }
             final count = availTasks.length + availRides.length;
             if (_lastAvailableCount >= 0 && count > _lastAvailableCount && _me!.isAvailable && myTask == null && myRide == null) {
               notifier.show('مهمة جديدة متاحة', 'افتح واصل شريك واقبلها قبل غيرك', channel: WChannel.orders);
@@ -205,8 +249,8 @@ class _DriverHomeState extends State<DriverHome> {
             return ListView(padding: const EdgeInsets.fromLTRB(WSpace.lg, 0, WSpace.lg, 24), children: [
               Text('مهام متاحة ($count)', style: WText.h3),
               const SizedBox(height: 10),
-              for (final r in availRides) ...[_offerRide(r), const SizedBox(height: 10)],
-              for (final t in availTasks) ...[_offerTask(t), const SizedBox(height: 10)],
+              for (final r in availRides) ...[KeyedSubtree(key: ValueKey('ride-${r.id}'), child: _offerRide(r)), const SizedBox(height: 10)],
+              for (final t in availTasks) ...[KeyedSubtree(key: ValueKey('task-${t.id}'), child: _offerTask(t)), const SizedBox(height: 10)],
             ]);
           },
         ),
@@ -239,6 +283,8 @@ class _DriverHomeState extends State<DriverHome> {
           if (t.description.isNotEmpty) ...[const SizedBox(height: 6), Text(t.description, style: WText.small, maxLines: 2, overflow: TextOverflow.ellipsis)],
           if (t.distanceKm != null) ...[const SizedBox(height: 4), Text('مسافة التوصيل ${kmAr(t.distanceKm!)}', style: WText.caption)],
           const SizedBox(height: 12),
+          OfferCountdown(startedAt: _seenAt[t.id] ?? DateTime.now(), total: _offerWindow, onExpire: () => _expire(t.id)),
+          const SizedBox(height: 12),
           WButton('قبول المهمة', kind: WButtonKind.dark, icon: Icons.check_rounded, onPressed: () => _accept(t.id, () => driverApi.acceptTask(t.id))),
         ]),
       );
@@ -255,6 +301,8 @@ class _DriverHomeState extends State<DriverHome> {
           const SizedBox(height: 4),
           InfoRow(icon: Icons.flag_rounded, text: '${r.dropoffText} · ${kmAr(r.distanceKm)}', color: WColors.blue),
           const SizedBox(height: 12),
+          OfferCountdown(startedAt: _seenAt[r.id] ?? DateTime.now(), total: _offerWindow, onExpire: () => _expire(r.id)),
+          const SizedBox(height: 12),
           WButton('قبول الرحلة', kind: WButtonKind.dark, icon: Icons.check_rounded, onPressed: () => _accept(r.id, () => driverApi.acceptRide(r.id))),
         ]),
       );
@@ -262,20 +310,34 @@ class _DriverHomeState extends State<DriverHome> {
   // ---------------- السجل ----------------
   Widget _history() => StreamBuilder<List<DeliveryTask>>(
         stream: _doesTasks ? _tasks : Stream.value(const []),
+        initialData: _doesTasks ? _tasksNow : const <DeliveryTask>[],
         builder: (context, ts) => StreamBuilder<List<Ride>>(
           stream: _doesRides ? _rides : Stream.value(const []),
+          initialData: _doesRides ? _ridesNow : const <Ride>[],
           builder: (context, rs) {
             if (!ts.hasData || !rs.hasData) return const SkeletonList();
             final uid = auth.userId;
-            final items = <(DateTime, String, String, int, bool)>[
+            final now = DateTime.now();
+            // (وقت، عنوان، وجهة، المبلغ، مكتملة، ملغاة)
+            final all = <(DateTime, String, String, int, bool, bool)>[
               for (final t in ts.data!.where((t) => t.driverId == uid && !t.status.isActive))
-                (t.createdAt, t.kind.label, t.dropoffText, t.fee, t.status == TaskStatus.delivered),
+                (t.createdAt, t.kind.label, t.dropoffText, t.fee, t.status == TaskStatus.delivered, t.status == TaskStatus.cancelled),
               for (final r in rs.data!.where((r) => r.driverId == uid && !r.status.isActive))
-                (r.createdAt, 'رحلة ${r.vehicle.label}', r.dropoffText, r.fare, r.status == RideStatus.completed),
+                (r.createdAt, 'رحلة ${r.vehicle.label}', r.dropoffText, r.fare, r.status == RideStatus.completed, r.status == RideStatus.cancelled),
             ]..sort((a, b) => b.$1.compareTo(a.$1));
-            if (items.isEmpty) return const EmptyView(icon: Icons.history_rounded, title: 'ما عندك مهام سابقة بعد');
-            final today = DateTime.now();
-            final todayTotal = items.where((e) => e.$5 && e.$1.year == today.year && e.$1.month == today.month && e.$1.day == today.day).fold<int>(0, (a, e) => a + e.$4);
+            if (all.isEmpty) return const EmptyView(icon: Icons.history_rounded, title: 'ما عندك مهام سابقة بعد');
+
+            final since = switch (_histPeriod) {
+              0 => DateTime(now.year, now.month, now.day),
+              1 => now.subtract(const Duration(days: 7)),
+              2 => now.subtract(const Duration(days: 30)),
+              _ => null,
+            };
+            final items = [
+              for (final e in all)
+                if ((since == null || !e.$1.isBefore(since)) && (_histStatus == 'all' || (_histStatus == 'completed' ? e.$5 : e.$6))) e,
+            ];
+            final todayTotal = all.where((e) => e.$5 && e.$1.year == now.year && e.$1.month == now.month && e.$1.day == now.day).fold<int>(0, (a, e) => a + e.$4);
             return ListView(padding: const EdgeInsets.fromLTRB(WSpace.lg, 0, WSpace.lg, 24), children: [
               WCard(
                 color: WColors.successSoft,
@@ -286,14 +348,24 @@ class _DriverHomeState extends State<DriverHome> {
                 ]),
               ),
               const SizedBox(height: 10),
-              for (final e in items)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(e.$5 ? Icons.check_circle_rounded : Icons.cancel_outlined, color: e.$5 ? WColors.success : WColors.inkFaint),
-                  title: Text('${e.$2} · ${e.$3}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(dateTimeAr(e.$1)),
-                  trailing: Text(iqd(e.$4), style: WText.bodyStrong),
-                ),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final p in const [(3, 'الكل'), (0, 'اليوم'), (1, 'أسبوع'), (2, 'شهر')])
+                  ChoiceChip(label: Text(p.$2), selected: _histPeriod == p.$1, onSelected: (_) => setState(() => _histPeriod = p.$1)),
+                for (final f in const [('all', 'كل الحالات'), ('completed', 'مكتملة'), ('cancelled', 'ملغاة')])
+                  ChoiceChip(label: Text(f.$2), selected: _histStatus == f.$1, onSelected: (_) => setState(() => _histStatus = f.$1)),
+              ]),
+              const SizedBox(height: 10),
+              if (items.isEmpty)
+                const EmptyView(icon: Icons.filter_alt_off_outlined, title: 'ما في مهام بهذا الفلتر')
+              else
+                for (final e in items)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(e.$5 ? Icons.check_circle_rounded : Icons.cancel_outlined, color: e.$5 ? WColors.success : WColors.inkFaint),
+                    title: Text('${e.$2} · ${e.$3}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(dateTimeAr(e.$1)),
+                    trailing: Text(iqd(e.$4), style: WText.bodyStrong),
+                  ),
             ]);
           },
         ),

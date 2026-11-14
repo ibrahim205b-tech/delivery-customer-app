@@ -889,3 +889,127 @@ class AppNotification {
         createdAt: _t(j['created_at']),
       );
 }
+
+// =====================================================================
+// دفتر حساب الكابتن (migration 0009) — كل الأرقام من الخادم
+// =====================================================================
+
+/// أداء يوم واحد (آخر 7 أيام)
+class CaptainDay {
+  final DateTime day;
+  final int trips;
+  final int fares;
+  const CaptainDay({required this.day, required this.trips, required this.fares});
+  factory CaptainDay.fromJson(Json j) => CaptainDay(day: DateTime.parse(j['day'] as String), trips: _i(j['trips']), fares: _i(j['fares']));
+}
+
+/// ملخص مالي وأداء الكابتن
+class CaptainSummary {
+  final int owed;
+  final int commissionTotal, commissionToday, commissionWeek, commissionMonth;
+  final int paidTotal, adjustTotal;
+  final int faresToday, faresWeek, faresMonth;
+  final int tripsDone, tripsDoneToday, tripsCancelled;
+  final double? cancelRate;
+  final double ratingAvg;
+  final List<CaptainDay> last7Days;
+
+  const CaptainSummary({
+    required this.owed,
+    required this.commissionTotal,
+    required this.commissionToday,
+    required this.commissionWeek,
+    required this.commissionMonth,
+    required this.paidTotal,
+    required this.adjustTotal,
+    required this.faresToday,
+    required this.faresWeek,
+    required this.faresMonth,
+    required this.tripsDone,
+    required this.tripsDoneToday,
+    required this.tripsCancelled,
+    required this.cancelRate,
+    required this.ratingAvg,
+    required this.last7Days,
+  });
+
+  factory CaptainSummary.fromJson(Json j) => CaptainSummary(
+        owed: _i(j['owed']),
+        commissionTotal: _i(j['commission_total']),
+        commissionToday: _i(j['commission_today']),
+        commissionWeek: _i(j['commission_week']),
+        commissionMonth: _i(j['commission_month']),
+        paidTotal: _i(j['paid_total']),
+        adjustTotal: _i(j['adjust_total']),
+        faresToday: _i(j['fares_today']),
+        faresWeek: _i(j['fares_week']),
+        faresMonth: _i(j['fares_month']),
+        tripsDone: _i(j['trips_done']),
+        tripsDoneToday: _i(j['trips_done_today']),
+        tripsCancelled: _i(j['trips_cancelled']),
+        cancelRate: _dn(j['cancel_rate']),
+        ratingAvg: _d(j['rating_avg']),
+        last7Days: [for (final e in (j['last_7_days'] as List? ?? const [])) CaptainDay.fromJson(e as Json)],
+      );
+}
+
+enum LedgerKind { commission, payment, adjustment }
+
+/// حركة مالية واحدة في الدفتر
+class LedgerRow {
+  final LedgerKind kind;
+  final DateTime at;
+  /// للعمولة: المبلغ المستحق (موجب). للتسديد: مبلغ المدفوع (يُعرض سالباً من الدالة، نعرضه كما هو). للتصحيح: الفرق على المستحق.
+  final int amount;
+  final int? fare;
+  final double? percent;
+  final String ref;
+  final String note;
+  const LedgerRow({required this.kind, required this.at, required this.amount, this.fare, this.percent, this.ref = '', this.note = ''});
+
+  factory LedgerRow.fromJson(Json j) => LedgerRow(
+        kind: switch (j['type'] as String) {
+          'payment' => LedgerKind.payment,
+          'adjustment' => LedgerKind.adjustment,
+          _ => LedgerKind.commission,
+        },
+        at: _t(j['at']),
+        amount: _i(j['amount']),
+        fare: j['fare'] == null ? null : _i(j['fare']),
+        percent: _dn(j['percent']),
+        ref: _s(j['ref']),
+        note: _s(j['note']),
+      );
+}
+
+/// الحساب الكامل: ملخص + سجل حركات
+class CaptainStatement {
+  final CaptainSummary summary;
+  final List<LedgerRow> ledger;
+  const CaptainStatement({required this.summary, required this.ledger});
+  factory CaptainStatement.fromJson(Json j) => CaptainStatement(
+        summary: CaptainSummary.fromJson(j['summary'] as Json),
+        ledger: [for (final e in (j['ledger'] as List? ?? const [])) LedgerRow.fromJson(e as Json)],
+      );
+}
+
+/// صف كابتن في قائمة الإدارة
+class DriverAccountRow {
+  final String driverId;
+  final String name;
+  final String phone;
+  final VehicleType vehicleType;
+  final bool isActive;
+  final int owed;
+  final int tripsDone;
+  const DriverAccountRow({required this.driverId, required this.name, required this.phone, required this.vehicleType, required this.isActive, required this.owed, required this.tripsDone});
+  factory DriverAccountRow.fromJson(Json j) => DriverAccountRow(
+        driverId: j['driver_id'] as String,
+        name: _s(j['name']),
+        phone: _s(j['phone']),
+        vehicleType: VehicleType.values.byName(j['vehicle_type'] as String),
+        isActive: j['is_active'] as bool? ?? true,
+        owed: _i(j['owed']),
+        tripsDone: _i(j['trips_done']),
+      );
+}

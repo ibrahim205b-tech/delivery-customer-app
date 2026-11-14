@@ -419,6 +419,10 @@ class DriverApi {
   Future<void> releaseTask(String id) => db.rpc('driver_release_task', params: {'p_task_id': id});
   Future<void> updateTask(String id, TaskStatus s) => db.rpc('driver_update_task', params: {'p_task_id': id, 'p_status': taskStatusDb(s)});
   Future<void> acceptRide(String id) => db.rpc('driver_accept_ride', params: {'p_ride_id': id});
+
+  /// حساب الكابتن: المستحق لواصل، الأرباح، الأداء، وسجل الحركات
+  Future<CaptainStatement> account() async => CaptainStatement.fromJson((await db.rpc('driver_account')) as Json);
+
   Future<void> updateRide(String id, RideStatus s) => db.rpc('driver_update_ride', params: {'p_ride_id': id, 'p_status': rideStatusDb(s)});
 }
 
@@ -431,6 +435,43 @@ class AdminApi {
   Future<Map<String, dynamic>> stats() async => (await db.rpc('admin_stats')) as Json;
 
   /// تقارير الرسوم البيانية (يحتاج migration 0006)
+  /// حسابات الكباتن مع المستحق عليهم (migration 0009)
+  Future<List<DriverAccountRow>> driverAccounts() async =>
+      [for (final e in (await db.rpc('admin_driver_accounts')) as List) DriverAccountRow.fromJson(e as Json)];
+
+  Future<CaptainStatement> driverAccount(String driverId, {DateTime? from, DateTime? to}) async => CaptainStatement.fromJson(
+        (await db.rpc('admin_driver_account', params: {
+          'p_driver_id': driverId,
+          'p_from': from?.toUtc().toIso8601String(),
+          'p_to': to?.toUtc().toIso8601String(),
+        })) as Json,
+      );
+
+  /// تسجيل تسديد نقدي استلمته الإدارة فعلاً. لا يتجاوز المستحق. نفس requestId لا يتكرر.
+  Future<void> addDriverPayment(String driverId, int amount, {String note = '', String? requestId}) => db.rpc('admin_add_driver_payment', params: {
+        'p_driver_id': driverId,
+        'p_amount': amount,
+        'p_note': note,
+        'p_request_id': requestId ?? _uuid.v4(),
+      });
+
+  /// تصحيح بسبب مكتوب، كصف مستقل. موجب يزيد المستحق، سالب ينقصه.
+  Future<void> addDriverAdjustment(String driverId, int delta, String reason, {String? requestId}) => db.rpc('admin_add_driver_adjustment', params: {
+        'p_driver_id': driverId,
+        'p_delta': delta,
+        'p_reason': reason,
+        'p_request_id': requestId ?? _uuid.v4(),
+      });
+
+  /// نسبة عمولة الكباتن (تنطبق على الإكمالات الجديدة فقط)
+  Future<Map<String, dynamic>> driverCommissionSetting() async {
+    final r = await db.from('app_settings').select('value').eq('key', 'driver_commission').maybeSingle();
+    return (r?['value'] as Map?)?.cast<String, dynamic>() ?? {'enabled': false, 'percent': 10};
+  }
+
+  Future<void> setDriverCommission({required bool enabled, required double percent}) =>
+      db.rpc('admin_set_driver_commission', params: {'p_enabled': enabled, 'p_percent': percent});
+
   Future<Map<String, dynamic>> reports({int days = 14}) async => (await db.rpc('admin_reports', params: {'p_days': days})) as Json;
 
   /// بيانات خريطة العمليات: سائقين بآخر موقع، طلبات جارية، محلات معتمدة، مناطق
