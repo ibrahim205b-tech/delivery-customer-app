@@ -1083,3 +1083,54 @@ class MapPlace {
         updatedAt: _t(j['updated_at']),
       );
 }
+
+// =====================================================================
+// WASEL SUPER APP: كتالوج الخدمات (migration 0013)
+// =====================================================================
+class ServiceGroup {
+  final String id;
+  final String name;
+  final int sortOrder;
+  const ServiceGroup({required this.id, required this.name, required this.sortOrder});
+  factory ServiceGroup.fromJson(Json j) => ServiceGroup(id: j['id'] as String, name: _s(j['name_ar']), sortOrder: _i(j['sort_order']));
+}
+
+class ServiceItem {
+  final String id;
+  final String groupId;
+  final String name;
+  final String description;
+  final String engine; // none · order · task · ride · booking
+  final bool isActive;
+  final int sortOrder;
+  const ServiceItem({
+    required this.id,
+    required this.groupId,
+    required this.name,
+    required this.description,
+    required this.engine,
+    required this.isActive,
+    required this.sortOrder,
+  });
+  factory ServiceItem.fromJson(Json j) => ServiceItem(
+        id: j['id'] as String,
+        groupId: j['group_id'] as String,
+        name: _s(j['name_ar']),
+        description: _s(j['description']),
+        engine: _s(j['engine']),
+        isActive: j['is_active'] as bool? ?? false,
+        sortOrder: _i(j['sort_order']),
+      );
+}
+
+/// نتيجة البحث الموحد: خدمات مفعّلة + محلات/مقدمو خدمات معتمدون
+class SearchResult {
+  final List<Json> services;
+  final List<Json> merchants;
+  const SearchResult({required this.services, required this.merchants});
+  factory SearchResult.fromJson(Json j) => SearchResult(
+        services: [for (final e in (j['services'] as List? ?? const [])) e as Json],
+        merchants: [for (final e in (j['merchants'] as List? ?? const [])) e as Json],
+      );
+  bool get isEmpty => services.isEmpty && merchants.isEmpty;
+}

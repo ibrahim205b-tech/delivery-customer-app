@@ -15,6 +15,19 @@ String get _uid => db.auth.currentUser!.id;
 // الكتالوج: الأقسام، المناطق، المحلات، المنتجات، العروض
 // =====================================================================
 class CatalogApi {
+  /// كتالوج «اكتشف خدمات واصل»: التصنيفات + الخدمات المفعّلة للزبون (الإدارة ترى الكل بحكم RLS)
+  Future<({List<ServiceGroup> groups, List<ServiceItem> services})> servicesCatalog() async {
+    final g = await db.from('service_groups').select().eq('is_active', true).order('sort_order');
+    final sv = await db.from('services').select().order('sort_order');
+    return (
+      groups: g.map(ServiceGroup.fromJson).toList(),
+      services: sv.map(ServiceItem.fromJson).toList(),
+    );
+  }
+
+  Future<SearchResult> searchServices(String query) async =>
+      SearchResult.fromJson((await db.rpc('search_services', params: {'p_query': query})) as Json);
+
   const CatalogApi();
 
   Future<List<MerchantCategory>> categories() async {
@@ -435,6 +448,19 @@ class AdminApi {
   Future<Map<String, dynamic>> stats() async => (await db.rpc('admin_stats')) as Json;
 
   /// تقارير الرسوم البيانية (يحتاج migration 0006)
+  /// تشغيل/إيقاف خدمة وتعديل اسمها ووصفها (الإدارة فقط)
+  Future<void> setServiceActive(String id, bool active, {String? name, String? description}) =>
+      db.rpc('admin_update_service', params: {'p_id': id, 'p_is_active': active, 'p_name_ar': name, 'p_description': description});
+
+  /// إعداد العمولة لخدمة: free · percent (حتى 50%) · fixed
+  Future<void> setServiceCommission(String id, String model, double value) =>
+      db.rpc('admin_set_service_commission', params: {'p_service_id': id, 'p_model': model, 'p_value': value});
+
+  Future<Map<String, dynamic>> serviceCommissions() async {
+    final r = await db.from('app_settings').select('value').eq('key', 'service_commissions').maybeSingle();
+    return (r?['value'] as Map?)?.cast<String, dynamic>() ?? {};
+  }
+
   /// نقاط الاستدلال حسب الحالة (الإدارة ترى الكل بحكم RLS)
   Future<List<MapPlace>> mapPlaces(String status) async {
     final r = await db.from('map_places').select().eq('status', status).order('updated_at', ascending: false).limit(300);

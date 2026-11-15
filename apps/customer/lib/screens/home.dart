@@ -9,6 +9,7 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import '../widgets.dart';
 import 'account.dart';
+import 'discover.dart';
 import 'errand.dart';
 import 'home_services.dart';
 import 'merchant_list.dart';
@@ -115,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ]),
                       ),
                       SliverToBoxAdapter(child: reveal(const _MoreServices())),
+                      SliverToBoxAdapter(child: reveal(const DiscoverEntry())),
                       if (active != null) SliverToBoxAdapter(child: reveal(_LiveOrder(order: active, onClosed: () => setState(() => _data = _load())))),
                       if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
                       if (d == null && !s.hasError) const SliverToBoxAdapter(child: _Loading()),
