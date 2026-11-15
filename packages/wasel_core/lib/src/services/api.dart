@@ -530,6 +530,26 @@ class DriverApi {
 // الإدارة
 // =====================================================================
 class AdminApi {
+  /// طلبات الخدمات لكل الخدمات (الإدارة ترى الكل بحكم RLS)، مع فلتر اختياري
+  Future<List<ServiceRequest>> serviceRequests({String? serviceId, String? status}) async {
+    var q = db.from('service_requests').select();
+    if (serviceId != null) q = q.eq('service_id', serviceId);
+    if (status != null) q = q.eq('status', status);
+    final r = await q.order('created_at', ascending: false).limit(200);
+    return r.map(ServiceRequest.fromJson).toList();
+  }
+
+  /// مجموع العمولات حسب الخدمة (الصفوف المكتملة فقط)
+  Future<Map<String, int>> serviceCommissionTotals() async {
+    final r = await db.from('service_commissions').select('service_id, amount');
+    final out = <String, int>{};
+    for (final m in r) {
+      final id = m['service_id'] as String;
+      out[id] = (out[id] ?? 0) + ((m['amount'] as num?)?.toInt() ?? 0);
+    }
+    return out;
+  }
+
   const AdminApi();
 
   Future<Map<String, dynamic>> stats() async => (await db.rpc('admin_stats')) as Json;

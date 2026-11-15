@@ -6,6 +6,7 @@ import '../main.dart';
 import 'commissions.dart';
 import 'driver_accounts.dart';
 import 'map_places.dart';
+import 'service_requests_admin.dart';
 import 'services_admin.dart';
 import 'support_inbox.dart';
 
@@ -30,6 +31,7 @@ class MoreScreen extends StatelessWidget {
           child: Column(children: [
             tile(Icons.percent_rounded, 'العمولات', 'عمولة الفترة، المستحق على كل محل، وتسجيل الدفعات', const CommissionsScreen()),
             tile(Icons.badge_outlined, 'حسابات الكباتن', 'المستحق على كل كابتن، التسديدات، والتصحيحات', const DriverAccountsScreen()),
+            tile(Icons.assignment_outlined, 'طلبات الخدمات', 'كل طلبات الخدمات وحالاتها، ومجموع عمولات كل خدمة', const ServiceRequestsAdminScreen()),
             tile(Icons.explore_outlined, 'إدارة الخدمات', 'تشغيل وإيقاف خدمات اكتشف واصل، وتعديل أسمائها وعمولاتها', const ServicesAdminScreen()),
             tile(Icons.place_outlined, 'نقاط الاستدلال', 'أضف النقاط وراجعها قبل ما تظهر للزبائن والسائقين', const MapPlacesScreen()),
             const Divider(indent: 72),
