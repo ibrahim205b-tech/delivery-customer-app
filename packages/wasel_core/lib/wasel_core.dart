@@ -14,6 +14,7 @@ export 'src/services/geo.dart';
 export 'src/services/location.dart';
 export 'src/services/notifier.dart';
 export 'src/services/support.dart';
+export 'src/services/tracking.dart';
 export 'src/theme/mode.dart';
 export 'src/theme/theme.dart';
 export 'src/theme/tokens.dart';

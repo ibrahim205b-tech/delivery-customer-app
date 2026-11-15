@@ -19,7 +19,7 @@ class _DriverHomeState extends State<DriverHome> {
   Driver? _me;
   Object? _error;
   LatLng? _pos;
-  Timer? _locTimer;
+  final DriverTracker _tracker = DriverTracker();
   bool _toggling = false;
   int _tab = 0;
   final Set<String> _hidden = {}; // مهام أخذها غيري
@@ -50,7 +50,7 @@ class _DriverHomeState extends State<DriverHome> {
 
   @override
   void dispose() {
-    _locTimer?.cancel();
+    unawaited(_tracker.stop());
     _subT?.cancel();
     _subR?.cancel();
     super.dispose();
@@ -69,12 +69,14 @@ class _DriverHomeState extends State<DriverHome> {
       _subR?.cancel();
       _subT = _tasks!.listen((v) {
         if (mounted) setState(() => _tasksNow = v);
+        _syncTracking();
       }, onError: (_) {});
       _subR = _rides!.listen((v) {
         if (mounted) setState(() => _ridesNow = v);
+        _syncTracking();
       }, onError: (_) {});
       _reloadAccount();
-      if (me?.isAvailable == true) _startTracking();
+      _syncTracking();
     } catch (e) {
       setState(() => _error = e);
     }
@@ -86,27 +88,47 @@ class _DriverHomeState extends State<DriverHome> {
     if (mounted) setState(() => _expired.add(id));
   }
 
-  void _startTracking() {
-    _locTimer?.cancel();
-    _sendLocation();
-    _locTimer = Timer.periodic(const Duration(seconds: 15), (_) => _sendLocation());
+  /// السائق عنده رحلة أو مهمة جارية الآن؟
+  bool get _hasJob {
+    final uid = auth.userId;
+    return (_tasksNow ?? const <DeliveryTask>[]).any((t) => t.driverId == uid && t.status.isActive) ||
+        (_ridesNow ?? const <Ride>[]).any((r) => r.driverId == uid && r.status.isActive);
   }
 
-  Future<void> _sendLocation() async {
-    final r = await currentLocation();
-    if (r.position == null) return;
-    if (mounted) setState(() => _pos = r.position);
-    try {
-      await driverApi.updateLocation(r.position!.latitude, r.position!.longitude);
-    } catch (_) {
-      // إذا انقطع النت نحاول بالدورة الجاية
+  /// التتبع يشتغل فقط عندما يكون السائق متاحاً أو عنده مهمة جارية. خارج ذلك يتوقف.
+  Future<void> _syncTracking() async {
+    final want = shouldTrack(available: _me?.isAvailable ?? false, hasJob: _hasJob);
+    if (want && !_tracker.running) {
+      final err = await _tracker.start(
+        onSend: (p) => driverApi.updateLocation(p.latitude, p.longitude),
+        onPosition: (p) {
+          if (mounted) setState(() => _pos = p);
+        },
+      );
+      if (err != null && mounted) showInfo(context, err);
+    } else if (!want && _tracker.running) {
+      await _tracker.stop();
     }
+  }
+
+  /// قبل تفعيل "متاح": نشرح سبب صلاحية الموقع بالخلفية، ثم نطلبها.
+  Future<void> _explainBackgroundLocation() async {
+    if (await hasAlwaysLocation() || !mounted) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'موقعك أثناء العمل',
+      message: 'نرسل موقعك للزبون وللمنظومة فقط أثناء ما تكون متاح أو عندك مهمة جارية. خارج ذلك ما نتتبعك. '
+          'اختر "السماح طوال الوقت" حتى يستمر التتبع والتطبيق بالخلفية.',
+      confirm: 'فهمت',
+    );
+    if (ok) await requestAlwaysLocation();
   }
 
   Future<void> _toggle(bool v) async {
     setState(() => _toggling = true);
     LatLng? p;
     if (v) {
+      await _explainBackgroundLocation();
       final r = await currentLocation();
       if (r.position == null) {
         if (mounted) showError(context, r.error!);
@@ -122,7 +144,7 @@ class _DriverHomeState extends State<DriverHome> {
             id: me.id, vehicleType: me.vehicleType, areaId: me.areaId, isActive: me.isActive, isAvailable: me.isAvailable,
             lastLat: me.lastLat, lastLng: me.lastLng, fullName: _me?.fullName, plate: _me?.plate, model: _me?.model, color: _me?.color,
           ));
-      v ? _startTracking() : _locTimer?.cancel();
+      await _syncTracking();
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
