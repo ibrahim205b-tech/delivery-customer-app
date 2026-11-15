@@ -5,6 +5,7 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import 'commissions.dart';
 import 'driver_accounts.dart';
+import 'map_places.dart';
 import 'support_inbox.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -28,6 +29,7 @@ class MoreScreen extends StatelessWidget {
           child: Column(children: [
             tile(Icons.percent_rounded, 'العمولات', 'عمولة الفترة، المستحق على كل محل، وتسجيل الدفعات', const CommissionsScreen()),
             tile(Icons.badge_outlined, 'حسابات الكباتن', 'المستحق على كل كابتن، التسديدات، والتصحيحات', const DriverAccountsScreen()),
+            tile(Icons.place_outlined, 'نقاط الاستدلال', 'أضف النقاط وراجعها قبل ما تظهر للزبائن والسائقين', const MapPlacesScreen()),
             const Divider(indent: 72),
             tile(Icons.support_agent_rounded, 'رسائل الدعم', 'محادثات المستهلكين والتجار والسائقين', const SupportInboxScreen()),
             const Divider(indent: 72),

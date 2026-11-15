@@ -435,6 +435,34 @@ class AdminApi {
   Future<Map<String, dynamic>> stats() async => (await db.rpc('admin_stats')) as Json;
 
   /// تقارير الرسوم البيانية (يحتاج migration 0006)
+  /// نقاط الاستدلال حسب الحالة (الإدارة ترى الكل بحكم RLS)
+  Future<List<MapPlace>> mapPlaces(String status) async {
+    final r = await db.from('map_places').select().eq('status', status).order('updated_at', ascending: false).limit(300);
+    return r.map(MapPlace.fromJson).toList();
+  }
+
+  /// إضافة أو تعديل نقطة. التعديل يعيدها لمسودة حتى تُراجع من جديد.
+  Future<MapPlace> saveMapPlace({String? id, required String name, required String kind, required double lat, required double lng, String description = ''}) async =>
+      MapPlace.fromJson((await db.rpc('admin_save_map_place', params: {
+        'p_id': id,
+        'p_name': name,
+        'p_kind': kind,
+        'p_lat': lat,
+        'p_lng': lng,
+        'p_description': description,
+      })) as Json);
+
+  /// اعتماد أو رفض نقطة. الرفض يحتاج سبباً.
+  Future<MapPlace> reviewMapPlace(String id, {required bool approve, String reason = ''}) async =>
+      MapPlace.fromJson((await db.rpc('admin_review_map_place', params: {
+        'p_id': id,
+        'p_status': approve ? 'approved' : 'rejected',
+        'p_reason': reason,
+      })) as Json);
+
+  /// حذف مسودة أو نقطة مرفوضة فقط (المعتمدة لا تنحذف)
+  Future<void> deleteMapPlace(String id) => db.rpc('admin_delete_map_place', params: {'p_id': id});
+
   /// حسابات الكباتن مع المستحق عليهم (migration 0009)
   Future<List<DriverAccountRow>> driverAccounts() async =>
       [for (final e in (await db.rpc('admin_driver_accounts')) as List) DriverAccountRow.fromJson(e as Json)];

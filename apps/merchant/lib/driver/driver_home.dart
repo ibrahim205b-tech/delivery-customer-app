@@ -232,6 +232,10 @@ class _DriverHomeState extends State<DriverHome> {
             for (final id in [...availTasks.map((t) => t.id), ...availRides.map((r) => r.id)]) {
               _seenAt.putIfAbsent(id, DateTime.now);
             }
+            // الأقرب أولاً: المسافة من موقعي الحالي إلى نقطة الاستلام
+            double distTo(double lat, double lng) => _pos == null ? double.maxFinite : distanceKm(_pos!.latitude, _pos!.longitude, lat, lng);
+            availRides.sort((a, b) => distTo(a.pickupLat, a.pickupLng).compareTo(distTo(b.pickupLat, b.pickupLng)));
+            availTasks.sort((a, b) => distTo(a.pickupLat, a.pickupLng).compareTo(distTo(b.pickupLat, b.pickupLng)));
             final count = availTasks.length + availRides.length;
             if (_lastAvailableCount >= 0 && count > _lastAvailableCount && _me!.isAvailable && myTask == null && myRide == null) {
               notifier.show('مهمة جديدة متاحة', 'افتح واصل شريك واقبلها قبل غيرك', channel: WChannel.orders);
@@ -243,8 +247,15 @@ class _DriverHomeState extends State<DriverHome> {
             if (!_me!.isAvailable) {
               return const EmptyView(icon: Icons.toggle_off_outlined, title: 'شغّل "متاح" حتى تستلم مهام', message: 'موقعك يتحدّث كل 15 ثانية وأنت متاح.');
             }
+            if (_me!.areaId == null) {
+              return const EmptyView(
+                icon: Icons.map_outlined,
+                title: 'حسابك غير مرتبط بمنطقة خدمة',
+                message: 'ما تشوف الطلبات إلا بعد ما تنربط بمنطقة. تواصل مع الإدارة.',
+              );
+            }
             if (count == 0) {
-              return const EmptyView(icon: Icons.radar_rounded, title: 'ماكو مهام هسه', message: 'أول ما يجي طلب يظهر هنا مع تنبيه.');
+              return const EmptyView(icon: Icons.radar_rounded, title: 'ماكو مهام هسه', message: 'أول ما يجي طلب بمنطقتك يظهر هنا مع تنبيه.');
             }
             return ListView(padding: const EdgeInsets.fromLTRB(WSpace.lg, 0, WSpace.lg, 24), children: [
               Text('مهام متاحة ($count)', style: WText.h3),
@@ -533,31 +544,47 @@ class _RouteMap extends StatefulWidget {
 
 class _RouteMapState extends State<_RouteMap> {
   RouteResult? _route;
-  LatLng? _from;
-  bool? _leg;
+  DateTime? _lastRouteAt;
+  bool _busy = false;
+  // أقل فاصل بين طلبين للمسار: يحمي خدمة التوجيه من الكثرة
+  static const _rerouteGap = Duration(seconds: 20);
 
   @override
   void initState() {
     super.initState();
-    _fetch();
+    _fetch(force: true);
   }
 
   @override
   void didUpdateWidget(covariant _RouteMap old) {
     super.didUpdateWidget(old);
-    _fetch();
+    final legChanged = old.toPickup != widget.toPickup || old.pickup != widget.pickup || old.dropoff != widget.dropoff;
+    if (legChanged) {
+      _fetch(force: true);
+      return;
+    }
+    // إعادة الحساب فقط: إذا ما عندنا مسار حقيقي بعد، أو السائق خرج عن الخط
+    final me = widget.me;
+    final r = _route;
+    final needs = r == null || r.isEstimate || (me != null && isOffRoute(me, r.points));
+    if (needs) _fetch();
   }
 
-  Future<void> _fetch() async {
+  Future<void> _fetch({bool force = false}) async {
+    if (_busy) return;
+    final now = DateTime.now();
+    if (!force && _lastRouteAt != null && now.difference(_lastRouteAt!) < _rerouteGap) return;
     final from = widget.toPickup ? (widget.me ?? widget.pickup) : widget.pickup;
     final to = widget.toPickup ? widget.pickup : widget.dropoff;
-    // لا نعيد الطلب إلا إذا تغيّرت المرحلة أو تحركت أكثر من 150 م
-    if (_leg == widget.toPickup && _from != null && distanceKm(_from!.latitude, _from!.longitude, from.latitude, from.longitude) < 0.15) return;
-    _from = from;
-    _leg = widget.toPickup;
     if (from == to) return;
-    final r = await geoApi.route(from, to);
-    if (mounted) setState(() => _route = r);
+    _busy = true;
+    _lastRouteAt = now;
+    try {
+      final r = await geoApi.route(from, to);
+      if (mounted) setState(() => _route = r);
+    } finally {
+      _busy = false;
+    }
   }
 
   @override

@@ -41,6 +41,7 @@ String friendlyError(Object e) {
     'reason_required' => 'اكتب سبب الرفض.',
     'not_a_driver' || 'driver_inactive' => 'حساب السائق غير مفعّل. تواصل مع الإدارة.',
     'already_on_job' => 'عندك مهمة شغّالة. كمّلها أولاً.',
+    'outside_service_area' => 'هذا الموقع خارج مناطق خدمة واصل حالياً.',
     'task_taken' || 'ride_taken' => 'سائق ثاني سبقك وقبلها.',
     'vehicle_not_allowed' => 'نوع مركبتك ما يناسب هذه المهمة.',
     'cannot_release' => 'ما يصير تتخلى عن المهمة بعد الاستلام.',

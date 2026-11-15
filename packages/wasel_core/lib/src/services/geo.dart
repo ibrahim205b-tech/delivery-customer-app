@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -38,6 +39,30 @@ class RouteResult {
   /// true إذا ما توفرت خدمة المسارات واستُخدم خط مستقيم وسرعة تقديرية
   final bool isEstimate;
 }
+
+/// أقصر مسافة (بالمتر) من نقطة إلى خط مكوّن من نقاط متتالية (مستوٍ تقريبياً، كافٍ لمسافات المدينة).
+double distanceToPolylineM(LatLng p, List<LatLng> line) {
+  if (line.isEmpty) return double.infinity;
+  if (line.length == 1) return distanceKm(p.latitude, p.longitude, line.first.latitude, line.first.longitude) * 1000;
+  var best = double.infinity;
+  final cosLat = math.cos(p.latitude * math.pi / 180);
+  for (var i = 0; i < line.length - 1; i++) {
+    final a = line[i], b = line[i + 1];
+    // إسقاط على مستوٍ محلي بوحدة متر (1 درجة ≈ 111 كم)
+    final ax = (a.longitude - p.longitude) * 111320 * cosLat, ay = (a.latitude - p.latitude) * 110540;
+    final bx = (b.longitude - p.longitude) * 111320 * cosLat, by = (b.latitude - p.latitude) * 110540;
+    final dx = bx - ax, dy = by - ay;
+    final len2 = dx * dx + dy * dy;
+    final t = len2 == 0 ? 0.0 : (-(ax * dx + ay * dy) / len2).clamp(0.0, 1.0);
+    final px = ax + dx * t, py = ay + dy * t;
+    final d = math.sqrt(px * px + py * py);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/// هل السائق خرج عن المسار؟ الحد الافتراضي 60 م (أكثر من دقّة GPS العادية في المدينة).
+bool isOffRoute(LatLng p, List<LatLng> line, {double thresholdM = 60}) => distanceToPolylineM(p, line) > thresholdM;
 
 /// البحث عن العناوين والمسارات. [client] قابل للحقن للاختبار.
 class GeoApi {

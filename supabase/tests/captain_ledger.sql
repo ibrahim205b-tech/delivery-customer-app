@@ -14,6 +14,7 @@ delete from rides where customer_id in (select id from users where phone like '0
 delete from delivery_tasks where customer_id in (select id from users where phone like '0770999%');
 delete from drivers where id in (select id from users where phone like '0770999%');
 delete from auth.users where email like '977099%@phone.wasel.app';
+delete from service_areas where name = 'منطقة اختبار الكابتن';
 
 create schema if not exists cl;
 create or replace function cl.ok(cond boolean, msg text) returns void language plpgsql as $$
@@ -54,20 +55,23 @@ insert into cl.ids select 'k2', id from auth.users where email like '%0003@phone
 insert into cl.ids select 'cust', id from auth.users where email like '%0004@phone.wasel.app' and email like '977099%';
 insert into cl.ids select 'courier', id from auth.users where email like '%0005@phone.wasel.app' and email like '977099%';
 
+insert into service_areas (id, name, city, center_lat, center_lng, radius_km, is_active)
+values ('e0000000-0000-4000-8000-0000000000aa', 'منطقة اختبار الكابتن', 'بغداد', 33.3100, 44.4300, 20, true);
+
 insert into user_roles (user_id, role) values (cl.id('adm'), 'admin'), (cl.id('k1'), 'driver'), (cl.id('k2'), 'driver'), (cl.id('courier'), 'driver');
-insert into drivers (id, vehicle_type, is_active, is_available) values
-  (cl.id('k1'), 'taxi', true, true), (cl.id('k2'), 'taxi', true, true), (cl.id('courier'), 'courier', true, true);
+insert into drivers (id, vehicle_type, area_id, is_active, is_available) values
+  (cl.id('k1'), 'taxi', 'e0000000-0000-4000-8000-0000000000aa', true, true), (cl.id('k2'), 'taxi', 'e0000000-0000-4000-8000-0000000000aa', true, true), (cl.id('courier'), 'courier', 'e0000000-0000-4000-8000-0000000000aa', true, true);
 update app_settings set value = '{"enabled": true, "percent": 10}' where key = 'driver_commission';
 
 -- رحلة 1: تكسي أجرتها 12,500 (تكمل)
-insert into rides (id, customer_id, vehicle, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
-values ('a0000000-0000-4000-8000-000000000001', cl.id('cust'), 'taxi', 33.31, 44.43, 33.32, 44.44, 3.2, 12500, 'requested');
+insert into rides (id, customer_id, vehicle, area_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
+values ('a0000000-0000-4000-8000-000000000001', cl.id('cust'), 'taxi', 'e0000000-0000-4000-8000-0000000000aa', 33.31, 44.43, 33.32, 44.44, 3.2, 12500, 'requested');
 -- رحلة 2: تُلغى بعد القبول
-insert into rides (id, customer_id, vehicle, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
-values ('a0000000-0000-4000-8000-000000000002', cl.id('cust'), 'taxi', 33.31, 44.43, 33.33, 44.45, 4.1, 9000, 'requested');
+insert into rides (id, customer_id, vehicle, area_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
+values ('a0000000-0000-4000-8000-000000000002', cl.id('cust'), 'taxi', 'e0000000-0000-4000-8000-0000000000aa', 33.31, 44.43, 33.33, 44.45, 4.1, 9000, 'requested');
 -- رحلة 3: تكمل بعد تعطيل العمولة (تُسجَّل بصفر)
-insert into rides (id, customer_id, vehicle, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
-values ('a0000000-0000-4000-8000-000000000003', cl.id('cust'), 'taxi', 33.31, 44.43, 33.34, 44.46, 2.0, 6000, 'requested');
+insert into rides (id, customer_id, vehicle, area_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, fare, status)
+values ('a0000000-0000-4000-8000-000000000003', cl.id('cust'), 'taxi', 'e0000000-0000-4000-8000-0000000000aa', 33.31, 44.43, 33.34, 44.46, 2.0, 6000, 'requested');
 -- توصيل مندوب 4,000 (يُكمل)
 insert into delivery_tasks (id, kind, customer_id, driver_id, status, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, fee, customer_name, customer_phone)
 values ('b0000000-0000-4000-8000-000000000001', 'courier', cl.id('cust'), cl.id('courier'), 'on_the_way', 33.31, 44.43, 33.32, 44.44, 4000, 'زبون', '07709990004');
@@ -184,6 +188,7 @@ delete from driver_commissions where driver_id in (cl.id('k1'), cl.id('k2'), cl.
 delete from rides where customer_id = cl.id('cust');
 delete from delivery_tasks where customer_id = cl.id('cust');
 delete from drivers where id in (cl.id('k1'), cl.id('k2'), cl.id('courier'));
+delete from service_areas where name = 'منطقة اختبار الكابتن';
 delete from user_roles where user_id in (cl.id('adm'), cl.id('k1'), cl.id('k2'), cl.id('courier'));
 delete from auth.users where email like '977099%@phone.wasel.app';
 \echo ✔ كل اختبارات دفتر الكابتن نجحت

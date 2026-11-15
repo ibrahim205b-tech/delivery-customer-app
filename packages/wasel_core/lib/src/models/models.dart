@@ -1026,3 +1026,60 @@ class DriverAccountRow {
         tripsDone: _i(j['trips_done']),
       );
 }
+
+// =====================================================================
+// نقاط الاستدلال (migration 0012)
+// =====================================================================
+const kMapPlaceKinds = <String, String>{
+  'landmark': 'معلم',
+  'district': 'منطقة سكنية',
+  'street': 'شارع أو زقاق',
+  'store': 'محل أو متجر',
+  'service_point': 'نقطة خدمة',
+  'hard_access': 'موقع يصعب الوصول إليه',
+  'driver_note': 'ملاحظة سائق عن الطريق',
+};
+
+class MapPlace {
+  final String id;
+  final String name;
+  final String kind;
+  final String description;
+  final double lat;
+  final double lng;
+  final String? areaId;
+  final String status; // draft · approved · rejected
+  final String rejectionReason;
+  final DateTime? reviewedAt;
+  final DateTime updatedAt;
+
+  const MapPlace({
+    required this.id,
+    required this.name,
+    required this.kind,
+    required this.description,
+    required this.lat,
+    required this.lng,
+    this.areaId,
+    required this.status,
+    required this.rejectionReason,
+    this.reviewedAt,
+    required this.updatedAt,
+  });
+
+  String get kindLabel => kMapPlaceKinds[kind] ?? kind;
+
+  factory MapPlace.fromJson(Json j) => MapPlace(
+        id: j['id'] as String,
+        name: _s(j['name_ar']),
+        kind: _s(j['kind']),
+        description: _s(j['description']),
+        lat: _d(j['lat']),
+        lng: _d(j['lng']),
+        areaId: j['area_id'] as String?,
+        status: _s(j['status']),
+        rejectionReason: _s(j['rejection_reason']),
+        reviewedAt: _tn(j['reviewed_at']),
+        updatedAt: _t(j['updated_at']),
+      );
+}
