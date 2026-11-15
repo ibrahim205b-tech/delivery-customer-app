@@ -10,6 +10,14 @@ import 'pitch_booking.dart';
 
 /// بوابة «اكتشف خدمات واصل»: كل الخدمات الإضافية منظمة بتصنيفات، مع بحث موحد.
 /// تعرض الخدمات المفعّلة من الإدارة فقط، فلا يظهر للزبون أي خدمة بلا تنفيذ.
+/// الخدمات التي لها مسار فعلي في التطبيق. أي خدمة مفعّلة خارج هذه المجموعة لا تُعرض
+/// (لا نعرض للزبون خدمة مفعّلة تقول "قريباً").
+const kRoutableServices = {
+  'parcel_delivery', 'courier_errand', 'home_services', 'restaurants', 'stores', 'pitch_booking',
+};
+
+bool _isLive(ServiceItem s) => s.isActive && kRoutableServices.contains(s.id);
+
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
   @override
@@ -105,7 +113,7 @@ class _Catalog extends StatelessWidget {
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             for (final g in c.groups) ...[
               Builder(builder: (_) {
-                final active = c.services.where((s) => s.groupId == g.id && s.isActive).toList();
+                final active = c.services.where((s) => s.groupId == g.id && _isLive(s)).toList();
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 18),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -157,7 +165,7 @@ class _SearchResults extends StatelessWidget {
             if (r.services.isNotEmpty) ...[
               Text('الخدمات', style: WText.h3),
               const SizedBox(height: 8),
-              for (final s in r.services)
+              for (final s in r.services.where((x) => kRoutableServices.contains(x['id']))) 
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: WCard(

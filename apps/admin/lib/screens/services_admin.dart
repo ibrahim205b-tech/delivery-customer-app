@@ -90,6 +90,14 @@ class _ServicesAdminScreenState extends State<ServicesAdminScreen> {
     if (await runAction(context, () => adminApi.setServiceCommission(s.id, model, v), success: 'انحفظت العمولة')) _reload();
   }
 
+  /// حالة الخدمة بوضوح: هل تُفعَّل الآن، ولماذا لا تُفعَّل
+  String _statusLine(ServiceItem s) {
+    if (s.engine == 'none') return 'بانتظار التنفيذ: الشاشات والمحرك لم تُبنَ بعد، لا يمكن تفعيلها';
+    final eng = _engineLabel[s.engine] ?? s.engine;
+    if (s.isActive) return 'مفعّلة · $eng';
+    return 'جاهزة للتفعيل · $eng · معطّلة حالياً';
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('إدارة الخدمات')),
@@ -114,7 +122,7 @@ class _ServicesAdminScreenState extends State<ServicesAdminScreen> {
                             Expanded(child: Text(s.name, style: WText.bodyStrong)),
                             Switch(value: s.isActive, onChanged: s.engine == 'none' ? null : (v) => _toggle(s, v)),
                           ]),
-                          Text('${_engineLabel[s.engine] ?? s.engine}${s.engine == 'none' ? ' · لا يظهر للزبون' : ''}', style: WText.caption),
+                          Text(_statusLine(s), style: WText.caption),
                           const SizedBox(height: 6),
                           Row(children: [
                             Expanded(
