@@ -108,6 +108,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
   static String _pct(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   late final _ownerPhone = TextEditingController();
   late String? _category = m?.categoryId;
+  late String _businessType = m?.businessType ?? 'store';
   late String? _area = m?.areaId;
   late LatLng? _point = m == null ? null : LatLng(m!.lat, m!.lng);
   late MerchantStatus _status = m?.status ?? MerchantStatus.pending;
@@ -156,6 +157,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
     final data = {
       'name': _name.text.trim(),
       'category_id': _category,
+      'business_type': _businessType,
       'area_id': _area,
       'description': _desc.text.trim(),
       'address_text': _address.text.trim(),
@@ -272,6 +274,13 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
                 items: [for (final c in _cats) DropdownMenuItem(value: c.id, child: Text(c.name))],
                 onChanged: (v) => setState(() => _category = v),
                 validator: (v) => v == null ? 'اختار التصنيف' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _businessType,
+                decoration: const InputDecoration(labelText: 'نوع النشاط', helperText: 'ملعب خماسي يظهر في حجز الملاعب، والبقية تبقى كما هي.'),
+                items: [for (final e in kBusinessTypeLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                onChanged: (v) => setState(() => _businessType = v ?? _businessType),
               ),
               if (_isProvider) ...[
                 const SizedBox(height: 10),

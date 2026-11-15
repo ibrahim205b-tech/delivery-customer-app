@@ -1233,3 +1233,20 @@ class ServiceRequest {
   DateTime? get endsAt => payload['ends_at'] == null ? null : DateTime.parse(payload['ends_at'] as String).toLocal();
   String get placeName => (payload['pitch_name'] as String?) ?? '';
 }
+
+/// أسماء أنواع النشاط بالعربية (تُستخدم في اختيار النوع من لوحة الإدارة)
+const kBusinessTypeLabels = <String, String>{
+  'store': 'متجر',
+  'restaurant': 'مطعم',
+  'provider': 'مقدم خدمة',
+  'pitch_owner': 'صاحب ملعب خماسي',
+  'venue': 'صالة',
+  'library': 'مكتبة',
+  'institute': 'معهد',
+  'photographer': 'مصور',
+  'technician': 'فني',
+  'employer': 'صاحب عمل',
+  'maintenance_center': 'مركز صيانة',
+  'rental_center': 'مركز تأجير',
+  'travel_agency': 'شركة سياحة',
+};
