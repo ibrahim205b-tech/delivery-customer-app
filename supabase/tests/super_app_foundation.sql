@@ -35,7 +35,7 @@ begin
   -- 3) خدمة بلا محرك تنفيذ ما تُفعَّل (لا وعد بلا تنفيذ)
   set local role authenticated;
   begin
-    perform admin_update_service('pitch_booking', true);
+    perform admin_update_service('jobs', true);
     msg := 'none';
   exception when others then msg := sqlerrm;
   end;
@@ -80,9 +80,9 @@ begin
     raise exception 'FAIL: البحث ما يرجّع توصيل الأمانات';
   end if;
   set local role authenticated;
-  j := search_services('ملعب');
+  j := search_services('وظيفة');
   reset role;
-  if jsonb_array_length(j->'services') <> 0 then raise exception 'FAIL: البحث يرجّع خدمة معطّلة (ملعب)'; end if;
+  if jsonb_array_length(j->'services') <> 0 then raise exception 'FAIL: البحث يرجّع خدمة معطّلة (وظيفة)'; end if;
   raise notice 'PASS: البحث يرجّع الخدمات المفعّلة فقط';
 
   -- 7) نوع النشاط: قيمة غير معروفة مرفوضة، والمحلات القائمة مصنّفة
@@ -92,8 +92,8 @@ begin
   exception when others then msg := sqlerrm;
   end;
   if msg not like '%business_type%' then raise exception 'FAIL: نوع نشاط غير معروف قُبل (رد: %)', msg; end if;
-  if (select count(*) from merchants where category_id = 'home_services' and business_type <> 'provider') > 0 then
-    raise exception 'FAIL: مزودو الخدمات المنزلية ما انصنّفوا';
+  if (select count(*) from merchants where business_type = 'provider' and category_id <> 'home_services') > 0 then
+    raise exception 'FAIL: مزود خدمة خارج تصنيف الخدمات المنزلية';
   end if;
   raise notice 'PASS: نوع النشاط محكوم بقائمة معروفة، والمحلات القائمة مصنّفة';
 

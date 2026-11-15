@@ -6,6 +6,7 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import 'bookings_tab.dart';
 import 'orders_tab.dart';
+import 'pitch_owner_tab.dart';
 import 'products_tab.dart';
 import 'stats_tab.dart';
 import 'store_tab.dart';
@@ -101,13 +102,15 @@ class _MerchantHomeState extends State<MerchantHome> {
     }
     _watchIncoming(m);
     final isProvider = m.categoryId == 'home_services';
+    final isPitch = m.businessType == 'pitch_owner';
     final tabs = <(String, IconData, IconData, Widget)>[
-      if (isProvider)
+      if (isPitch) ('الملاعب', Icons.sports_soccer_outlined, Icons.sports_soccer_rounded, PitchOwnerTab(merchant: m))
+      else if (isProvider)
         ('الحجوزات', Icons.event_note_outlined, Icons.event_note_rounded, BookingsTab(merchant: m))
       else
         ('الطلبات', Icons.receipt_long_outlined, Icons.receipt_long_rounded, OrdersTab(merchant: m)),
-      if (!isProvider) ('المنتجات', Icons.inventory_2_outlined, Icons.inventory_2_rounded, ProductsTab(merchant: m)),
-      if (!isProvider) ('المبيعات', Icons.insights_outlined, Icons.insights_rounded, StatsTab(merchant: m)),
+      if (!isProvider && !isPitch) ('المنتجات', Icons.inventory_2_outlined, Icons.inventory_2_rounded, ProductsTab(merchant: m)),
+      if (!isProvider && !isPitch) ('المبيعات', Icons.insights_outlined, Icons.insights_rounded, StatsTab(merchant: m)),
       ('المحل', Icons.storefront_outlined, Icons.storefront_rounded, StoreTab(merchant: m, onUpdated: _updated)),
     ];
     final tab = _tab.clamp(0, tabs.length - 1);

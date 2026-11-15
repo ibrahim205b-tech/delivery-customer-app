@@ -15,6 +15,48 @@ String get _uid => db.auth.currentUser!.id;
 // الكتالوج: الأقسام، المناطق، المحلات، المنتجات، العروض
 // =====================================================================
 class CatalogApi {
+  /// أصحاب الملاعب المعتمدون (لاختيار الملعب)
+  Future<List<Merchant>> pitchOwners() async {
+    final r = await db.from('merchants').select().eq('business_type', 'pitch_owner').eq('status', 'approved').order('name');
+    return r.map(Merchant.fromJson).toList();
+  }
+
+  /// الملاعب المفعّلة لمحل معتمد (RLS تضمن أن الملعب معتمد ومفعّل)
+  Future<List<Pitch>> pitchesOf(String merchantId) async {
+    final r = await db.from('pitches').select().eq('merchant_id', merchantId).eq('is_active', true).order('name_ar');
+    return r.map(Pitch.fromJson).toList();
+  }
+
+  /// الأوقات المحجوزة (مقبولة فقط) ليوم معيّن بتوقيت بغداد
+  Future<List<({DateTime start, DateTime end})>> pitchBusySlots(String pitchId, DateTime day) async {
+    final d = '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+    final r = await db.rpc('pitch_busy_slots', params: {'p_pitch_id': pitchId, 'p_day': d}) as List;
+    return [
+      for (final e in r) (start: DateTime.parse((e as Json)['starts_at'] as String).toLocal(), end: DateTime.parse(e['ends_at'] as String).toLocal()),
+    ];
+  }
+
+  /// يطلب حجز ملعب. نفس [clientRequestId] لا يكرر الطلب.
+  Future<ServiceRequest> bookPitch(String pitchId, DateTime start, int minutes, {String? clientRequestId}) async =>
+      ServiceRequest.fromJson((await db.rpc('pitch_book_request', params: {
+        'p_pitch_id': pitchId,
+        'p_starts_at': start.toUtc().toIso8601String(),
+        'p_minutes': minutes,
+        'p_client_request_id': clientRequestId ?? _uuid.v4(),
+      })) as Json);
+
+  /// حجوزات الزبون وطلباته
+  Future<List<ServiceRequest>> myServiceRequests() async {
+    final r = await db.from('service_requests').select().order('created_at', ascending: false).limit(100);
+    return r.map(ServiceRequest.fromJson).toList();
+  }
+
+  Future<ServiceRequest> cancelServiceRequest(String id, String reason) async =>
+      ServiceRequest.fromJson((await db.rpc('service_cancel', params: {'p_request_id': id, 'p_reason': reason})) as Json);
+
+  Future<void> rateServiceRequest(String id, int rating, String comment) =>
+      db.rpc('service_rate', params: {'p_request_id': id, 'p_rating': rating, 'p_comment': comment});
+
   /// كتالوج «اكتشف خدمات واصل»: التصنيفات + الخدمات المفعّلة للزبون (الإدارة ترى الكل بحكم RLS)
   Future<({List<ServiceGroup> groups, List<ServiceItem> services})> servicesCatalog() async {
     final g = await db.from('service_groups').select().eq('is_active', true).order('sort_order');
@@ -301,6 +343,51 @@ class CustomerApi {
 // التاجر
 // =====================================================================
 class MerchantApi {
+  /// ملاعب هذا المحل (كل الحالات)، لصاحب المحل
+  Future<List<Pitch>> myPitches(String merchantId) async {
+    final r = await db.from('pitches').select().eq('merchant_id', merchantId).order('name_ar');
+    return r.map(Pitch.fromJson).toList();
+  }
+
+  Future<Pitch> savePitch({
+    String? id,
+    required String merchantId,
+    required String name,
+    required String description,
+    required int pricePerHour,
+    required int minMinutes,
+    required int openHour,
+    required int closeHour,
+    required int cancelBeforeHours,
+    required String cancellationPolicy,
+    required bool isActive,
+  }) async =>
+      Pitch.fromJson((await db.rpc('upsert_pitch', params: {
+        'p_id': id ?? _uuid.v4(),
+        'p_merchant_id': merchantId,
+        'p_name': name,
+        'p_description': description,
+        'p_price_per_hour': pricePerHour,
+        'p_min_minutes': minMinutes,
+        'p_open_hour': openHour,
+        'p_close_hour': closeHour,
+        'p_cancel_before_hours': cancelBeforeHours,
+        'p_cancellation_policy': cancellationPolicy,
+        'p_is_active': isActive,
+      })) as Json);
+
+  /// طلبات محل مقدم الخدمة (الحالة كلها)
+  Future<List<ServiceRequest>> providerRequests(String merchantId) async {
+    final r = await db.from('service_requests').select().eq('provider_id', merchantId).order('created_at', ascending: false).limit(200);
+    return r.map(ServiceRequest.fromJson).toList();
+  }
+
+  Future<ServiceRequest> respondServiceRequest(String id, {required bool accept, String reason = ''}) async =>
+      ServiceRequest.fromJson((await db.rpc('service_respond', params: {'p_request_id': id, 'p_accept': accept, 'p_reason': reason})) as Json);
+
+  Future<ServiceRequest> setServiceRequestStatus(String id, String status) async =>
+      ServiceRequest.fromJson((await db.rpc('service_set_status', params: {'p_request_id': id, 'p_to': status})) as Json);
+
   const MerchantApi();
 
   Future<List<Merchant>> myMerchants() async {

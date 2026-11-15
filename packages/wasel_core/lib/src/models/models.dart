@@ -124,6 +124,8 @@ class Merchant {
   final double deliveryRadiusKm;
   final Map<String, DayHours> workingHours; // "0".."6" (0 = الأحد)
   final MerchantStatus status;
+  /// نوع النشاط (store, pitch_owner, provider...). القيمة الافتراضية متجر.
+  final String businessType;
   final bool isAcceptingOrders;
   final double ratingAvg;
   final int ratingCount;
@@ -152,6 +154,7 @@ class Merchant {
     required this.deliveryRadiusKm,
     required this.workingHours,
     required this.status,
+    this.businessType = 'store',
     required this.isAcceptingOrders,
     required this.ratingAvg,
     required this.ratingCount,
@@ -185,6 +188,7 @@ class Merchant {
       deliveryRadiusKm: _d(j['delivery_radius_km']),
       workingHours: wh,
       status: MerchantStatus.values.byName(j['status'] as String),
+      businessType: (j['business_type'] as String?) ?? 'store',
       isAcceptingOrders: j['is_accepting_orders'] as bool? ?? true,
       ratingAvg: _d(j['rating_avg']),
       ratingCount: _i(j['rating_count']),
@@ -1133,4 +1137,99 @@ class SearchResult {
         merchants: [for (final e in (j['merchants'] as List? ?? const [])) e as Json],
       );
   bool get isEmpty => services.isEmpty && merchants.isEmpty;
+}
+
+// =====================================================================
+// المحرك المشترك للخدمات + حجز الملاعب (migration 0014)
+// =====================================================================
+const kServiceStatusLabels = <String, String>{
+  'requested': 'بانتظار الرد',
+  'accepted': 'مقبول',
+  'rejected': 'مرفوض',
+  'in_progress': 'جارٍ التنفيذ',
+  'completed': 'مكتمل',
+  'cancelled': 'ملغي',
+};
+
+class Pitch {
+  final String id;
+  final String merchantId;
+  final String name;
+  final String description;
+  final int pricePerHour;
+  final int minMinutes;
+  final int openHour;
+  final int closeHour;
+  final int cancelBeforeHours;
+  final String cancellationPolicy;
+  final bool isActive;
+  const Pitch({
+    required this.id,
+    required this.merchantId,
+    required this.name,
+    required this.description,
+    required this.pricePerHour,
+    required this.minMinutes,
+    required this.openHour,
+    required this.closeHour,
+    required this.cancelBeforeHours,
+    required this.cancellationPolicy,
+    required this.isActive,
+  });
+  factory Pitch.fromJson(Json j) => Pitch(
+        id: j['id'] as String,
+        merchantId: j['merchant_id'] as String,
+        name: _s(j['name_ar']),
+        description: _s(j['description']),
+        pricePerHour: _i(j['price_per_hour']),
+        minMinutes: _i(j['min_minutes']),
+        openHour: _i(j['open_hour']),
+        closeHour: _i(j['close_hour']),
+        cancelBeforeHours: _i(j['cancel_before_hours']),
+        cancellationPolicy: _s(j['cancellation_policy']),
+        isActive: j['is_active'] as bool? ?? false,
+      );
+}
+
+/// طلب خدمة موحد (حجز ملعب حالياً، وغيره لاحقاً)
+class ServiceRequest {
+  final String id;
+  final String serviceId;
+  final String customerId;
+  final String providerId;
+  final String status;
+  final Json payload;
+  final int amount;
+  final String rejectReason;
+  final String cancelReason;
+  final DateTime createdAt;
+  const ServiceRequest({
+    required this.id,
+    required this.serviceId,
+    required this.customerId,
+    required this.providerId,
+    required this.status,
+    required this.payload,
+    required this.amount,
+    required this.rejectReason,
+    required this.cancelReason,
+    required this.createdAt,
+  });
+  factory ServiceRequest.fromJson(Json j) => ServiceRequest(
+        id: j['id'] as String,
+        serviceId: _s(j['service_id']),
+        customerId: _s(j['customer_id']),
+        providerId: _s(j['provider_id']),
+        status: _s(j['status']),
+        payload: (j['payload'] as Map?)?.cast<String, dynamic>() ?? const {},
+        amount: _i(j['amount']),
+        rejectReason: _s(j['reject_reason']),
+        cancelReason: _s(j['cancel_reason']),
+        createdAt: _t(j['created_at']),
+      );
+
+  String get statusLabel => kServiceStatusLabels[status] ?? status;
+  DateTime? get startsAt => payload['starts_at'] == null ? null : DateTime.parse(payload['starts_at'] as String).toLocal();
+  DateTime? get endsAt => payload['ends_at'] == null ? null : DateTime.parse(payload['ends_at'] as String).toLocal();
+  String get placeName => (payload['pitch_name'] as String?) ?? '';
 }

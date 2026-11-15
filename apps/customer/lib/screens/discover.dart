@@ -6,6 +6,7 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import 'errand.dart';
 import 'home.dart';
+import 'pitch_booking.dart';
 
 /// بوابة «اكتشف خدمات واصل»: كل الخدمات الإضافية منظمة بتصنيفات، مع بحث موحد.
 /// تعرض الخدمات المفعّلة من الإدارة فقط، فلا يظهر للزبون أي خدمة بلا تنفيذ.
@@ -42,6 +43,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       'parcel_delivery' => const ErrandRequestScreen(kind: TaskKind.parcel),
       'courier_errand' => const ErrandRequestScreen(kind: TaskKind.courier),
       'stores' => const ShopsHubScreen(),
+      'pitch_booking' => const PitchOwnersScreen(),
       'restaurants' || 'home_services' => null,
       _ => null,
     };
@@ -60,7 +62,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('اكتشف خدمات واصل')),
+        appBar: AppBar(
+          title: const Text('اكتشف خدمات واصل'),
+          actions: [IconButton(tooltip: 'حجوزاتي', icon: const Icon(Icons.event_note_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())))],
+        ),
         body: RefreshIndicator(
           onRefresh: () async => setState(() => _catalog = catalogApi.servicesCatalog()),
           child: ListView(
