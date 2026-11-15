@@ -9,6 +9,7 @@ export 'src/services/api.dart';
 export 'src/services/auth.dart';
 export 'src/services/config.dart';
 export 'src/services/errors.dart';
+export 'src/services/freshness.dart';
 export 'src/services/geo.dart';
 export 'src/services/location.dart';
 export 'src/services/notifier.dart';

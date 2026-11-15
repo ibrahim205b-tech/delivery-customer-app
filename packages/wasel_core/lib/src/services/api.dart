@@ -475,20 +475,34 @@ class AdminApi {
   Future<Map<String, dynamic>> reports({int days = 14}) async => (await db.rpc('admin_reports', params: {'p_days': days})) as Json;
 
   /// بيانات خريطة العمليات: سائقين بآخر موقع، طلبات جارية، محلات معتمدة، مناطق
-  Future<({List<Driver> drivers, List<Order> activeOrders, List<Merchant> merchants, List<ServiceArea> areas})> opsMap() async {
+  /// بيانات خريطة العمليات. [busyDriverIds] = السائقون اللي عندهم رحلة أو مهمة جارية الآن.
+  Future<({List<Driver> drivers, List<Order> activeOrders, List<Merchant> merchants, List<ServiceArea> areas, Set<String> busyDriverIds})> opsMap() async {
     final r = await Future.wait([
       db.from('drivers').select('*, vehicles(*), users(full_name, phone)').not('last_lat', 'is', null),
       db.from('orders').select('*, merchants(name, logo_url, lat, lng)').not('status', 'in', '(delivered,cancelled)').limit(200),
       db.from('merchants').select().eq('status', 'approved'),
       db.from('service_areas').select(),
+      db.from('rides').select('driver_id').not('driver_id', 'is', null).inFilter('status', ['accepted', 'arrived', 'in_progress']),
+      db.from('delivery_tasks').select('driver_id').not('driver_id', 'is', null).inFilter('status', ['assigned', 'picked_up', 'on_the_way']),
     ]);
+    final busy = <String>{
+      for (final row in [...(r[4] as List), ...(r[5] as List)]) (row as Map)['driver_id'] as String,
+    };
     return (
-      drivers: r[0].map(Driver.fromJson).toList(),
-      activeOrders: r[1].map(Order.fromJson).toList(),
-      merchants: r[2].map(Merchant.fromJson).toList(),
-      areas: r[3].map(ServiceArea.fromJson).toList(),
+      drivers: (r[0] as List).map((e) => Driver.fromJson(e as Json)).toList(),
+      activeOrders: (r[1] as List).map((e) => Order.fromJson(e as Json)).toList(),
+      merchants: (r[2] as List).map((e) => Merchant.fromJson(e as Json)).toList(),
+      areas: (r[3] as List).map((e) => ServiceArea.fromJson(e as Json)).toList(),
+      busyDriverIds: busy,
     );
   }
+
+  /// مواقع السائقين مباشرة (Realtime). الإدارة فقط تقرأ جدول drivers بحكم RLS.
+  /// الصف لا يحمل أسماء المستخدمين، فالشاشة تدمج الاسم من التحميل الكامل.
+  Stream<List<Driver>> watchDriverLocations() => db
+      .from('drivers')
+      .stream(primaryKey: ['id'])
+      .map((rows) => rows.map(Driver.fromJson).toList());
 
   // ---------- المحلات ----------
   Future<List<Merchant>> merchants({String? status, String? categoryId, String? search}) async {

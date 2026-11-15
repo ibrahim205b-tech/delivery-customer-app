@@ -103,7 +103,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     final markers = <WMarker>[
       if (o.merchantLat != null) WMarker(LatLng(o.merchantLat!, o.merchantLng!), kind: WMarkerKind.store),
       WMarker(home, kind: WMarkerKind.home, label: _eta),
-      if (o.driverLat != null && o.status.isActive) WMarker(LatLng(o.driverLat!, o.driverLng!), kind: WMarkerKind.courier),
+      if (o.driverLat != null && o.status.isActive)
+        WMarker(LatLng(o.driverLat!, o.driverLng!), kind: WMarkerKind.courier, stale: freshnessOf(o.driverLocatedAt) == Freshness.stale),
     ];
     return Scaffold(
       body: Stack(children: [
@@ -192,6 +193,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               ]),
             ),
         ]),
+        if (o.driverLat != null && o.status.isActive)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Align(alignment: AlignmentDirectional.centerStart, child: FreshnessBadge(at: o.driverLocatedAt)),
+          ),
         if (widget.justPlaced && o.status == OrderStatus.placed)
           Padding(
             padding: const EdgeInsets.only(top: 6),

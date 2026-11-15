@@ -362,6 +362,8 @@ class Order {
   final String? driverVehicle;
   final double? driverLat;
   final double? driverLng;
+  /// وقت آخر موقع أرسله السائق لهذا الطلب/الرحلة/المهمة (null قبل أول تحديث)
+  final DateTime? driverLocatedAt;
   final int subtotal;
   final int deliveryFee;
   final int total;
@@ -392,6 +394,7 @@ class Order {
     this.driverVehicle,
     this.driverLat,
     this.driverLng,
+    this.driverLocatedAt,
     required this.subtotal,
     required this.deliveryFee,
     required this.total,
@@ -425,6 +428,7 @@ class Order {
       driverVehicle: j['driver_vehicle'] as String?,
       driverLat: _dn(j['driver_lat']),
       driverLng: _dn(j['driver_lng']),
+        driverLocatedAt: _tn(j['driver_located_at']),
       subtotal: _i(j['subtotal']),
       deliveryFee: _i(j['delivery_fee']),
       total: _i(j['total']),
@@ -464,6 +468,7 @@ class Order {
       driverVehicle: updated.driverVehicle,
       driverLat: updated.driverLat,
       driverLng: updated.driverLng,
+      driverLocatedAt: updated.driverLocatedAt,
       subtotal: updated.subtotal,
       deliveryFee: updated.deliveryFee,
       total: updated.total,
@@ -604,6 +609,8 @@ class DeliveryTask {
   final String? driverPhone;
   final double? driverLat;
   final double? driverLng;
+  /// وقت آخر موقع أرسله السائق لهذا الطلب/الرحلة/المهمة (null قبل أول تحديث)
+  final DateTime? driverLocatedAt;
   final double? distanceKm;
   final int fee;
   final DateTime createdAt;
@@ -631,6 +638,7 @@ class DeliveryTask {
     this.driverPhone,
     this.driverLat,
     this.driverLng,
+    this.driverLocatedAt,
     this.distanceKm,
     required this.fee,
     required this.createdAt,
@@ -659,6 +667,7 @@ class DeliveryTask {
         driverPhone: j['driver_phone'] as String?,
         driverLat: _dn(j['driver_lat']),
         driverLng: _dn(j['driver_lng']),
+        driverLocatedAt: _tn(j['driver_located_at']),
         distanceKm: _dn(j['distance_km']),
         fee: _i(j['fee']),
         createdAt: _t(j['created_at']),
@@ -703,6 +712,8 @@ class Ride {
   final String? driverVehicle;
   final double? driverLat;
   final double? driverLng;
+  /// وقت آخر موقع أرسله السائق لهذا الطلب/الرحلة/المهمة (null قبل أول تحديث)
+  final DateTime? driverLocatedAt;
   final DateTime createdAt;
   final DateTime? completedAt;
 
@@ -727,6 +738,7 @@ class Ride {
     this.driverVehicle,
     this.driverLat,
     this.driverLng,
+    this.driverLocatedAt,
     required this.createdAt,
     this.completedAt,
   });
@@ -752,6 +764,7 @@ class Ride {
         driverVehicle: j['driver_vehicle'] as String?,
         driverLat: _dn(j['driver_lat']),
         driverLng: _dn(j['driver_lng']),
+        driverLocatedAt: _tn(j['driver_located_at']),
         createdAt: _t(j['created_at']),
         completedAt: _tn(j['completed_at']),
       );

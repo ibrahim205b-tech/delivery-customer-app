@@ -181,12 +181,17 @@ class RideTrackingScreen extends StatelessWidget {
                 child: WMap(markers: [
                   WMarker(LatLng(r.pickupLat, r.pickupLng), kind: WMarkerKind.pickup),
                   WMarker(LatLng(r.dropoffLat, r.dropoffLng), kind: WMarkerKind.dropoff),
-                  if (r.driverLat != null && r.status.isActive) WMarker(LatLng(r.driverLat!, r.driverLng!), kind: r.vehicle == VehicleType.tuktuk ? WMarkerKind.tuktuk : WMarkerKind.taxi),
+                  if (r.driverLat != null && r.status.isActive)
+                    WMarker(LatLng(r.driverLat!, r.driverLng!), kind: r.vehicle == VehicleType.tuktuk ? WMarkerKind.tuktuk : WMarkerKind.taxi, stale: freshnessOf(r.driverLocatedAt) == Freshness.stale),
                 ]),
               ),
               Expanded(
                 child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
                   Text(r.status.label, style: WText.h1),
+                  if (r.driverLat != null && r.status.isActive) ...[
+                    const SizedBox(height: 8),
+                    FreshnessBadge(at: r.driverLocatedAt),
+                  ],
                   if (r.status == RideStatus.requested) ...[
                     const SizedBox(height: 10),
                     const LinearProgressIndicator(),

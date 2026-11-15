@@ -14,12 +14,16 @@ import 'basics.dart';
 enum WMarkerKind { place, store, home, pickup, dropoff, courier, taxi, tuktuk, me }
 
 class WMarker {
-  const WMarker(this.point, {this.kind = WMarkerKind.place, this.label, this.icon, this.onTap});
+  const WMarker(this.point, {this.kind = WMarkerKind.place, this.label, this.icon, this.onTap, this.stale = false, this.busy = false});
   final LatLng point;
   final WMarkerKind kind;
   final String? label;
   final IconData? icon; // مثلاً أيقونة قسم المحل
   final VoidCallback? onTap;
+  /// موقع قديم (أكثر من 5 دقائق): يظهر باهتاً حتى لا يُفهم كمباشر
+  final bool stale;
+  /// سائق مشغول (رحلة/مهمة جارية): يظهر بلون أزرق بدل الحبر
+  final bool busy;
 
   /// للتوافق: كان اسمه driver
   static const driver = WMarkerKind.courier;
@@ -151,7 +155,7 @@ class _WMapState extends State<WMap> {
                 width: m.label == null ? 52 : 150,
                 height: m.label == null ? 52 : 76,
                 alignment: m.label == null ? Alignment.center : const Alignment(0, -0.35),
-                child: GestureDetector(onTap: m.onTap, child: WMapPin(kind: m.kind, icon: m.icon, label: m.label)),
+                child: GestureDetector(onTap: m.onTap, child: Opacity(opacity: m.stale ? 0.4 : 1, child: WMapPin(kind: m.kind, icon: m.icon, label: m.label, busy: m.busy))),
               ),
           ]),
           RichAttributionWidget(
@@ -167,10 +171,11 @@ class _WMapState extends State<WMap> {
 
 /// العلامة نفسها (تُستخدم بالخريطة وبالأدلة)
 class WMapPin extends StatelessWidget {
-  const WMapPin({super.key, required this.kind, this.icon, this.label});
+  const WMapPin({super.key, required this.kind, this.icon, this.label, this.busy = false});
   final WMarkerKind kind;
   final IconData? icon;
   final String? label;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +185,7 @@ class WMapPin extends StatelessWidget {
           child: Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(12), border: Border.all(color: WColors.white, width: 2.5), boxShadow: WShadow.soft),
+            decoration: BoxDecoration(color: busy ? WColors.blue : WColors.ink, borderRadius: WRadius.all(12), border: Border.all(color: WColors.white, width: 2.5), boxShadow: WShadow.soft),
             child: Icon(
               switch (kind) { WMarkerKind.taxi => Icons.local_taxi_rounded, WMarkerKind.tuktuk => Icons.electric_rickshaw_rounded, _ => Icons.two_wheeler_rounded },
               color: WColors.lime,
