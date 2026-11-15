@@ -6,7 +6,9 @@ import 'package:wasel_core/wasel_core.dart';
 import '../main.dart';
 import 'bookings_tab.dart';
 import 'orders_tab.dart';
+import 'activity_picker.dart';
 import 'pitch_owner_tab.dart';
+import 'provider_requests_tab.dart';
 import 'products_tab.dart';
 import 'stats_tab.dart';
 import 'store_tab.dart';
@@ -100,17 +102,21 @@ class _MerchantHomeState extends State<MerchantHome> {
         ),
       );
     }
+    // أول دخول: صاحب الحساب يختار نشاطه قبل أي شيء
+    if (!m.activityChosen) return ActivityPickerScreen(merchant: m, onSaved: _updated);
     _watchIncoming(m);
     final isProvider = m.categoryId == 'home_services';
-    final isPitch = m.businessType == 'pitch_owner';
+    final type = m.businessType;
+    final isPitch = type == 'pitch_owner';
+    final isStoreLike = type == 'store' || type == 'restaurant';
+    // تبويبات حسب النشاط فقط: لا يرى صاحب الملعب مثلاً قائمة المنتجات
     final tabs = <(String, IconData, IconData, Widget)>[
       if (isPitch) ('الملاعب', Icons.sports_soccer_outlined, Icons.sports_soccer_rounded, PitchOwnerTab(merchant: m))
-      else if (isProvider)
-        ('الحجوزات', Icons.event_note_outlined, Icons.event_note_rounded, BookingsTab(merchant: m))
-      else
-        ('الطلبات', Icons.receipt_long_outlined, Icons.receipt_long_rounded, OrdersTab(merchant: m)),
-      if (!isProvider && !isPitch) ('المنتجات', Icons.inventory_2_outlined, Icons.inventory_2_rounded, ProductsTab(merchant: m)),
-      if (!isProvider && !isPitch) ('المبيعات', Icons.insights_outlined, Icons.insights_rounded, StatsTab(merchant: m)),
+      else if (isStoreLike) ('الطلبات', Icons.receipt_long_outlined, Icons.receipt_long_rounded, OrdersTab(merchant: m))
+      else if (type == 'provider' || isProvider) ('الحجوزات', Icons.event_note_outlined, Icons.event_note_rounded, BookingsTab(merchant: m))
+      else ('الطلبات', Icons.assignment_outlined, Icons.assignment_rounded, ProviderRequestsTab(merchant: m)),
+      if (isStoreLike) ('المنتجات', Icons.inventory_2_outlined, Icons.inventory_2_rounded, ProductsTab(merchant: m)),
+      if (isStoreLike) ('المبيعات', Icons.insights_outlined, Icons.insights_rounded, StatsTab(merchant: m)),
       ('المحل', Icons.storefront_outlined, Icons.storefront_rounded, StoreTab(merchant: m, onUpdated: _updated)),
     ];
     final tab = _tab.clamp(0, tabs.length - 1);
@@ -138,7 +144,15 @@ class _MerchantHomeState extends State<MerchantHome> {
                   ]),
           ),
         ]),
-        actions: const [SupportIconButton(app: SupportApp.merchant), SizedBox(width: 6)],
+        actions: [
+          IconButton(
+            tooltip: 'تغيير النشاط',
+            icon: const Icon(Icons.swap_horiz_rounded),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ActivityPickerScreen(merchant: m, canCancel: true, onSaved: _updated))),
+          ),
+          const SupportIconButton(app: SupportApp.merchant),
+          const SizedBox(width: 6),
+        ],
       ),
       body: KeyedSubtree(key: ValueKey('${m.id}-$tab'), child: tabs[tab].$4),
       bottomNavigationBar: NavigationBar(

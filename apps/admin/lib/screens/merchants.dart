@@ -158,6 +158,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
       'name': _name.text.trim(),
       'category_id': _category,
       'business_type': _businessType,
+      'activity_chosen': true,
       'area_id': _area,
       'description': _desc.text.trim(),
       'address_text': _address.text.trim(),

@@ -7,6 +7,7 @@ import '../main.dart';
 import 'errand.dart';
 import 'home.dart';
 import 'pitch_booking.dart';
+import 'service_request.dart';
 
 /// بوابة «اكتشف خدمات واصل»: كل الخدمات الإضافية منظمة بتصنيفات، مع بحث موحد.
 /// تعرض الخدمات المفعّلة من الإدارة فقط، فلا يظهر للزبون أي خدمة بلا تنفيذ.
@@ -14,6 +15,8 @@ import 'pitch_booking.dart';
 /// (لا نعرض للزبون خدمة مفعّلة تقول "قريباً").
 const kRoutableServices = {
   'parcel_delivery', 'courier_errand', 'home_services', 'restaurants', 'stores', 'pitch_booking',
+  'photographers', 'clothing_store', 'device_installments', 'print_custom', 'phone_repair', 'carpet_cleaning',
+  'institute_seats', 'documents', 'ps_rental', 'heavy_transport', 'travel_campaigns', 'doctor_booking', 'restaurant_booking',
 };
 
 bool _isLive(ServiceItem s) => s.isActive && kRoutableServices.contains(s.id);
@@ -57,6 +60,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     };
     if (page != null) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+      return;
+    }
+    // الخدمات التي تطلب تفاصيل من مقدم معتمد: قائمة المقدمين ثم نموذج الطلب
+    if (kServiceForms.containsKey(s.id)) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ServiceProvidersScreen(service: s)));
       return;
     }
     final catId = s.id == 'restaurants' || s.id == 'home_services' ? s.id : null;

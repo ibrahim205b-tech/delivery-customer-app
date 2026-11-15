@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wasel_core/wasel_core.dart';
 
+import 'provider_requests_tab.dart';
+
 /// تبويب صاحب الملعب: إدارة الملاعب (السعر والساعات والمدة وسياسة الإلغاء)،
 /// وطلبات الحجز (قبول أو رفض بسبب، وبدء وإتمام).
 class PitchOwnerTab extends StatefulWidget {
@@ -12,27 +14,9 @@ class PitchOwnerTab extends StatefulWidget {
 
 class _PitchOwnerTabState extends State<PitchOwnerTab> {
   int _section = 0; // 0 الطلبات · 1 الملاعب
-  late Future<List<ServiceRequest>> _requests = merchantApi.providerRequests(widget.merchant.id);
   late Future<List<Pitch>> _pitches = merchantApi.myPitches(widget.merchant.id);
 
-  void _reload() => setState(() {
-        _requests = merchantApi.providerRequests(widget.merchant.id);
-        _pitches = merchantApi.myPitches(widget.merchant.id);
-      });
-
-  Future<void> _respond(ServiceRequest r, bool accept) async {
-    var reason = '';
-    if (!accept) {
-      final v = await promptText(context, title: 'سبب الرفض', hint: 'مثال: الملعب مغلق لصيانة', confirm: 'رفض');
-      if (v == null || v.trim().length < 3 || !mounted) return;
-      reason = v.trim();
-    }
-    if (await runAction(context, () => merchantApi.respondServiceRequest(r.id, accept: accept, reason: reason), success: accept ? 'تم القبول' : 'تم الرفض')) _reload();
-  }
-
-  Future<void> _advance(ServiceRequest r, String to) async {
-    if (await runAction(context, () => merchantApi.setServiceRequestStatus(r.id, to), success: to == 'completed' ? 'انتهى الحجز' : 'بدأ الحجز')) _reload();
-  }
+  void _reload() => setState(() => _pitches = merchantApi.myPitches(widget.merchant.id));
 
   Future<void> _editPitch([Pitch? p]) async {
     final saved = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => _PitchForm(merchant: widget.merchant, pitch: p)));
@@ -55,50 +39,8 @@ class _PitchOwnerTabState extends State<PitchOwnerTab> {
               onSelectionChanged: (v) => setState(() => _section = v.first),
             ),
           ),
-          Expanded(child: _section == 0 ? _requestsView() : _pitchesView()),
+          Expanded(child: _section == 0 ? ProviderRequestsTab(merchant: widget.merchant) : _pitchesView()),
         ]),
-      );
-
-  Widget _requestsView() => FutureBuilder<List<ServiceRequest>>(
-        future: _requests,
-        builder: (context, snap) {
-          if (snap.hasError) return ErrorView(error: snap.error!, onRetry: _reload);
-          if (!snap.hasData) return const SkeletonList(count: 4);
-          final rows = snap.data!;
-          if (rows.isEmpty) return const EmptyView(icon: Icons.event_available_outlined, title: 'ما في طلبات حجز', message: 'أول ما يطلب زبون حجز يظهر هنا.');
-          return RefreshIndicator(
-            onRefresh: () async => _reload(),
-            child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
-              for (final r in rows)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: WCard(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: Text(r.placeName.isEmpty ? 'حجز' : r.placeName, style: WText.bodyStrong)),
-                        StatusPill(r.statusLabel, tone: r.status == 'requested' ? PillTone.accent : PillTone.neutral),
-                      ]),
-                      if (r.startsAt != null) Text('${dateTimeAr(r.startsAt!)} · ${iqd(r.amount)}', style: WText.small),
-                      const SizedBox(height: 8),
-                      if (r.status == 'requested')
-                        Row(children: [
-                          Expanded(child: WButton('قبول', kind: WButtonKind.dark, compact: true, onPressed: () => _respond(r, true))),
-                          const SizedBox(width: 8),
-                          Expanded(child: WButton('رفض', kind: WButtonKind.ghost, compact: true, onPressed: () => _respond(r, false))),
-                        ]),
-                      if (r.status == 'accepted')
-                        WButton('بدأ الحجز', kind: WButtonKind.secondary, compact: true, onPressed: () => _advance(r, 'in_progress')),
-                      if (r.status == 'accepted' || r.status == 'in_progress')
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: WButton('انتهى الحجز', compact: true, onPressed: () => _advance(r, 'completed')),
-                        ),
-                    ]),
-                  ),
-                ),
-            ]),
-          );
-        },
       );
 
   Widget _pitchesView() => FutureBuilder<List<Pitch>>(

@@ -126,6 +126,8 @@ class Merchant {
   final MerchantStatus status;
   /// نوع النشاط (store, pitch_owner, provider...). القيمة الافتراضية متجر.
   final String businessType;
+  /// هل اختار صاحب الحساب نشاطه بنفسه؟ إذا لا، يظهر له اختيار النشاط عند الدخول.
+  final bool activityChosen;
   final bool isAcceptingOrders;
   final double ratingAvg;
   final int ratingCount;
@@ -155,6 +157,7 @@ class Merchant {
     required this.workingHours,
     required this.status,
     this.businessType = 'store',
+    this.activityChosen = true,
     required this.isAcceptingOrders,
     required this.ratingAvg,
     required this.ratingCount,
@@ -189,6 +192,7 @@ class Merchant {
       workingHours: wh,
       status: MerchantStatus.values.byName(j['status'] as String),
       businessType: (j['business_type'] as String?) ?? 'store',
+      activityChosen: j['activity_chosen'] as bool? ?? true,
       isAcceptingOrders: j['is_accepting_orders'] as bool? ?? true,
       ratingAvg: _d(j['rating_avg']),
       ratingCount: _i(j['rating_count']),
@@ -1249,4 +1253,9 @@ const kBusinessTypeLabels = <String, String>{
   'maintenance_center': 'مركز صيانة',
   'rental_center': 'مركز تأجير',
   'travel_agency': 'شركة سياحة',
+  'clinic': 'عيادة طبية',
+  'print_shop': 'مطبعة',
+  'mobile_repair': 'صيانة موبايلات',
+  'cleaning_company': 'شركة تنظيف',
+  'transport_company': 'شركة نقل',
 };

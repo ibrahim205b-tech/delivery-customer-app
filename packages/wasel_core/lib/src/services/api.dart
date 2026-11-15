@@ -15,6 +15,21 @@ String get _uid => db.auth.currentUser!.id;
 // الكتالوج: الأقسام، المناطق، المحلات، المنتجات، العروض
 // =====================================================================
 class CatalogApi {
+  /// مقدمو الخدمة المعتمدون المناسبون لخدمة معيّنة
+  Future<List<Merchant>> providersForService(String serviceId) async {
+    final r = await db.rpc('providers_for_service', params: {'p_service_id': serviceId}) as List;
+    return [for (final e in r) Merchant.fromJson(e as Json)];
+  }
+
+  /// طلب عام: الزبون يرسل التفاصيل حسب الخدمة لمقدم مناسب
+  Future<ServiceRequest> createServiceRequest(String serviceId, String providerId, Map<String, dynamic> payload, {String? clientRequestId}) async =>
+      ServiceRequest.fromJson((await db.rpc('svc_create_request', params: {
+        'p_service_id': serviceId,
+        'p_provider_id': providerId,
+        'p_payload': payload,
+        'p_client_request_id': clientRequestId ?? _uuid.v4(),
+      })) as Json);
+
   /// أصحاب الملاعب المعتمدون (لاختيار الملعب)
   Future<List<Merchant>> pitchOwners() async {
     final r = await db.from('merchants').select().eq('business_type', 'pitch_owner').eq('status', 'approved').order('name');
@@ -343,6 +358,14 @@ class CustomerApi {
 // التاجر
 // =====================================================================
 class MerchantApi {
+  /// صاحب الحساب يختار نشاطه (ممنوع إذا عنده طلبات مفتوحة)
+  Future<Merchant> setBusinessType(String merchantId, String type) async =>
+      Merchant.fromJson((await db.rpc('merchant_set_business_type', params: {'p_merchant_id': merchantId, 'p_type': type})) as Json);
+
+  /// مقدم الخدمة يحدد السعر قبل القبول
+  Future<ServiceRequest> setRequestAmount(String requestId, int amount) async =>
+      ServiceRequest.fromJson((await db.rpc('service_set_amount', params: {'p_request_id': requestId, 'p_amount': amount})) as Json);
+
   /// ملاعب هذا المحل (كل الحالات)، لصاحب المحل
   Future<List<Pitch>> myPitches(String merchantId) async {
     final r = await db.from('pitches').select().eq('merchant_id', merchantId).order('name_ar');
