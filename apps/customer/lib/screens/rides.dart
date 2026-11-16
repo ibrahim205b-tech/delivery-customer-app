@@ -21,11 +21,24 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   Object? _estimateError;
   bool _sending = false;
   RouteResult? _route;
+  List<UserRestriction> _restrictions = [];
+
+  bool get _restricted => _restrictions.any((r) => r.isActive);
 
   @override
   void initState() {
     super.initState();
     _useMyLocation();
+    _loadRestrictions();
+  }
+
+  Future<void> _loadRestrictions() async {
+    try {
+      final list = await catalogApi.myRestrictions();
+      if (mounted) setState(() => _restrictions = list.where((r) => r.isCustomer).toList());
+    } catch (_) {
+      // لا نعطّل الشاشة إذا تعذّر تحميل الإيقاف، والخادم يرفض الطلب أصلاً
+    }
   }
 
   Future<void> _useMyLocation() async {
@@ -59,6 +72,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
   Future<void> _request() async {
     final p = _pickup.point, d = _dropoff.point;
+    if (_restricted) return showError(context, 'طلب الرحلات موقوف مؤقتاً بسبب تكرار الإلغاء.');
     if (p == null || d == null) return showError(context, 'حدّد الانطلاق والوجهة.');
     setState(() => _sending = true);
     try {
@@ -74,6 +88,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
       if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => RideTrackingScreen(rideId: ride.id)));
     } catch (e) {
       if (mounted) showError(context, e);
+      _loadRestrictions();
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -94,6 +109,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(WSpace.page), children: [
+            for (final r in _restrictions) ...[RestrictionNotice(restriction: r), const SizedBox(height: 12)],
             SegmentedButton<VehicleType>(
               segments: const [
                 ButtonSegment(value: VehicleType.taxi, label: Text('تكسي'), icon: Icon(Icons.local_taxi_rounded)),
@@ -146,7 +162,12 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: WButton('اطلب ${_vehicle.label}', icon: Icons.near_me_rounded, onPressed: p == null || d == null ? null : _request, loading: _sending),
+            child: WButton(
+              _restricted ? 'طلب الرحلات موقوف مؤقتاً' : 'اطلب ${_vehicle.label}',
+              icon: Icons.near_me_rounded,
+              onPressed: p == null || d == null || _restricted ? null : _request,
+              loading: _sending,
+            ),
           ),
         ),
       ]),
@@ -234,8 +255,9 @@ class RideTrackingScreen extends StatelessWidget {
                   if (r.status == RideStatus.requested || r.status == RideStatus.accepted || r.status == RideStatus.arrived) ...[
                     const SizedBox(height: 16),
                     WButton('إلغاء الرحلة', kind: WButtonKind.danger, onPressed: () async {
-                      if (await confirmDialog(context, title: 'إلغاء الرحلة؟', confirm: 'إلغاء', danger: true) && context.mounted) {
-                        await runAction(context, () => customerApi.cancelRide(r.id), success: 'انلغت الرحلة');
+                      final choice = await pickCancelReason(context, party: 'customer');
+                      if (choice != null && context.mounted) {
+                        await runAction(context, () => customerApi.cancelRide(r.id, choice.reason, choice.note), success: 'انلغت الرحلة');
                       }
                     }),
                   ],

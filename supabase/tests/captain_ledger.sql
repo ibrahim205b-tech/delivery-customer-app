@@ -105,7 +105,7 @@ select cl.ok((select count(*) from driver_commissions where ride_id = 'a0000000-
 set role authenticated;
 select cl.login(cl.id('k1'));
 select driver_accept_ride('a0000000-0000-4000-8000-000000000002');
-select driver_update_ride('a0000000-0000-4000-8000-000000000002', 'cancelled');
+select cancel_ride('a0000000-0000-4000-8000-000000000002', 'no_answer', '');
 reset role;
 select cl.ok(not exists (select 1 from driver_commissions where ride_id = 'a0000000-0000-4000-8000-000000000002'), 'الرحلة الملغاة ما تنحسب عليها عمولة');
 
@@ -185,6 +185,7 @@ select cl.ok((select count(*) from jsonb_array_elements(admin_driver_accounts())
 reset role;
 delete from driver_ledger_entries where driver_id in (cl.id('k1'), cl.id('k2'), cl.id('courier'));
 delete from driver_commissions where driver_id in (cl.id('k1'), cl.id('k2'), cl.id('courier'));
+delete from ride_cancellations where ride_id in (select id from rides where customer_id = cl.id('cust'));
 delete from rides where customer_id = cl.id('cust');
 delete from delivery_tasks where customer_id = cl.id('cust');
 delete from drivers where id in (cl.id('k1'), cl.id('k2'), cl.id('courier'));

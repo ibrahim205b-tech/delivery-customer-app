@@ -97,6 +97,18 @@ class CatalogApi {
     return r.map(ServiceArea.fromJson).toList();
   }
 
+  /// أسباب إلغاء الرحلة لطرف معيّن (customer أو driver)
+  Future<List<CancelReason>> cancelReasons(String party) async {
+    final r = await db.from('cancel_reasons').select().eq('party', party).eq('is_active', true).order('sort', ascending: true);
+    return r.map(CancelReason.fromJson).toList();
+  }
+
+  /// الإيقافات النشطة للحساب الحالي (بوقت انتهاء من الخادم)
+  Future<List<UserRestriction>> myRestrictions() async {
+    final r = await db.rpc('my_restrictions') as List;
+    return r.map((e) => UserRestriction.fromJson(e as Json)).toList();
+  }
+
   /// الأنشطة المفعّلة (للتسجيل واختيار النشاط)
   Future<List<BusinessActivity>> businessActivities() async {
     final r = await db.from('business_activities').select().eq('is_active', true).order('sort', ascending: true);
@@ -273,7 +285,9 @@ class CustomerApi {
   Stream<Ride?> watchRide(String id) =>
       db.from('rides').stream(primaryKey: ['id']).eq('id', id).map((rows) => rows.isEmpty ? null : Ride.fromJson(rows.first));
 
-  Future<void> cancelRide(String id) => db.rpc('customer_cancel_ride', params: {'p_ride_id': id});
+  /// إلغاء الرحلة مع سبب إلزامي (والملاحظة إذا كان السبب "سبب آخر")
+  Future<void> cancelRide(String id, String reason, String note) =>
+      db.rpc('cancel_ride', params: {'p_ride_id': id, 'p_reason': reason, 'p_note': note});
 
   // ---------- المندوب وتوصيل الأغراض ----------
   Future<DeliveryTask> createErrand({
@@ -553,6 +567,9 @@ class DriverApi {
   Future<CaptainStatement> account() async => CaptainStatement.fromJson((await db.rpc('driver_account')) as Json);
 
   Future<void> updateRide(String id, RideStatus s) => db.rpc('driver_update_ride', params: {'p_ride_id': id, 'p_status': rideStatusDb(s)});
+  /// إلغاء السائق للرحلة المعيّنة له مع سبب إلزامي
+  Future<void> cancelRide(String id, String reason, String note) =>
+      db.rpc('cancel_ride', params: {'p_ride_id': id, 'p_reason': reason, 'p_note': note});
 }
 
 // =====================================================================
@@ -823,6 +840,28 @@ class AdminApi {
   }
 
   Future<void> cancelOrder(String id, String reason) => db.rpc('admin_cancel_order', params: {'p_order_id': id, 'p_reason': reason});
+
+  // ---------- الإلغاءات والإيقافات ----------
+  /// ملخص اليوم (بتوقيت بغداد) وأسباب الإلغاء
+  Future<Json> cancellationSummary() async => Map<String, dynamic>.from(await db.rpc('admin_cancellation_summary') as Json);
+
+  /// سجل الإلغاءات مع فلتر الطرف والبحث (رقم الرحلة، اسم أو هاتف الزبون أو السائق)
+  Future<List<Json>> cancellations({String? party, String? search}) async {
+    final r = await db.rpc('admin_list_cancellations', params: {'p_party': party, 'p_search': search, 'p_limit': 150}) as List;
+    return r.cast<Json>();
+  }
+
+  Future<List<Json>> restrictions({bool activeOnly = true}) async {
+    final r = await db.rpc('admin_list_restrictions', params: {'p_active_only': activeOnly, 'p_limit': 150}) as List;
+    return r.cast<Json>();
+  }
+
+  Future<void> liftRestriction(String id, String reason) => db.rpc('admin_lift_restriction', params: {'p_restriction_id': id, 'p_reason': reason});
+
+  Future<List<Json>> auditLog() async {
+    final r = await db.rpc('admin_audit_list', params: {'p_limit': 150}) as List;
+    return r.cast<Json>();
+  }
 
   // ---------- المناطق ----------
   Future<void> saveArea(String? id, Json data) async {

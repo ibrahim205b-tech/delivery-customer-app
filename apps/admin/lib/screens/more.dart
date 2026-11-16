@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
+import 'cancellations.dart';
 import 'commissions.dart';
 import 'driver_accounts.dart';
 import 'map_places.dart';
@@ -34,6 +35,8 @@ class MoreScreen extends StatelessWidget {
             tile(Icons.assignment_outlined, 'طلبات الخدمات', 'كل طلبات الخدمات وحالاتها، ومجموع عمولات كل خدمة', const ServiceRequestsAdminScreen()),
             tile(Icons.explore_outlined, 'إدارة الخدمات', 'تشغيل وإيقاف خدمات اكتشف واصل، وتعديل أسمائها وعمولاتها', const ServicesAdminScreen()),
             tile(Icons.place_outlined, 'نقاط الاستدلال', 'أضف النقاط وراجعها قبل ما تظهر للزبائن والسائقين', const MapPlacesScreen()),
+            const Divider(indent: 72),
+            tile(Icons.block_rounded, 'الإلغاءات والإيقافات', 'سجل الإلغاء، الإيقافات المؤقتة، وسجل تدقيق الإدارة', const CancellationsScreen()),
             const Divider(indent: 72),
             tile(Icons.support_agent_rounded, 'رسائل الدعم', 'محادثات المستهلكين والتجار والسائقين', const SupportInboxScreen()),
             const Divider(indent: 72),

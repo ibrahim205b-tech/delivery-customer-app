@@ -11,8 +11,17 @@ declare
   drv uuid; cust uuid; rid uuid; before_loc timestamptz; after_loc timestamptz; n int; lat double precision;
 begin
   select id into drv from drivers order by created_at limit 1;
-  if drv is null then raise exception 'FAIL: لا يوجد سائق للاختبار'; end if;
-  select id into cust from users where id <> drv order by created_at limit 1;
+  if drv is null then
+    -- قاعدة فارغة: ننشئ سائقاً تجريبياً داخل هذه المعاملة فقط
+    drv := 'e0000099-0000-4000-8000-000000000099';
+    insert into auth.users (id, email, raw_user_meta_data) values (drv, 'drv.rt@test.local', '{"full_name":"سائق تجريبي","phone":"07790000099"}');
+    insert into user_roles (user_id, role) values (drv, 'driver');
+    insert into drivers (id, vehicle_type, is_active, is_available) values (drv, 'taxi', true, true);
+  end if;
+  -- زبون حقيقي: ليس سائقاً ولا مديراً (القراءة المعزولة تُختبر بحساب لا يملك صلاحية السائقين)
+  select u.id into cust from users u
+   where u.id <> drv and not exists (select 1 from user_roles r where r.user_id = u.id and r.role in ('admin', 'driver'))
+   order by u.created_at limit 1;
 
   -- 1) drivers منشور على Realtime
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'drivers') then

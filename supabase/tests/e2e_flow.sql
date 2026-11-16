@@ -262,7 +262,7 @@ insert into t.ids select 'ride2', (request_ride('tuktuk', 'البيت', 33.30, 4
 select t.login(t.id('tuktuk'));
 select driver_accept_ride(t.id('ride2'));
 select t.login(t.id('cust'));
-select customer_cancel_ride(t.id('ride2'));
+select cancel_ride(t.id('ride2'), 'changed_mind', '');
 select t.ok((select status from rides where id = t.id('ride2')) = 'cancelled', 'الزبون يلغي رحلة التكتك');
 
 -- الإدارة تغيّر التسعير إلى أجرة ثابتة

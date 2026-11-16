@@ -23,6 +23,7 @@ class _DriverHomeState extends State<DriverHome> {
   bool _toggling = false;
   int _tab = 0;
   final Set<String> _hidden = {}; // مهام أخذها غيري
+  List<UserRestriction> _restrictions = []; // إيقاف استقبال الطلبات (إن وُجد)
   Stream<List<DeliveryTask>>? _tasks;
   Stream<List<Ride>>? _rides;
   // آخر قيمة من كل ستريم: الستريم عام (broadcast) فالتبويب اللي يفتح بعد ما يوصل له الحدث الأخير
@@ -56,6 +57,15 @@ class _DriverHomeState extends State<DriverHome> {
     super.dispose();
   }
 
+  Future<void> _loadRestrictions() async {
+    try {
+      final list = await catalogApi.myRestrictions();
+      if (mounted) setState(() => _restrictions = list.where((r) => !r.isCustomer).toList());
+    } catch (_) {
+      // الخادم يرفض قبول الرحلة أثناء الإيقاف أصلاً، فلا نعطّل الشاشة
+    }
+  }
+
   Future<void> _load() async {
     try {
       final me = await driverApi.me();
@@ -65,6 +75,7 @@ class _DriverHomeState extends State<DriverHome> {
         _tasks = driverApi.watchTasks().asBroadcastStream();
         _rides = driverApi.watchRides().asBroadcastStream();
       });
+      _loadRestrictions();
       _subT?.cancel();
       _subR?.cancel();
       _subT = _tasks!.listen((v) {
@@ -175,6 +186,7 @@ class _DriverHomeState extends State<DriverHome> {
       body: SafeArea(
         child: Column(children: [
           _header(me),
+          for (final r in _restrictions) Padding(padding: const EdgeInsets.fromLTRB(WSpace.lg, 0, WSpace.lg, 10), child: RestrictionNotice(restriction: r)),
           Expanded(
             child: switch (_tab) {
               0 => _jobs(),
@@ -296,6 +308,7 @@ class _DriverHomeState extends State<DriverHome> {
       await action();
       HapticFeedback.mediumImpact();
     } catch (e) {
+      _loadRestrictions();
       final msg = friendlyError(e);
       if (msg.contains('سبقك')) setState(() => _hidden.add(id));
       if (mounted) showError(context, msg);
@@ -524,8 +537,9 @@ class _ActiveRide extends StatelessWidget {
       if (r.status != RideStatus.inProgress) ...[
         const SizedBox(height: 8),
         WButton('إلغاء الرحلة', kind: WButtonKind.ghost, onPressed: () async {
-          if (await confirmDialog(context, title: 'إلغاء الرحلة؟', confirm: 'إلغاء', danger: true) && context.mounted) {
-            await runAction(context, () => driverApi.updateRide(r.id, RideStatus.cancelled));
+          final choice = await pickCancelReason(context, party: 'driver');
+          if (choice != null && context.mounted) {
+            await runAction(context, () => driverApi.cancelRide(r.id, choice.reason, choice.note));
           }
         }),
       ],

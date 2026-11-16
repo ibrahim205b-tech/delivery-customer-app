@@ -1283,3 +1283,45 @@ class BusinessActivity {
         for (final e in kBusinessTypeLabels.entries) BusinessActivity(key: e.key, label: e.value, groupName: 'أنشطة', sort: 0, isActive: true),
       ];
 }
+
+/// سبب إلغاء رحلة (للزبون أو للسائق). يُدار من قاعدة البيانات.
+class CancelReason {
+  final String id;
+  final String party;
+  final String label;
+  final bool needsNote;
+  final int sort;
+
+  const CancelReason({required this.id, required this.party, required this.label, required this.needsNote, required this.sort});
+
+  factory CancelReason.fromJson(Json j) => CancelReason(
+        id: j['id'] as String,
+        party: j['party'] as String,
+        label: j['label'] as String,
+        needsNote: j['needs_note'] as bool? ?? false,
+        sort: (j['sort'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// إيقاف مؤقت لحساب: الزبون عن طلب الرحلات، أو السائق عن استقبال الطلبات.
+class UserRestriction {
+  final String id;
+  final String kind;
+  final DateTime startsAt;
+  final DateTime endsAt;
+  final String reason;
+
+  const UserRestriction({required this.id, required this.kind, required this.startsAt, required this.endsAt, required this.reason});
+
+  bool get isCustomer => kind == 'customer_rides';
+  Duration get remaining => endsAt.difference(DateTime.now());
+  bool get isActive => remaining > Duration.zero;
+
+  factory UserRestriction.fromJson(Json j) => UserRestriction(
+        id: j['id'] as String,
+        kind: j['kind'] as String,
+        startsAt: DateTime.parse(j['starts_at'] as String).toLocal(),
+        endsAt: DateTime.parse(j['ends_at'] as String).toLocal(),
+        reason: (j['reason'] as String?) ?? '',
+      );
+}
