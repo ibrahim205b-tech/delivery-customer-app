@@ -105,8 +105,8 @@ class _MerchantHomeState extends State<MerchantHome> {
     // أول دخول: صاحب الحساب يختار نشاطه قبل أي شيء
     if (!m.activityChosen) return ActivityPickerScreen(merchant: m, onSaved: _updated);
     _watchIncoming(m);
-    final isProvider = m.categoryId == 'home_services';
     final type = m.businessType;
+    final isProvider = type == 'provider';
     final isPitch = type == 'pitch_owner';
     final isStoreLike = type == 'store' || type == 'restaurant';
     // تبويبات حسب النشاط فقط: لا يرى صاحب الملعب مثلاً قائمة المنتجات

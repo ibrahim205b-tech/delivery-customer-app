@@ -148,7 +148,15 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
     }
   }
 
-  bool get _isProvider => _category == 'home_services';
+  bool get _isProvider => _businessType == 'provider';
+
+  /// التصنيف يُطلب فقط للمتاجر والمطاعم. باقي الأنشطة تُربط تلقائياً بتصنيف الخدمات المنزلية
+  /// (هذا التصنيف لا يظهر في قوائم المتاجر، فلا تظهر الملاعب أو المصورون كمحلات).
+  String get _effectiveCategory {
+    if (_businessType == 'store') return _category ?? 'supermarket';
+    if (_businessType == 'restaurant') return 'restaurants';
+    return 'home_services';
+  }
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
@@ -156,7 +164,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
     setState(() => _saving = true);
     final data = {
       'name': _name.text.trim(),
-      'category_id': _category,
+      'category_id': _effectiveCategory,
       'business_type': _businessType,
       'activity_chosen': true,
       'area_id': _area,
@@ -270,19 +278,22 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
               TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'اسم المحل'), validator: (v) => (v ?? '').trim().length < 2 ? 'مطلوب' : null),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: _cats.any((c) => c.id == _category) ? _category : null,
-                decoration: const InputDecoration(labelText: 'التصنيف'),
-                items: [for (final c in _cats) DropdownMenuItem(value: c.id, child: Text(c.name))],
-                onChanged: (v) => setState(() => _category = v),
-                validator: (v) => v == null ? 'اختار التصنيف' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
                 initialValue: _businessType,
                 decoration: const InputDecoration(labelText: 'نوع النشاط', helperText: 'ملعب خماسي يظهر في حجز الملاعب، والبقية تبقى كما هي.'),
                 items: [for (final e in kBusinessTypeLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
                 onChanged: (v) => setState(() => _businessType = v ?? _businessType),
               ),
+
+              if (_businessType == 'store') ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _cats.any((c) => c.id == _category) ? _category : null,
+                  decoration: const InputDecoration(labelText: 'تصنيف المتجر'),
+                  items: [for (final c in _cats.where((c) => c.kind == CategoryKind.store)) DropdownMenuItem(value: c.id, child: Text(c.name))],
+                  onChanged: (v) => setState(() => _category = v),
+                  validator: (v) => v == null ? 'اختار تصنيف المتجر' : null,
+                ),
+              ],
               if (_isProvider) ...[
                 const SizedBox(height: 10),
                 Text('الخدمات اللي يقدّمها', style: WText.caption),
