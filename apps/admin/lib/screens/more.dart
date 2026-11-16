@@ -464,11 +464,21 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('الأقسام والخدمات')),
-        body: AsyncView<(List<MerchantCategory>, List<HomeService>)>(
+        body: AsyncView<(List<MerchantCategory>, List<HomeService>, List<BusinessActivity>)>(
           key: ValueKey(_key),
-          load: () async => (await adminApi.allCategories(), await adminApi.allHomeServices()),
+          load: () async => (await adminApi.allCategories(), await adminApi.allHomeServices(), await adminApi.allBusinessActivities()),
           builder: (context, d, _) => ListView(padding: const EdgeInsets.all(WSpace.page), children: [
-            Text('أقسام التطبيق', style: WText.h3),
+            Row(children: [
+              Expanded(child: Text('أقسام المحلات', style: WText.h3)),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('إضافة قسم'),
+                onPressed: () async {
+                  final n = await promptText(context, title: 'اسم القسم', hint: 'مثلاً: هدايا وورد');
+                  if (n != null && n.trim().length >= 2 && context.mounted && await runAction(context, () => adminApi.addStoreCategory(n))) setState(() => _key++);
+                },
+              ),
+            ]),
             Text('القسم المعطّل يختفي من تطبيق المستهلك.', style: WText.small),
             const SizedBox(height: 8),
             WCard(
@@ -481,6 +491,37 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
                     value: c.isActive,
                     onChanged: (v) async {
                       if (await runAction(context, () => adminApi.setCategoryActive(c.id, v))) setState(() => _key++);
+                    },
+                  ),
+              ]),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(child: Text('أنواع النشاط', style: WText.h3)),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('إضافة نشاط'),
+                onPressed: () async {
+                  final n = await promptText(context, title: 'اسم النشاط', hint: 'مثلاً: مركز تدريب');
+                  if (n == null || n.trim().length < 2 || !context.mounted) return;
+                  final key = 'act_${DateTime.now().millisecondsSinceEpoch}';
+                  if (await runAction(context, () => adminApi.saveBusinessActivity(key: key, label: n, groupName: 'أنشطة أخرى', isActive: true))) setState(() => _key++);
+                },
+              ),
+            ]),
+            Text('النشاط المعطّل ما يظهر لأصحاب الحسابات الجدد عند الاختيار. الحسابات الحالية تبقى على نشاطها.', style: WText.small),
+            const SizedBox(height: 8),
+            WCard(
+              padding: EdgeInsets.zero,
+              child: Column(children: [
+                for (final a in d.$3)
+                  SwitchListTile(
+                    secondary: const Icon(Icons.business_center_outlined),
+                    title: Text(a.label),
+                    subtitle: Text(a.groupName, style: WText.small),
+                    value: a.isActive,
+                    onChanged: (v) async {
+                      if (await runAction(context, () => adminApi.setBusinessActivityActive(a.key, v))) setState(() => _key++);
                     },
                   ),
               ]),

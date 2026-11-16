@@ -1259,3 +1259,27 @@ const kBusinessTypeLabels = <String, String>{
   'cleaning_company': 'شركة تنظيف',
   'transport_company': 'شركة نقل',
 };
+
+/// نشاط من جدول business_activities (يديره الأدمن). kBusinessTypeLabels احتياطي إذا تعذّر التحميل.
+class BusinessActivity {
+  final String key;
+  final String label;
+  final String groupName;
+  final int sort;
+  final bool isActive;
+
+  const BusinessActivity({required this.key, required this.label, required this.groupName, required this.sort, required this.isActive});
+
+  factory BusinessActivity.fromJson(Json j) => BusinessActivity(
+        key: j['key'] as String,
+        label: j['label'] as String,
+        groupName: (j['group_name'] as String?) ?? 'أنشطة أخرى',
+        sort: (j['sort'] as num?)?.toInt() ?? 0,
+        isActive: j['is_active'] as bool? ?? true,
+      );
+
+  /// الاحتياطي: نفس الأنشطة الحالية إذا تعذّر الاتصال
+  static List<BusinessActivity> fallback() => [
+        for (final e in kBusinessTypeLabels.entries) BusinessActivity(key: e.key, label: e.value, groupName: 'أنشطة', sort: 0, isActive: true),
+      ];
+}

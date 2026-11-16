@@ -97,6 +97,12 @@ class CatalogApi {
     return r.map(ServiceArea.fromJson).toList();
   }
 
+  /// الأنشطة المفعّلة (للتسجيل واختيار النشاط)
+  Future<List<BusinessActivity>> businessActivities() async {
+    final r = await db.from('business_activities').select().eq('is_active', true).order('sort', ascending: true);
+    return r.map(BusinessActivity.fromJson).toList();
+  }
+
   Future<List<Merchant>> merchants({String? categoryId, String? areaId, String? search, int limit = 100}) async {
     var q = db.from('merchants').select().eq('status', 'approved');
     if (categoryId != null) q = q.eq('category_id', categoryId);
@@ -865,6 +871,26 @@ class AdminApi {
     final r = await db.from('merchant_categories').select().order('sort', ascending: true);
     return r.map(MerchantCategory.fromJson).toList();
   }
+
+  Future<List<BusinessActivity>> allBusinessActivities() async {
+    final r = await db.from('business_activities').select().order('sort', ascending: true);
+    return r.map(BusinessActivity.fromJson).toList();
+  }
+
+  Future<void> saveBusinessActivity({required String key, required String label, required String groupName, required bool isActive}) =>
+      db.from('business_activities').upsert({'key': key, 'label': label.trim(), 'group_name': groupName, 'is_active': isActive});
+
+  Future<void> setBusinessActivityActive(String key, bool active) => db.from('business_activities').update({'is_active': active}).eq('key', key);
+
+  /// قسم جديد للمحلات (kind = store). المعرّف يُولَّد من الوقت لأن الأدمن يكتب الاسم فقط.
+  Future<void> addStoreCategory(String name) => db.from('merchant_categories').insert({
+        'id': 'cat_${DateTime.now().millisecondsSinceEpoch}',
+        'name': name.trim(),
+        'kind': 'store',
+        'icon': 'store',
+        'sort': 50,
+        'is_active': true,
+      });
 
   Future<void> setCategoryActive(String id, bool active) => db.from('merchant_categories').update({'is_active': active}).eq('id', id);
 

@@ -86,8 +86,10 @@ begin
   raise notice 'PASS: البحث يرجّع الخدمات المفعّلة فقط';
 
   -- 7) نوع النشاط: قيمة غير معروفة مرفوضة، والمحلات القائمة مصنّفة
+  insert into merchants (id, owner_id, category_id, name, address_text, lat, lng, phone, status, business_type, activity_chosen)
+  values ('b0000009-0000-4000-8000-000000000009', adm, 'home_services', 'محل الاختبار', 'بغداد', 33.31, 44.43, '07750000009', 'approved', 'provider', true);
   begin
-    update merchants set business_type = 'casino' where id = (select id from merchants limit 1);
+    update merchants set business_type = 'casino' where id = 'b0000009-0000-4000-8000-000000000009';
     msg := 'none';
   exception when others then msg := sqlerrm;
   end;

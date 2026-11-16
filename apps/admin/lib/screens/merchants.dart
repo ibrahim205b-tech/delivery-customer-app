@@ -114,6 +114,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
   late MerchantStatus _status = m?.status ?? MerchantStatus.pending;
   String? _ownerLabel;
   List<MerchantCategory> _cats = [];
+  List<BusinessActivity> _acts = BusinessActivity.fallback();
   List<ServiceArea> _areas = [];
   List<HomeService> _services = [];
   Set<String> _serviceIds = {};
@@ -128,7 +129,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
 
   Future<void> _loadRefs() async {
     try {
-      final r = await Future.wait([adminApi.allCategories(), catalogApi.areas(), adminApi.allHomeServices()]);
+      final r = await Future.wait([adminApi.allCategories(), catalogApi.areas(), adminApi.allHomeServices(), adminApi.allBusinessActivities()]);
       final ids = m == null ? <String>{} : await adminApi.merchantServiceIds(m!.id);
       String? ownerLabel;
       if (m?.ownerId != null) {
@@ -140,6 +141,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
         _cats = (r[0] as List<MerchantCategory>).where((c) => c.kind == CategoryKind.store || c.kind == CategoryKind.homeService).toList();
         _areas = r[1] as List<ServiceArea>;
         _services = r[2] as List<HomeService>;
+        _acts = r[3] as List<BusinessActivity>;
         _serviceIds = ids;
         _ownerLabel = ownerLabel;
       });
@@ -280,7 +282,7 @@ class _MerchantFormScreenState extends State<MerchantFormScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _businessType,
                 decoration: const InputDecoration(labelText: 'نوع النشاط', helperText: 'ملعب خماسي يظهر في حجز الملاعب، والبقية تبقى كما هي.'),
-                items: [for (final e in kBusinessTypeLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                items: [for (final a in _acts) DropdownMenuItem(value: a.key, child: Text(a.label))],
                 onChanged: (v) => setState(() => _businessType = v ?? _businessType),
               ),
 
