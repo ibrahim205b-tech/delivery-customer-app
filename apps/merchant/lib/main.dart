@@ -11,7 +11,7 @@ Future<void> main() async {
   if (ready) auth = AuthController();
   runApp(WaselApp(
     title: 'واصل للأعمال',
-    home: ready ? const Root() : const NotConfiguredScreen(),
+    home: ready ? const UpdateGate(apkName: 'wasel-merchant.apk', child: Root()) : const NotConfiguredScreen(),
   ));
 }
 

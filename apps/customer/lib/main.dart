@@ -15,7 +15,7 @@ Future<void> main() async {
     auth = AuthController();
     app = CustomerState();
   }
-  runApp(WaselApp(title: 'واصل', home: ready ? const Root() : const NotConfiguredScreen()));
+  runApp(WaselApp(title: 'واصل', home: ready ? UpdateGate(apkName: 'wasel-customer.apk', child: const Root()) : const NotConfiguredScreen()));
 }
 
 /// يبدّل بين الدخول والتطبيق حسب حالة الجلسة

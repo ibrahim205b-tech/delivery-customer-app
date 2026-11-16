@@ -15,6 +15,7 @@ export 'src/services/location.dart';
 export 'src/services/notifier.dart';
 export 'src/services/support.dart';
 export 'src/services/tracking.dart';
+export 'src/services/updater.dart';
 export 'src/services/service_forms.dart';
 export 'src/theme/mode.dart';
 export 'src/theme/theme.dart';

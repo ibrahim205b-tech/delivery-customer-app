@@ -13,7 +13,7 @@ late final AuthController auth;
 Future<void> main() async {
   final ready = await bootstrapWasel();
   if (ready) auth = AuthController();
-  runApp(WaselApp(title: 'إدارة واصل', home: ready ? const Root() : const NotConfiguredScreen()));
+  runApp(WaselApp(title: 'إدارة واصل', home: ready ? UpdateGate(apkName: 'wasel-admin.apk', child: const Root()) : const NotConfiguredScreen()));
 }
 
 class Root extends StatelessWidget {
