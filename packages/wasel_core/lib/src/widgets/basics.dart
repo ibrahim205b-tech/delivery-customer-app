@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -477,7 +478,17 @@ class WImage extends StatelessWidget {
       borderRadius: WRadius.all(radius),
       child: url == null || url!.isEmpty
           ? fallback
-          : CachedNetworkImage(
+          // ويندوز ولينكس: ذاكرة الصور المؤقتة تعتمد على sqflite غير المدعوم هناك، فنستخدم التحميل العادي
+          : (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux))
+              ? Image.network(
+                  url!,
+                  width: width,
+                  height: height,
+                  fit: fit,
+                  loadingBuilder: (_, child, p) => p == null ? child : SkeletonBox(height: height ?? 48, width: width, radius: 0),
+                  errorBuilder: (_, __, ___) => fallback,
+                )
+              : CachedNetworkImage(
               imageUrl: url!,
               width: width,
               height: height,

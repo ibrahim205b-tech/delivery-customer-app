@@ -111,10 +111,58 @@ jobs:
           path: out/wasel-${{ matrix.app }}.apk
           if-no-files-found: error
 
-  # نشر الملفات الثلاثة كإصدار بروابط تحميل مباشرة (فقط من الفرع main)
+  # نسخة ويندوز من تطبيق الإدارة (نفس كود الأندرويد)
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build admin for Windows
+        working-directory: apps/admin
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          MAP_TILE_URL: ${{ secrets.MAP_TILE_URL }}
+          MAP_TILE_ATTRIBUTION: ${{ secrets.MAP_TILE_ATTRIBUTION }}
+          GEOCODER_URL: ${{ secrets.GEOCODER_URL }}
+          ROUTER_URL: ${{ secrets.ROUTER_URL }}
+        run: |
+          MAP_DEFINES=()
+          for v in MAP_TILE_URL MAP_TILE_ATTRIBUTION GEOCODER_URL ROUTER_URL; do
+            if [ -n "${!v}" ]; then MAP_DEFINES+=("--dart-define=$v=${!v}"); fi
+          done
+          flutter config --enable-windows-desktop
+          flutter pub get
+          flutter build windows --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            "${MAP_DEFINES[@]}"
+          ls build/windows/x64/runner/Release
+      - name: Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Compress-Archive -Path apps/admin/build/windows/x64/runner/Release/* -DestinationPath out/wasel-admin-windows.zip
+          Get-Item out/wasel-admin-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasel-admin-windows
+          path: out/wasel-admin-windows.zip
+          if-no-files-found: error
+
+  # نشر الملفات كإصدار بروابط تحميل مباشرة (فقط من الفرع main).
+  # فشل نسخة ويندوز وحده لا يمنع نشر ملفات APK.
   release:
-    if: github.ref == 'refs/heads/main'
-    needs: [apk, database]
+    if: github.ref == 'refs/heads/main' && !cancelled() && needs.apk.result == 'success' && needs.database.result == 'success'
+    needs: [apk, database, windows]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
@@ -130,5 +178,8 @@ jobs:
             - wasel-customer.apk — تطبيق المستهلك
             - wasel-merchant.apk — تطبيق التجار والسائقين
             - wasel-admin.apk — تطبيق الإدارة
-          files: out/*.apk
+            - wasel-admin-windows.zip — تطبيق الإدارة لويندوز (فك الضغط وشغّل wasel_admin.exe)
+          files: |
+            out/*.apk
+            out/*.zip
           make_latest: true
