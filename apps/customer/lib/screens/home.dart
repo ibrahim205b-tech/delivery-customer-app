@@ -95,6 +95,12 @@ class _HomeScreenState extends State<HomeScreen> {
     openCategory(context, c);
   }
 
+  void _openSection(String id, String name) {
+    final c = _cat(id);
+    if (c == null) return showInfo(context, 'قسم $name غير متاح حالياً.');
+    openCategory(context, c);
+  }
+
   void _openTaxi() {
     final c = _cat('taxi');
     if (c == null) return showInfo(context, 'خدمة التكسي غير متاحة حالياً.');
@@ -134,6 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (active != null) _LiveOrderStrip(order: active, onClosed: () => setState(() => _data = _load())),
                         const SizedBox(height: 17),
                         _Services(onRestaurants: _openRestaurants, onTaxi: _openTaxi),
+                        const SizedBox(height: 12),
+                        _MoreSections(onOpen: _openSection),
                         const SizedBox(height: 23),
                         _OffersSection(offers: d?.offers, error: s.hasError),
                         const SizedBox(height: 16),
@@ -528,6 +536,77 @@ class _ServiceTile extends StatelessWidget {
               ]),
             ]),
           ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------
+// أقسام إضافية: سوبر ماركت، طبخ منزلي، محلات الهواتف (صور القسم المعتمدة)
+// ---------------------------------------------------------------------
+class _MoreSections extends StatelessWidget {
+  const _MoreSections({required this.onOpen});
+  final void Function(String id, String name) onOpen;
+
+  static const _items = [
+    ('supermarket', 'سوبر ماركت', 'assets/home/section_supermarket.jpg'),
+    ('home_cooking', 'طبخ منزلي', 'assets/home/section_home_cooking.jpg'),
+    ('mobiles', 'محلات الهواتف', 'assets/home/section_phones.jpg'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: SizedBox(
+          height: 128,
+          child: Row(children: [
+            for (var i = 0; i < _items.length; i++) ...[
+              if (i > 0) const SizedBox(width: 10),
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  label: _items[i].$2,
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: () => onOpen(_items[i].$1, _items[i].$2),
+                    child: Container(
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: _R.shadow),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(fit: StackFit.expand, children: [
+                        Image.asset(_items[i].$3, fit: BoxFit.cover, alignment: const Alignment(0, -0.1), filterQuality: FilterQuality.high),
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0x00000000), Color(0xCC000000)], stops: [0, 0.45, 1]),
+                          ),
+                        ),
+                        PositionedDirectional(
+                          end: 8,
+                          top: 8,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                            alignment: Alignment.center,
+                            child: _chevron(Icons.chevron_right_rounded, 17, _R.ink),
+                          ),
+                        ),
+                        // العنوان بعرض البطاقة كاملاً، ويصغر إذا ما وسعه (ما يُقص)
+                        PositionedDirectional(
+                          start: 9,
+                          end: 9,
+                          bottom: 9,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(_items[i].$2, maxLines: 1, style: _t(13.5, w: FontWeight.w800, color: Colors.white)),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ]),
         ),
       );
 }

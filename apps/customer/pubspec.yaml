@@ -24,6 +24,21 @@ flutter:
   assets:
     - assets/illustrations/
     - assets/home/
+  # خطوط تصميم صفحات الأقسام (رخصة OFL، الملفات داخل التطبيق ولا تُحمّل من الإنترنت)
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Variable.ttf
+    - family: IBMPlexArabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: true
