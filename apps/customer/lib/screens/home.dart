@@ -34,7 +34,7 @@ void openMerchant(BuildContext context, Merchant m) => Navigator.push(context, M
 // الصفحة الرئيسية — مطابقة للتصميم المرجعي (design/home_reference.png)
 //
 // الترتيب: الرأس (المدينة، الشعار، الإشعارات) ← البانر ← البحث ← [طلبك الشغّال إذا موجود]
-//   ← المطاعم + تاكسي ← عروض خاصة ← أقسام المطاعم.
+//   ← المطاعم + تكسي ← عروض خاصة ← أقسام المطاعم.
 // الصور ملفات حقيقية مقصوصة من المرجع (assets/home). العروض من بيانات المطاعم الفعلية فقط.
 // الألوان ثابتة كما في المرجع (الصفحة مصممة للوضع الفاتح).
 // =====================================================================
@@ -495,7 +495,7 @@ class _SearchBox extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------
-// الخدمتان: المطاعم وتاكسي (فقط)
+// الخدمتان: المطاعم وتكسي (فقط)
 // ---------------------------------------------------------------------
 class _Services extends StatelessWidget {
   const _Services({required this.onRestaurants, required this.onTaxi});
@@ -509,7 +509,7 @@ class _Services extends StatelessWidget {
           child: Row(children: [
             Expanded(child: _ServiceTile(title: 'المطاعم', sub: 'اكتشف المطاعم', asset: 'assets/home/restaurant.png', bg: _R.peachFood, onTap: onRestaurants)),
             const SizedBox(width: 12),
-            Expanded(child: _ServiceTile(title: 'تاكسي', sub: 'اطلب سيارة الآن', asset: 'assets/home/taxi.png', bg: _R.peachTaxi, onTap: onTaxi)),
+            Expanded(child: _ServiceTile(title: 'تكسي', sub: 'أو تكتك', asset: 'assets/home/taxi.png', bg: _R.peachTaxi, onTap: onTaxi)),
           ]),
         ),
       );
