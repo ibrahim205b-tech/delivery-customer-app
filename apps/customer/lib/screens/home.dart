@@ -96,6 +96,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openSection(String id, String name) {
+    if (id == 'bakery_sweets') {
+      final cats = [_cat('bakery'), _cat('sweets')].whereType<MerchantCategory>().toList();
+      if (cats.isEmpty) return showInfo(context, 'قسم $name غير متاح حالياً.');
+      final first = cats.first;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MerchantListScreen(
+            category: MerchantCategory(id: 'bakery', name: name, kind: CategoryKind.store, icon: first.icon, sort: first.sort, isActive: true),
+            categoryIds: [for (final c in cats) c.id],
+          ),
+        ),
+      );
+      return;
+    }
     final c = _cat(id);
     if (c == null) return showInfo(context, 'قسم $name غير متاح حالياً.');
     openCategory(context, c);
@@ -547,32 +562,46 @@ class _MoreSections extends StatelessWidget {
   const _MoreSections({required this.onOpen});
   final void Function(String id, String name) onOpen;
 
-  static const _items = [
-    ('supermarket', 'سوبر ماركت', 'assets/home/section_supermarket.jpg'),
-    ('home_cooking', 'طبخ منزلي', 'assets/home/section_home_cooking.jpg'),
-    ('mobiles', 'محلات الهواتف', 'assets/home/section_phones.jpg'),
+  // صفّان: ثلاثة فوق واثنان تحت
+  static const _rows = [
+    [
+      ('supermarket', 'سوبر ماركت', 'assets/home/section_supermarket.jpg', Alignment(0, -0.1)),
+      ('home_cooking', 'طبخ منزلي', 'assets/home/section_home_cooking.jpg', Alignment(0, -0.1)),
+      ('mobiles', 'محلات الهواتف', 'assets/home/section_phones.jpg', Alignment(0, -0.1)),
+    ],
+    [
+      ('bakery_sweets', 'المخابز والحلويات', 'assets/home/section_bakery.jpg', Alignment(0, 0.35)),
+      ('cosmetics', 'كوزمتك', 'assets/home/section_cosmetics.jpg', Alignment(0, 0.05)),
+    ],
   ];
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => Column(children: [
+        for (var r = 0; r < _rows.length; r++) ...[
+          if (r > 0) const SizedBox(height: 10),
+          _row(_rows[r]),
+        ],
+      ]);
+
+  Widget _row(List<(String, String, String, Alignment)> items) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 13),
         child: SizedBox(
           height: 128,
           child: Row(children: [
-            for (var i = 0; i < _items.length; i++) ...[
+            for (var i = 0; i < items.length; i++) ...[
               if (i > 0) const SizedBox(width: 10),
               Expanded(
                 child: Semantics(
                   button: true,
-                  label: _items[i].$2,
+                  label: items[i].$2,
                   excludeSemantics: true,
                   child: Pressable(
-                    onTap: () => onOpen(_items[i].$1, _items[i].$2),
+                    onTap: () => onOpen(items[i].$1, items[i].$2),
                     child: Container(
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: _R.shadow),
                       clipBehavior: Clip.antiAlias,
                       child: Stack(fit: StackFit.expand, children: [
-                        Image.asset(_items[i].$3, fit: BoxFit.cover, alignment: const Alignment(0, -0.1), filterQuality: FilterQuality.high),
+                        Image.asset(items[i].$3, fit: BoxFit.cover, alignment: items[i].$4, filterQuality: FilterQuality.high),
                         const DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0x00000000), Color(0xCC000000)], stops: [0, 0.45, 1]),
@@ -597,7 +626,7 @@ class _MoreSections extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: AlignmentDirectional.centerStart,
-                            child: Text(_items[i].$2, maxLines: 1, style: _t(13.5, w: FontWeight.w800, color: Colors.white)),
+                            child: Text(items[i].$2, maxLines: 1, style: _t(13.5, w: FontWeight.w800, color: Colors.white)),
                           ),
                         ),
                       ]),

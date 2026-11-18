@@ -118,6 +118,40 @@ class _Section {
               _Pill('مقبلات وسلطات', Icons.set_meal_outlined, ['سلطة', 'مقبلات', 'حمص', 'متبل']),
             ],
           ),
+        'bakery' || 'sweets' => const _Section(
+            title: 'المحلات المتاحة',
+            hint: 'ابحث عن مخبز، صمون، كيك، كليجة...',
+            one: 'محل واحد',
+            two: 'محلان',
+            many: 'محلات',
+            noMatch: 'لم نعثر على محلات مطابقة',
+            showAll: 'عرض جميع المحلات',
+            pills: [
+              _all,
+              _Pill('خبز وصمون', Icons.bakery_dining_outlined, ['خبز', 'صمون', 'مخبز', 'فرن', 'افران']),
+              _Pill('معجنات', Icons.breakfast_dining_outlined, ['معجنات', 'فطائر', 'كرواسون', 'بورك']),
+              _Pill('كيك وتورتات', Icons.cake_outlined, ['كيك', 'تورتة', 'تورته', 'كب كيك']),
+              _Pill('حلويات شرقية', Icons.icecream_outlined, ['حلويات', 'بقلاوة', 'كنافة', 'زلابية', 'من السما']),
+              _Pill('كليجة', Icons.cookie_outlined, ['كليجة', 'كعك']),
+            ],
+          ),
+        'cosmetics' => const _Section(
+            title: 'المحلات المتاحة',
+            hint: 'ابحث عن عناية بالبشرة، مكياج، عطر...',
+            one: 'محل واحد',
+            two: 'محلان',
+            many: 'محلات',
+            noMatch: 'لم نعثر على محلات مطابقة',
+            showAll: 'عرض جميع المحلات',
+            pills: [
+              _all,
+              _Pill('عناية بالبشرة', Icons.spa_outlined, ['بشرة', 'سيروم', 'غسول', 'مرطب', 'كريم']),
+              _Pill('مكياج', Icons.brush_outlined, ['مكياج', 'روج', 'ماسكرا', 'كونسيلر', 'بودرة']),
+              _Pill('عطور', Icons.water_drop_outlined, ['عطر', 'عطور', 'بخاخ']),
+              _Pill('عناية بالشعر', Icons.face_retouching_natural_outlined, ['شعر', 'شامبو', 'بلسم']),
+              _Pill('واقي شمس', Icons.wb_sunny_outlined, ['واقي', 'شمس']),
+            ],
+          ),
         'mobiles' => const _Section(
             title: 'المحلات المتاحة',
             hint: 'ابحث عن هاتف، شاحن، سماعة...',
@@ -162,8 +196,10 @@ extension on _Quick {
 int _eta(Merchant m) => m.etaMinutes(distanceTo(m) ?? 2);
 
 class MerchantListScreen extends StatefulWidget {
-  const MerchantListScreen({super.key, required this.category});
+  const MerchantListScreen({super.key, required this.category, this.categoryIds});
   final MerchantCategory category;
+  /// لعرض أكثر من قسم بصفحة واحدة (مثلاً المخابز + الحلويات)
+  final List<String>? categoryIds;
   @override
   State<MerchantListScreen> createState() => _MerchantListScreenState();
 }
@@ -184,7 +220,12 @@ class _MerchantListScreenState extends State<MerchantListScreen> {
   Set<String>? _offerIds;
   bool _filtering = false;
 
-  Future<List<Merchant>> _fetch() => catalogApi.merchants(categoryId: widget.category.id, areaId: app.selectedAreaId);
+  Future<List<Merchant>> _fetch() async {
+    final ids = widget.categoryIds ?? [widget.category.id];
+    final lists = await Future.wait(ids.map((id) => catalogApi.merchants(categoryId: id, areaId: app.selectedAreaId)));
+    final seen = <String>{};
+    return [for (final l in lists) ...l.where((m) => seen.add(m.id))];
+  }
 
   @override
   void dispose() {
