@@ -168,6 +168,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   final _form = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.product?.name);
   late final _price = TextEditingController(text: widget.product?.price.toString());
+  late final _compare = TextEditingController(text: widget.product?.compareAtPrice?.toString());
   late final _desc = TextEditingController(text: widget.product?.description);
   late final _stock = TextEditingController(text: widget.product?.stock?.toString());
   late String? _categoryId = widget.product?.categoryId;
@@ -207,6 +208,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         isAvailable: _available,
         stock: _trackStock ? int.tryParse(_stock.text) ?? 0 : null,
         imageUrl: _image != widget.product?.imageUrl ? _image : null,
+        compareAtPrice: int.tryParse(_compare.text.trim()),
       ),
       success: 'انحفظ المنتج',
     );
@@ -256,6 +258,23 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(labelText: 'السعر', suffixText: 'د.ع'),
               validator: (v) => (int.tryParse(v ?? '') ?? 0) <= 0 ? 'اكتب سعر صحيح' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _compare,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'السعر قبل الخصم (اختياري)',
+                suffixText: 'د.ع',
+                helperText: 'إذا كتبته أكبر من السعر، يظهر المنتج بقسم العروض الخاصة للزبائن.',
+              ),
+              validator: (v) {
+                final c = int.tryParse((v ?? '').trim());
+                if (c == null) return null;
+                final p = int.tryParse(_price.text.trim()) ?? 0;
+                return c <= p ? 'لازم يكون أكبر من السعر الحالي، أو اتركه فارغ' : null;
+              },
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String?>(

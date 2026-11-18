@@ -8,7 +8,9 @@ import 'home.dart';
 
 /// البحث الشامل: محلات + منتجات
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.initialQuery});
+  /// كلمة بحث تبدأ بها الشاشة (مثلاً من أقسام المطاعم: شاورما، برغر...)
+  final String? initialQuery;
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
@@ -17,6 +19,17 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   String _q = '';
   Future<({List<Merchant> merchants, List<(Product, Merchant)> products})>? _results;
+  late final _ctrl = TextEditingController(text: widget.initialQuery ?? '');
+
+  @override
+  void initState() {
+    super.initState();
+    final q = widget.initialQuery?.trim() ?? '';
+    if (q.length >= 2) {
+      _q = q;
+      _results = catalogApi.search(q);
+    }
+  }
 
   void _onChanged(String v) {
     _debounce?.cancel();
@@ -31,6 +44,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -41,7 +55,8 @@ class _SearchScreenState extends State<SearchScreen> {
           title: Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
             child: TextField(
-              autofocus: true,
+              controller: _ctrl,
+              autofocus: widget.initialQuery == null,
               onChanged: _onChanged,
               textInputAction: TextInputAction.search,
               decoration: const InputDecoration(hintText: 'شتريد؟ مثلاً: بيتزا، صمون، شاحنة…', prefixIcon: Icon(Icons.search_rounded), isDense: true),

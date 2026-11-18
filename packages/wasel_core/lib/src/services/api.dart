@@ -109,6 +109,27 @@ class CatalogApi {
     return r.map((e) => UserRestriction.fromJson(e as Json)).toList();
   }
 
+  /// عروض حقيقية: منتجات متوفرة لمطاعم معتمدة سعرها الحالي أقل من سعرها قبل الخصم.
+  /// إذا حُدّدت منطقة تُعرض عروض مطاعمها فقط. الأكبر خصماً أولاً.
+  Future<List<(Product, Merchant)>> offers({String? areaId, int limit = 20}) async {
+    var q = db
+        .from('products')
+        .select('*, product_images(url, sort), merchants!inner(*)')
+        .not('compare_at_price', 'is', null)
+        .eq('is_available', true)
+        .eq('merchants.status', 'approved');
+    if (areaId != null) q = q.eq('merchants.area_id', areaId);
+    final rows = await q.limit(200);
+    final list = <(Product, Merchant)>[];
+    for (final r in rows) {
+      final p = Product.fromJson(r);
+      if (!p.isOnOffer) continue;
+      list.add((p, Merchant.fromJson(r['merchants'] as Json)));
+    }
+    list.sort((a, b) => b.$1.discountPercent.compareTo(a.$1.discountPercent));
+    return list.take(limit).toList();
+  }
+
   /// الأنشطة المفعّلة (للتسجيل واختيار النشاط)
   Future<List<BusinessActivity>> businessActivities() async {
     final r = await db.from('business_activities').select().eq('is_active', true).order('sort', ascending: true);
@@ -489,6 +510,7 @@ class MerchantApi {
     required bool isAvailable,
     int? stock,
     String? imageUrl,
+    int? compareAtPrice,
   }) async {
     final data = {
       'merchant_id': merchantId,
@@ -498,6 +520,7 @@ class MerchantApi {
       'price': price,
       'is_available': isAvailable,
       'stock': stock,
+      'compare_at_price': compareAtPrice,
     };
     final row = id == null
         ? await db.from('products').insert(data).select().single()

@@ -244,6 +244,11 @@ class Product {
   final int? stock;
   final int sort;
   final List<String> images;
+  /// السعر قبل الخصم (اختياري). العرض حقيقي فقط إذا كان أكبر من السعر الحالي.
+  final int? compareAtPrice;
+
+  bool get isOnOffer => compareAtPrice != null && compareAtPrice! > price;
+  int get discountPercent => isOnOffer ? ((compareAtPrice! - price) * 100 / compareAtPrice!).round() : 0;
 
   const Product({
     required this.id,
@@ -256,6 +261,7 @@ class Product {
     this.stock,
     required this.sort,
     this.images = const [],
+    this.compareAtPrice,
   });
 
   factory Product.fromJson(Json j) {
@@ -272,6 +278,7 @@ class Product {
       stock: j['stock'] == null ? null : _i(j['stock']),
       sort: _i(j['sort']),
       images: sorted.map((e) => e['url'] as String).toList(),
+      compareAtPrice: j['compare_at_price'] == null ? null : _i(j['compare_at_price']),
     );
   }
 

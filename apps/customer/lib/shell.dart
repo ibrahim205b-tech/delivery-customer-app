@@ -9,6 +9,7 @@ import 'screens/account.dart';
 import 'screens/favorites.dart';
 import 'screens/home.dart';
 import 'screens/orders.dart';
+import 'screens/wallet.dart';
 
 /// الهيكل الرئيسي: أربع تبويبات + تنبيهات داخل التطبيق لحظياً.
 class CustomerShell extends StatefulWidget {
@@ -53,83 +54,82 @@ class _CustomerShellState extends State<CustomerShell> {
   Widget build(BuildContext context) => Scaffold(
         body: IndexedStack(index: _tab, children: [
           HomeScreen(unread: _unread),
-          const OrdersScreen(),
           const FavoritesScreen(),
+          const WalletScreen(),
+          const OrdersScreen(),
           const AccountScreen(),
         ]),
+        // نفس ترتيب المرجع من اليسار لليمين: الرئيسية، المفضلة، محفظتي، طلباتي، حسابي
         bottomNavigationBar: _WaselNav(
           index: _tab,
           onSelect: (i) => setState(() => _tab = i),
           items: const [
             (Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
-            (Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'طلباتي'),
             (Icons.favorite_outline_rounded, Icons.favorite_rounded, 'المفضلة'),
+            (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'محفظتي'),
+            (Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'طلباتي'),
             (Icons.person_outline_rounded, Icons.person_rounded, 'حسابي'),
           ],
         ),
       );
 }
 
-/// شريط التنقل: كبسولة داكنة طافية. التبويب المختار يتمدد لزر ليموني مع اسمه، والباقي أيقونات.
+/// شريط التنقل كما في المرجع: أبيض، خمس تبويبات من اليسار لليمين، والمختار أحمر مع خط تحته.
 class _WaselNav extends StatelessWidget {
   const _WaselNav({required this.index, required this.onSelect, required this.items});
   final int index;
   final ValueChanged<int> onSelect;
   final List<(IconData, IconData, String)> items;
 
+  static const _red = Color(0xFFE3161B);
+  static const _grey = Color(0xFF55555E);
+
   @override
-  Widget build(BuildContext context) => ColoredBox(
-        color: WColors.paper,
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFECEAF2))),
+          boxShadow: [BoxShadow(color: Color(0x0F000000), blurRadius: 12, offset: Offset(0, -2))],
+        ),
         child: SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(22), border: Border.all(color: WColors.line), boxShadow: WShadow.soft),
-              child: Row(children: [
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              textDirection: TextDirection.ltr,
+              children: [
                 for (var i = 0; i < items.length; i++)
                   Expanded(
-                    flex: i == index ? 5 : 3,
                     child: Semantics(
                       selected: i == index,
                       button: true,
                       label: items[i].$3,
-                      onTap: () => onSelect(i),
                       excludeSemantics: true,
+                      onTap: () => onSelect(i),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
                           if (i != index) HapticFeedback.selectionClick();
                           onSelect(i);
                         },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 380),
-                          curve: Curves.easeOutBack,
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          decoration: BoxDecoration(color: i == index ? WColors.night : Colors.transparent, borderRadius: WRadius.all(16)),
-                          child: Center(
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              TweenAnimationBuilder<double>(
-                                key: ValueKey('nav-$i-${i == index}'),
-                                tween: Tween(begin: i == index ? 0.6 : 1, end: 1),
-                                duration: const Duration(milliseconds: 520),
-                                curve: Curves.elasticOut,
-                                builder: (context, v, child) => Transform.scale(scale: v, child: child),
-                                child: Icon(i == index ? items[i].$2 : items[i].$1, size: 22, color: i == index ? WColors.white : WColors.inkFaint),
-                              ),
-                              if (i == index) ...[
-                                const SizedBox(width: 6),
-                                Flexible(child: Text(items[i].$3, maxLines: 1, overflow: TextOverflow.fade, softWrap: false, style: WText.label.copyWith(color: WColors.white, fontWeight: FontWeight.w700))),
-                              ],
-                            ]),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                          Icon(i == index ? items[i].$2 : items[i].$1, size: 25, color: i == index ? _red : _grey),
+                          const SizedBox(height: 3),
+                          Text(items[i].$3,
+                              maxLines: 1,
+                              style: WText.label.copyWith(fontSize: 11.5, fontWeight: i == index ? FontWeight.w800 : FontWeight.w500, color: i == index ? _red : _grey)),
+                          const SizedBox(height: 6),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            height: 3,
+                            width: i == index ? 52 : 0,
+                            decoration: BoxDecoration(color: _red, borderRadius: BorderRadius.circular(2)),
                           ),
-                        ),
+                        ]),
                       ),
                     ),
                   ),
-              ]),
+              ],
             ),
           ),
         ),

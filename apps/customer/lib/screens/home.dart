@@ -1,15 +1,12 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../main.dart';
 import '../widgets.dart';
 import 'account.dart';
-import 'discover.dart';
 import 'errand.dart';
 import 'home_services.dart';
 import 'merchant_list.dart';
@@ -34,22 +31,36 @@ void openCategory(BuildContext context, MerchantCategory c) {
 void openMerchant(BuildContext context, Merchant m) => Navigator.push(context, MaterialPageRoute(builder: (_) => MerchantPage(merchant: m)));
 
 // =====================================================================
-// الصفحة الرئيسية — الإصدار 4
+// الصفحة الرئيسية — مطابقة للتصميم المرجعي (design/home_reference.png)
 //
-// الترتيب حسب الأولوية:
-//   1. وين أوصل (العنوان) + التنبيهات
-//   2. البحث (يثبت أعلى الشاشة عند التمرير)
-//   3. المنطقة
-//   4. طلبك الشغّال (إذا موجود) — أهم شي يشوفه الزبون
-//   5. العروض (بطاقات كبيرة تتقلّب)
-//   6. المشاوير (لوحة تحكم: تكسي، تكتك، مندوب، أغراض)
-//   7. الأسواق (رف أقسام بأحجام وألوان مختلفة + الخدمات المنزلية)
-//   8. مقترح لك (بطاقات محلات كبيرة)
-//   9. الأكثر طلباً (لوحة ترتيب)
-//  10. توصيل مجاني قريب منك
-//  11. اطلب مرة ثانية
-// كل الأرقام والصور من بيانات الخادم الحقيقية؛ القسم يختفي إذا ما عنده بيانات.
+// الترتيب: الرأس (المدينة، الشعار، الإشعارات) ← البانر ← البحث ← [طلبك الشغّال إذا موجود]
+//   ← المطاعم + تاكسي ← عروض خاصة ← أقسام المطاعم.
+// الصور ملفات حقيقية مقصوصة من المرجع (assets/home). العروض من بيانات المطاعم الفعلية فقط.
+// الألوان ثابتة كما في المرجع (الصفحة مصممة للوضع الفاتح).
 // =====================================================================
+
+class _R {
+  static const page = Color(0xFFF7F6FD);
+  static const ink = Color(0xFF17171B);
+  static const sub = Color(0xFF4C4C55);
+  static const muted = Color(0xFF9B9BA4);
+  static const line = Color(0xFFECEAF2);
+  static const red = Color(0xFFE3161B);
+  static const redDeep = Color(0xFFD60103);
+  static const orange = Color(0xFFFF8C00);
+  static const yellow = Color(0xFFFFC21C);
+  static const peachFood = Color(0xFFFBE8D0);
+  static const peachTaxi = Color(0xFFFCE3C8);
+  static const tile = Color(0xFFFFEEEC);
+  static const shadow = [BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 4))];
+}
+
+TextStyle _t(double size, {FontWeight w = FontWeight.w700, Color color = _R.ink, double? height}) =>
+    WText.body.copyWith(fontSize: size, fontWeight: w, color: color, height: height);
+
+/// سهم ">" ثابت الاتجاه كما في المرجع
+Widget _chevron(IconData icon, double size, Color color) =>
+    Directionality(textDirection: TextDirection.ltr, child: Icon(icon, size: size, color: color));
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.unread});
@@ -62,13 +73,13 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<_HomeData> _data = _load();
 
   Future<_HomeData> _load() async {
-    final r = await Future.wait([
-      catalogApi.merchants(areaId: app.selectedAreaId),
-      catalogApi.activePromotions(),
-      customerApi.myOrders(limit: 6),
-      catalogApi.homeServices().catchError((_) => <HomeService>[]),
+    final r = await Future.wait<Object>([
+      catalogApi.activePromotions().catchError((_) => <Promotion>[]),
+      // العروض تحتاج ترحيل 0018؛ إذا ما مطبّق يرجع فارغاً بدل ما يكسر الصفحة
+      catalogApi.offers(areaId: app.selectedAreaId).catchError((_) => <(Product, Merchant)>[]),
+      customerApi.myOrders(limit: 3).catchError((_) => <Order>[]),
     ]);
-    return _HomeData(r[0] as List<Merchant>, r[1] as List<Promotion>, r[2] as List<Order>, r[3] as List<HomeService>);
+    return _HomeData(r[0] as List<Promotion>, r[1] as List<(Product, Merchant)>, r[2] as List<Order>);
   }
 
   Future<void> _refresh() async {
@@ -78,948 +89,793 @@ class _HomeScreenState extends State<HomeScreen> {
     await f.then((_) {}, onError: (_) {});
   }
 
-  void _addAddress() => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen()));
+  void _openRestaurants() {
+    final c = _cat('restaurants');
+    if (c == null) return showInfo(context, 'المطاعم غير متاحة حالياً.');
+    openCategory(context, c);
+  }
 
-  void _selectArea(String? id) {
-    HapticFeedback.selectionClick();
-    app.selectArea(id);
-    setState(() => _data = _load());
+  void _openTaxi() {
+    final c = _cat('taxi');
+    if (c == null) return showInfo(context, 'خدمة التكسي غير متاحة حالياً.');
+    openCategory(context, c);
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: WColors.paper,
+        backgroundColor: _R.page,
         bottomNavigationBar: const CartBar(),
-        body: ListenableBuilder(
-          listenable: app,
-          builder: (context, _) {
-            if (app.loadError != null && !app.loaded) return SafeArea(child: ErrorView(error: app.loadError!, onRetry: _refresh));
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
-              child: RefreshIndicator(
-                color: WColors.night,
-                edgeOffset: MediaQuery.paddingOf(context).top,
-                onRefresh: _refresh,
-                child: FutureBuilder<_HomeData>(
-                  future: _data,
-                  builder: (context, s) {
-                    final d = s.data;
-                    final active = d?.recent.where((o) => o.status.isActive).firstOrNull;
-                    var i = 0;
-                    Widget reveal(Widget w) => _Reveal(index: i++, child: w);
-                    return CustomScrollView(slivers: [
-                      // الرأس البرتقالي + الأقسام الأربعة (تطلع فوق حافة الرأس) — أهم شي بالصفحة
-                      SliverToBoxAdapter(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          _Hero(unread: widget.unread, onAddress: () => pickAddressSheet(context, onAddNew: _addAddress)),
-                          const _PullUp(amount: _Hero.overlap, child: _ServiceGrid()),
-                        ]),
-                      ),
-                      SliverToBoxAdapter(child: reveal(const _MoreServices())),
-                      SliverToBoxAdapter(child: reveal(const DiscoverEntry())),
-                      if (active != null) SliverToBoxAdapter(child: reveal(_LiveOrder(order: active, onClosed: () => setState(() => _data = _load())))),
-                      if (s.hasError) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 40), child: ErrorView(error: s.error!, onRetry: _refresh))),
-                      if (d == null && !s.hasError) const SliverToBoxAdapter(child: _Loading()),
-                      if (d != null && d.promotions.isNotEmpty) SliverToBoxAdapter(child: reveal(_OfferDeck(promos: d.promotions))),
-                      if (d != null) ..._stores(d, reveal),
-                      if (d != null && d.recent.where((o) => !o.status.isActive).isNotEmpty) SliverToBoxAdapter(child: reveal(_Reorder(orders: d.recent.where((o) => !o.status.isActive).toList()))),
-                      const SliverToBoxAdapter(child: _Footer()),
-                    ]);
-                  },
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+          child: ListenableBuilder(
+            listenable: app,
+            builder: (context, _) {
+              if (app.loadError != null && !app.loaded) return SafeArea(child: ErrorView(error: app.loadError!, onRetry: _refresh));
+              return SafeArea(
+                bottom: false,
+                child: RefreshIndicator(
+                  color: _R.red,
+                  onRefresh: _refresh,
+                  child: FutureBuilder<_HomeData>(
+                    future: _data,
+                    builder: (context, s) {
+                      final d = s.data;
+                      final active = d?.recent.where((o) => o.status.isActive).firstOrNull;
+                      return ListView(padding: const EdgeInsets.only(bottom: 8), children: [
+                        _Header(
+                          unread: widget.unread,
+                          city: app.selectedArea?.city.isNotEmpty == true ? app.selectedArea!.city : 'بغداد',
+                          onCity: () => pickAddressSheet(context, onAddNew: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressFormScreen()))),
+                          onBell: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                        ),
+                        _Banner(promos: d?.promotions ?? const [], onOrder: _openRestaurants),
+                        const SizedBox(height: 12),
+                        _SearchBox(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
+                        if (active != null) _LiveOrderStrip(order: active, onClosed: () => setState(() => _data = _load())),
+                        const SizedBox(height: 17),
+                        _Services(onRestaurants: _openRestaurants, onTaxi: _openTaxi),
+                        const SizedBox(height: 23),
+                        _OffersSection(offers: d?.offers, error: s.hasError),
+                        const SizedBox(height: 16),
+                        _Categories(onMore: _openRestaurants),
+                      ]);
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-      );
-
-  List<Widget> _stores(_HomeData d, Widget Function(Widget) reveal) {
-    final storeCatIds = app.categories.where((c) => c.kind == CategoryKind.store).map((c) => c.id).toSet();
-    if (!d.merchants.any((m) => storeCatIds.contains(m.categoryId))) {
-      return [
-        SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 24), child: _AreaTabs(onSelect: _selectArea))),
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.only(top: 12),
-            child: EmptyView(icon: Icons.storefront_outlined, title: 'ما اكو محلات بهذه المنطقة بعد', message: 'المحلات تظهر هنا بعد ما تعتمدها إدارة واصل.'),
+              );
+            },
           ),
         ),
-      ];
-    }
-    final ref = app.referencePoint;
-    // أقسام المحلات فقط (مزودي الخدمات المنزلية لهم شاشتهم الخاصة)
-    final storeCats = app.categories.where((c) => c.kind == CategoryKind.store).map((c) => c.id).toSet();
-    final picks = d.merchants.where((m) => storeCats.contains(m.categoryId)).toList();
-    if (ref != null) {
-      picks.sort((a, b) => distanceKm(ref.latitude, ref.longitude, a.lat, a.lng).compareTo(distanceKm(ref.latitude, ref.longitude, b.lat, b.lng)));
-    }
-    // المفتوح أولاً
-    picks.sort((a, b) => (b.isOpenNow ? 1 : 0) - (a.isOpenNow ? 1 : 0));
-    final popular = picks.where((m) => m.orderCount > 0).toList()..sort((a, b) => b.orderCount.compareTo(a.orderCount));
-    final free = picks.where((m) => m.deliveryFee == 0 && m.isOpenNow).toList();
-    return [
-      SliverToBoxAdapter(child: reveal(_Picks(merchants: picks.take(10).toList(), nearby: ref != null, onArea: _selectArea))),
-      if (popular.length >= 2) SliverToBoxAdapter(child: reveal(_Leaderboard(merchants: popular.take(6).toList()))),
-      if (free.isNotEmpty) SliverToBoxAdapter(child: reveal(_FreeDelivery(merchants: free.take(8).toList()))),
-    ];
-  }
+      );
 }
 
 class _HomeData {
-  _HomeData(this.merchants, this.promotions, this.recent, this.homeServices);
-  final List<Merchant> merchants;
+  _HomeData(this.promotions, this.offers, this.recent);
   final List<Promotion> promotions;
+  final List<(Product, Merchant)> offers;
   final List<Order> recent;
-  final List<HomeService> homeServices;
 }
 
-// =====================================================================
-// عناصر مشتركة
-// =====================================================================
-
-/// عنوان قسم: سطر عريض + وصف قصير
-class _SectionHead extends StatelessWidget {
-  const _SectionHead(this.title, {this.sub});
-  final String title;
-  final String? sub;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(WSpace.page, 30, WSpace.page, 14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: WText.h1.copyWith(fontSize: 22)),
-          if (sub != null) Text(sub!, style: WText.small),
-        ]),
-      );
-}
-
-/// ظهور تدريجي للأقسام عند أول تحميل (حركة قصيرة وهادئة)
-class _Reveal extends StatefulWidget {
-  const _Reveal({required this.index, required this.child});
-  final int index;
-  final Widget child;
-  @override
-  State<_Reveal> createState() => _RevealState();
-}
-
-class _RevealState extends State<_Reveal> {
-  bool _shown = false;
-  Timer? _t;
-
-  @override
-  void initState() {
-    super.initState();
-    _t = Timer(Duration(milliseconds: 380 + 80 * math.min(widget.index, 6)), () {
-      if (mounted) setState(() => _shown = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _t?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedOpacity(
-        opacity: _shown ? 1 : 0,
-        duration: const Duration(milliseconds: 520),
-        curve: Curves.easeOut,
-        child: AnimatedSlide(
-          offset: _shown ? Offset.zero : const Offset(0, 0.14),
-          duration: const Duration(milliseconds: 620),
-          curve: Curves.easeOutCubic,
-          child: AnimatedScale(scale: _shown ? 1 : 0.97, duration: const Duration(milliseconds: 620), curve: Curves.easeOutBack, child: widget.child),
-        ),
-      );
-}
-
-/// شارة صغيرة (عدد، حالة)
-class _Tag extends StatelessWidget {
-  const _Tag(this.text, {required this.bg, required this.fg});
-  final String text;
-  final Color bg;
-  final Color fg;
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: bg, borderRadius: WRadius.all(7)),
-        child: Text(text, style: WText.label.copyWith(color: fg, fontSize: 11.5, fontWeight: FontWeight.w600)),
-      );
-}
-
-// =====================================================================
-// 1) الرأس البرتقالي: العنوان، التنبيهات، الترحيب، البحث
-//    حافته السفلية تختفي تحت الأقسام الأربعة (تداخل يعطي عمق وحركة)
-// =====================================================================
-class _Hero extends StatelessWidget {
-  const _Hero({required this.unread, required this.onAddress});
+// ---------------------------------------------------------------------
+// الرأس: المدينة (يمين) · الشعار (وسط) · الإشعارات (يسار)
+// ---------------------------------------------------------------------
+class _Header extends StatelessWidget {
+  const _Header({required this.unread, required this.city, required this.onCity, required this.onBell});
   final int unread;
-  final VoidCallback onAddress;
-  static const overlap = 64.0;
+  final String city;
+  final VoidCallback onCity;
+  final VoidCallback onBell;
 
   @override
-  Widget build(BuildContext context) {
-    final a = app.selectedAddress;
-    final h = DateTime.now().hour;
-    final greet = h < 5 ? 'سهرانين؟' : (h < 12 ? 'صباح الخير' : 'مساء الخير');
-    final first = (auth.profile?.fullName ?? '').split(' ').first;
-    const soft = Color(0xFFFFD9C2);
-    return Container(
-      decoration: BoxDecoration(color: WColors.night, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(34))),
-      padding: EdgeInsets.fromLTRB(WSpace.page, MediaQuery.paddingOf(context).top + 10, WSpace.page, 22 + overlap),
-      child: Stack(clipBehavior: Clip.none, children: [
-        // شيفرون العلامة كبير وشفاف بزاوية الرأس — حركة بصرية بدون صور
-        PositionedDirectional(end: -70, top: -10, child: IgnorePointer(child: Opacity(opacity: 0.10, child: WaselMark(size: 230, route: WColors.white)))),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-              child: Semantics(
-                button: true,
-                label: 'تغيير عنوان التوصيل',
-                onTap: onAddress,
-                excludeSemantics: true,
-                child: Pressable(
-                  onTap: onAddress,
-                  child: Row(children: [
-                    Container(
-                      width: 30,
-                      height: 30,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: WColors.white.withValues(alpha: 0.16), borderRadius: WRadius.all(10)),
-                      child: const Icon(Icons.near_me_rounded, size: 17, color: WColors.white),
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('التوصيل إلى', style: WText.caption.copyWith(color: soft, fontSize: 11)),
-                        Text(a == null ? 'أضف عنوان التوصيل' : a.oneLine, style: WText.bodyStrong.copyWith(color: WColors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      ]),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down_rounded, color: WColors.white, size: 22),
+  Widget build(BuildContext context) => SizedBox(
+        height: 76,
+        child: Stack(children: [
+          // الشعار والعبارة
+          Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: 142,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Image.asset('assets/home/logo.png', width: 142, filterQuality: FilterQuality.high, semanticLabel: 'واصل'),
+                Align(
+                  // العبارة تحت كلمة "واصل" (يسار الشعار) كما في المرجع
+                  alignment: const Alignment(-0.42, 0),
+                  child: Text('اطلب .. نوصلك', style: _t(12.5, w: FontWeight.w600, color: _R.ink, height: 1.1)),
+                ),
+              ]),
+            ),
+          ),
+          // المدينة
+          PositionedDirectional(
+            start: 14,
+            top: 29,
+            child: Semantics(
+              button: true,
+              label: 'المدينة: $city',
+              child: GestureDetector(
+                onTap: onCity,
+                child: Container(
+                  height: 31,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: _R.line), boxShadow: _R.shadow),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.location_on_rounded, size: 18, color: _R.orange),
+                    const SizedBox(width: 6),
+                    Text(city, style: _t(14, height: 1.1)),
                   ]),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            Stack(clipBehavior: Clip.none, children: [
-              WIconButton(Icons.notifications_none_rounded, background: WColors.white.withValues(alpha: 0.16), color: WColors.white, tooltip: 'الإشعارات', onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-              }),
-              if (unread > 0)
-                PositionedDirectional(
-                  top: -5,
-                  end: -5,
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 20),
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(8), border: Border.all(color: WColors.night, width: 2)),
-                    child: Text('${unread > 9 ? '9+' : unread}', textAlign: TextAlign.center, style: WText.number.copyWith(fontSize: 10.5, color: WColors.ink)),
-                  ),
+          ),
+          // الإشعارات
+          PositionedDirectional(
+            end: 10,
+            top: 24,
+            child: Semantics(
+              button: true,
+              label: unread > 0 ? 'الإشعارات، $unread غير مقروءة' : 'الإشعارات',
+              child: GestureDetector(
+                onTap: onBell,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    const Center(child: Icon(Icons.notifications_none_rounded, size: 32, color: _R.ink)),
+                    if (unread > 0)
+                      Positioned(
+                        top: 0,
+                        right: 2,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 19),
+                          height: 19,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(color: _R.red, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white, width: 1.5)),
+                          alignment: Alignment.center,
+                          child: Text(unread > 99 ? '99+' : '$unread', style: _t(10.5, color: Colors.white, height: 1)),
+                        ),
+                      ),
+                  ]),
                 ),
-            ]),
-          ]),
-          const SizedBox(height: 20),
-          Text(first.isEmpty ? greet : '$greet، $first', style: WText.body.copyWith(color: soft)),
-          Text('وين نوصّلك اليوم؟', style: WText.display.copyWith(color: WColors.white, fontSize: 28, height: 1.25)),
-          const SizedBox(height: 16),
-          Semantics(
-            button: true,
-            label: 'بحث',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-            excludeSemantics: true,
-            child: Pressable(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsetsDirectional.only(start: 16, end: 5),
-                decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(16)),
-                child: Row(children: [
-                  Expanded(child: Text('دوّر على مطعم، منتج أو محل', style: WText.body.copyWith(color: WColors.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(12)),
-                    child: Icon(Icons.search_rounded, color: WColors.ink),
-                  ),
-                ]),
               ),
             ),
           ),
         ]),
-      ]),
-    );
-  }
-}
-
-/// يسحب الابن لفوق بمقدار [amount] (يتداخل ويا العنصر اللي قبله) ويقلّل ارتفاعه بنفس المقدار.
-/// الضغط يشتغل حتى على الجزء المتداخل.
-class _PullUp extends SingleChildRenderObjectWidget {
-  const _PullUp({required this.amount, required super.child});
-  final double amount;
-  @override
-  RenderObject createRenderObject(BuildContext context) => _RenderPullUp(amount);
-  @override
-  void updateRenderObject(BuildContext context, _RenderPullUp renderObject) => renderObject.amount = amount;
-}
-
-class _RenderPullUp extends RenderShiftedBox {
-  _RenderPullUp(this._amount) : super(null);
-  double _amount;
-  set amount(double v) {
-    if (v == _amount) return;
-    _amount = v;
-    markNeedsLayout();
-  }
-
-  @override
-  void performLayout() {
-    final c = child;
-    if (c == null) {
-      size = constraints.smallest;
-      return;
-    }
-    c.layout(constraints, parentUsesSize: true);
-    (c.parentData! as BoxParentData).offset = Offset(0, -_amount);
-    size = constraints.constrain(Size(c.size.width, math.max(0, c.size.height - _amount)));
-  }
-
-  @override
-  bool hitTest(BoxHitTestResult result, {required Offset position}) => hitTestChildren(result, position: position);
-}
-
-// =====================================================================
-// 3) المنطقة — تبويبات نصية بخط سفلي ليموني
-// =====================================================================
-class _AreaTabs extends StatelessWidget {
-  const _AreaTabs({required this.onSelect});
-  final ValueChanged<String?> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final areas = app.areas.where((a) => a.isActive).toList();
-    if (areas.length < 2) return const SizedBox(height: 4);
-    Widget tab(String label, bool sel, VoidCallback f) => Semantics(
-          selected: sel,
-          button: true,
-          child: InkWell(
-            onTap: f,
-            borderRadius: WRadius.all(8),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(end: 18, top: 6, bottom: 4),
-              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: (sel ? WText.bodyStrong.copyWith(fontWeight: FontWeight.w700) : WText.body).copyWith(color: sel ? WColors.fg : WColors.inkMuted)),
-                const SizedBox(height: 4),
-                AnimatedContainer(duration: WDurations.base, curve: WDurations.curve, height: 4, width: sel ? 26 : 0, decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(2))),
-              ]),
-            ),
-          ),
-        );
-    return SizedBox(
-      height: 40,
-      child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: WSpace.page), children: [
-        tab('كل المناطق', app.selectedAreaId == null, () => onSelect(null)),
-        for (final ar in areas) tab(ar.name, app.selectedAreaId == ar.id, () => onSelect(ar.id)),
-      ]),
-    );
-  }
-}
-
-// =====================================================================
-// 4) الطلب الشغّال — تذكرة حيّة
-// =====================================================================
-class _LiveOrder extends StatelessWidget {
-  const _LiveOrder({required this.order, required this.onClosed});
-  final Order order;
-  final VoidCallback onClosed;
-
-  @override
-  Widget build(BuildContext context) {
-    final o = order;
-    final group = switch (o.status) {
-      OrderStatus.placed => 0,
-      OrderStatus.accepted || OrderStatus.preparing || OrderStatus.ready => 1,
-      OrderStatus.pickedUp || OrderStatus.onTheWay => 2,
-      _ => 3,
-    };
-    const steps = ['انرسل', 'يتجهّز', 'بالطريق', 'وصل'];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(WSpace.page, 14, WSpace.page, 0),
-      child: Semantics(
-        button: true,
-        label: 'تتبّع طلبك: ${o.status.label}',
-        child: Pressable(
-          onTap: () async {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: o.id)));
-            onClosed();
-          },
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-            decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.xl), border: Border.all(color: WColors.line), boxShadow: WShadow.soft),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const _LivePulse(),
-                const SizedBox(width: 8),
-                Expanded(child: Text('طلبك الحالي · ${o.merchantName ?? ''}', style: WText.label.copyWith(color: WColors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                Text(o.code, style: WText.label.copyWith(color: WColors.link, fontWeight: FontWeight.w700)),
-              ]),
-              const SizedBox(height: 10),
-              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Expanded(child: Text(o.status.label, style: WText.h1.copyWith(fontSize: 22))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(12)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('تتبّع', style: WText.label.copyWith(color: WColors.ink, fontWeight: FontWeight.w700)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_back_rounded, size: 16, color: WColors.ink),
-                  ]),
-                ),
-              ]),
-              const SizedBox(height: 16),
-              Row(children: [
-                for (var i = 0; i < 4; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _StepBar(done: i < group, current: i == group),
-                      const SizedBox(height: 6),
-                      Text(steps[i], style: WText.caption.copyWith(fontSize: 11, color: i <= group ? WColors.fg : WColors.inkFaint, fontWeight: i == group ? FontWeight.w700 : FontWeight.w400)),
-                    ]),
-                  ),
-                ],
-              ]),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// خطوة بشريط التتبع: المكتملة برتقالية، والحالية يمر عليها ضوء (تبيّن إنها شغّالة)
-class _StepBar extends StatefulWidget {
-  const _StepBar({required this.done, required this.current});
-  final bool done;
-  final bool current;
-  @override
-  State<_StepBar> createState() => _StepBarState();
-}
-
-class _StepBarState extends State<_StepBar> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
-  @override
-  void initState() {
-    super.initState();
-    if (widget.current) _c.repeat();
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: WRadius.all(3),
-        child: SizedBox(
-          height: 6,
-          child: widget.current
-              ? AnimatedBuilder(
-                  animation: _c,
-                  builder: (context, _) => DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [WColors.night, WColors.lime, WColors.night],
-                        stops: [(_c.value - 0.3).clamp(0.0, 1.0), _c.value, (_c.value + 0.3).clamp(0.0, 1.0)],
-                      ),
-                    ),
-                  ),
-                )
-              : ColoredBox(color: widget.done ? WColors.night : WColors.line),
-        ),
       );
 }
 
-class _LivePulse extends StatefulWidget {
-  const _LivePulse();
-  @override
-  State<_LivePulse> createState() => _LivePulseState();
-}
-
-class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
-        child: Container(width: 8, height: 8, decoration: BoxDecoration(color: WColors.night, borderRadius: WRadius.all(2))),
-      );
-}
-
-// =====================================================================
-// 5) العروض — بطاقات كبيرة تتقلّب تلقائياً
-// =====================================================================
-class _OfferDeck extends StatefulWidget {
-  const _OfferDeck({required this.promos});
+// ---------------------------------------------------------------------
+// البانر: شريحة واصل الرئيسية + عروض الإدارة الفعّالة (إن وجدت)
+// ---------------------------------------------------------------------
+class _Banner extends StatefulWidget {
+  const _Banner({required this.promos, required this.onOrder});
   final List<Promotion> promos;
+  final VoidCallback onOrder;
   @override
-  State<_OfferDeck> createState() => _OfferDeckState();
+  State<_Banner> createState() => _BannerState();
 }
 
-class _OfferDeckState extends State<_OfferDeck> {
-  final _pc = PageController(viewportFraction: 0.9);
-  int _page = 0;
+class _BannerState extends State<_Banner> {
+  final _ctrl = PageController();
   Timer? _auto;
-  DateTime _touched = DateTime.fromMillisecondsSinceEpoch(0);
+  int _page = 0;
+
+  int get _count => 1 + widget.promos.length;
 
   @override
   void initState() {
     super.initState();
-    if (widget.promos.length > 1) {
-      _auto = Timer.periodic(const Duration(seconds: 5), (_) {
-        // يوقف التقليب التلقائي إذا المستخدم يتصفح بنفسه
-        if (!_pc.hasClients || DateTime.now().difference(_touched).inSeconds < 8) return;
-        _pc.animateToPage((_page + 1) % widget.promos.length, duration: const Duration(milliseconds: 520), curve: Curves.easeInOutCubic);
-      });
-    }
+    _auto = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || _count < 2 || !_ctrl.hasClients) return;
+      _ctrl.animateToPage((_page + 1) % _count, duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
+    });
   }
 
   @override
   void dispose() {
     _auto?.cancel();
-    _pc.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  Future<void> _open(Promotion p) async {
-    if (p.merchantId == null) return;
-    final m = await catalogApi.merchant(p.merchantId!);
-    if (m != null && mounted) openMerchant(context, m);
-  }
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth;
+        final h = w * 333 / 852;
+        return SizedBox(
+          height: h,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: Stack(children: [
+              PageView(
+                controller: _ctrl,
+                onPageChanged: (i) => setState(() => _page = i),
+                children: [
+                  _BrandSlide(height: h, width: w, onOrder: widget.onOrder),
+                  for (final p in widget.promos) _PromoSlide(promo: p),
+                ],
+              ),
+              // مؤشرات السلايدر
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: h * 0.075,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  textDirection: TextDirection.ltr,
+                  children: [
+                    for (var i = 0; i < _count; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(color: i == _page ? _R.red : Colors.white, shape: BoxShape.circle),
+                      ),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        );
+      });
+}
+
+class _BrandSlide extends StatelessWidget {
+  const _BrandSlide({required this.height, required this.width, required this.onOrder});
+  final double height;
+  final double width;
+  final VoidCallback onOrder;
 
   @override
   Widget build(BuildContext context) {
-    final promos = widget.promos;
-    return Padding(
-      padding: const EdgeInsets.only(top: 18),
-      child: Column(children: [
-        SizedBox(
-          height: 176,
-          child: Listener(
-            onPointerDown: (_) => _touched = DateTime.now(),
-            child: PageView.builder(
-              controller: _pc,
-              padEnds: false,
-              itemCount: promos.length,
-              onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (context, i) => AnimatedBuilder(
-                animation: _pc,
-                builder: (context, child) {
-                  // البطاقات الجانبية أصغر وأخفت — عمق وحركة أثناء التقليب
-                  final page = _pc.hasClients && _pc.position.haveDimensions ? (_pc.page ?? _page.toDouble()) : _page.toDouble();
-                  final d = (page - i).abs().clamp(0.0, 1.0);
-                  return Opacity(opacity: 1 - 0.35 * d, child: Transform.scale(scale: 1 - 0.07 * d, child: child));
-                },
-                child: Padding(
-                  padding: EdgeInsetsDirectional.only(start: i == 0 ? WSpace.page : 6, end: i == promos.length - 1 ? WSpace.page : 6),
-                  child: _OfferCard(p: promos[i], style: i % 3, onTap: () => _open(promos[i])),
+    final fs = height * 0.14;
+    return Stack(fit: StackFit.expand, children: [
+      // خلفية المطعم الداكنة
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF3B2A1D), Color(0xFF1C140F), Color(0xFF0B0807)],
+          ),
+        ),
+      ),
+      // توهّج أحمر أسفل اليمين كما في المرجع
+      Positioned(
+        right: -width * 0.08,
+        bottom: -height * 0.35,
+        child: Container(
+          width: width * 0.42,
+          height: height * 0.8,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [Color(0x99B3060A), Color(0x00B3060A)]),
+          ),
+        ),
+      ),
+      // صورة البرغر والبطاطا (من المرجع)
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        child: Image.asset('assets/home/banner_food.png', height: height, fit: BoxFit.fitHeight, filterQuality: FilterQuality.high),
+      ),
+      // النص والزر
+      PositionedDirectional(
+        start: width * 0.045,
+        top: height * 0.13,
+        width: width * 0.40,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text('كل ما تشتهيه', style: _t(fs, w: FontWeight.w800, color: Colors.white, height: 1.25))),
+          FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text('في مكان واحد', style: _t(fs, w: FontWeight.w800, color: _R.yellow, height: 1.25))),
+          SizedBox(height: height * 0.07),
+          Semantics(
+            button: true,
+            label: 'اطلب الآن',
+            excludeSemantics: true,
+            child: GestureDetector(
+              onTap: onOrder,
+              child: Transform.rotate(
+                angle: -0.05,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: height * 0.06, vertical: height * 0.035),
+                  decoration: BoxDecoration(color: const Color(0xFFD7141B), borderRadius: BorderRadius.circular(6), boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 10, offset: Offset(0, 3))]),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(
+                      width: height * 0.115,
+                      height: height * 0.115,
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: _chevron(Icons.chevron_right_rounded, height * 0.1, const Color(0xFFD7141B)),
+                    ),
+                    SizedBox(width: height * 0.05),
+                    Text('اطلب الآن', style: _t(height * 0.09, w: FontWeight.w800, color: Colors.white)),
+                  ]),
                 ),
               ),
             ),
           ),
-        ),
-        if (promos.length > 1) ...[
-          const SizedBox(height: 12),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            for (var i = 0; i < promos.length; i++)
-              AnimatedContainer(
-                duration: WDurations.base,
-                curve: WDurations.curve,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: i == _page ? 22 : 6,
-                height: 6,
-                decoration: BoxDecoration(color: i == _page ? WColors.fg : WColors.line, borderRadius: WRadius.all(3)),
-              ),
-          ]),
-        ],
-      ]),
-    );
-  }
-}
-
-/// بطاقة عرض: صورة حقيقية إذا موجودة، وإلا ملصق طباعي بألوان الهوية
-class _OfferCard extends StatelessWidget {
-  const _OfferCard({required this.p, required this.style, required this.onTap});
-  final Promotion p;
-  final int style; // 0 ليموني، 1 حبر، 2 أزرق
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImg = p.imageUrl != null && p.imageUrl!.isNotEmpty;
-    final (bg, fg, sub, tagBg, tagFg) = switch (style) {
-      0 => (WColors.lime, WColors.ink, const Color(0xFF3B4A12), WColors.ink, WColors.lime),
-      1 => (WColors.night, WColors.white, const Color(0xFFB9BCC0), WColors.lime, WColors.ink),
-      _ => (WColors.mint, WColors.white, const Color(0xFFD9F2E8), WColors.white, WColors.mint),
-    };
-    final text = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      _Tag(p.merchantId == null ? 'عرض واصل' : 'عرض', bg: hasImg ? WColors.lime : tagBg, fg: hasImg ? WColors.ink : tagFg),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(p.title, style: WText.h1.copyWith(fontSize: 22, height: 1.2, color: hasImg ? WColors.white : fg), maxLines: 2, overflow: TextOverflow.ellipsis),
-        if (p.description.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(p.description, style: WText.small.copyWith(color: hasImg ? const Color(0xFFE5E5E5) : sub), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      ]),
-    ]);
-    return Semantics(
-      button: p.merchantId != null,
-      label: p.title,
-      child: Pressable(
-        onTap: onTap,
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: bg, borderRadius: WRadius.all(WRadius.xl)),
-          child: hasImg
-              ? Stack(fit: StackFit.expand, children: [
-                  WImage(p.imageUrl, radius: 0),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x0017191B), Color(0xCC17191B)], stops: [0.25, 1])),
-                  ),
-                  Padding(padding: const EdgeInsets.all(18), child: text),
-                ])
-              : Stack(children: [
-                  // علامة واصل كبيرة مقصوصة بزاوية البطاقة — شخصية بدون صور مخترعة
-                  PositionedDirectional(end: -26, bottom: -34, child: Opacity(opacity: style == 0 ? 0.16 : 0.22, child: WaselMark(size: 170, route: style == 0 ? WColors.ink : WColors.lime))),
-                  Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 18), child: text),
-                ]),
-        ),
+        ]),
       ),
-    );
+    ]);
   }
 }
 
-// =====================================================================
-// 5) الأقسام الأربعة الرئيسية — بطاقات مربعة برسومات أصلية
-//    التكسي الأبرز: تعبئة صفراء كاملة + زر "اطلب" + حركة خفيفة للسيارة.
-//    كل بطاقة مربوطة بقسم حقيقي من قاعدة البيانات، وتختفي إذا القسم معطّل من الإدارة.
-// =====================================================================
-MerchantCategory? _cat(String id) => app.categories.where((c) => c.id == id).firstOrNull;
+/// شريحة عرض من الإدارة (صورة العرض الحقيقية وعنوانه)
+class _PromoSlide extends StatelessWidget {
+  const _PromoSlide({required this.promo});
+  final Promotion promo;
 
-/// أقسام المحلات (غير المطاعم) — تظهر تحت بطاقة "المحلات"
-List<MerchantCategory> get _shopCategories => app.categories.where((c) => c.kind == CategoryKind.store && c.id != 'restaurants').toList();
-
-class _ServiceGrid extends StatelessWidget {
-  const _ServiceGrid();
-
-  // يستمع لبيانات التطبيق مباشرة: الأقسام توصل من الخادم بعد أول رسم،
-  // ولأن الودجت ثابت (const) ما ينعاد رسمه من الأب — بدون هذا كان يبقى فارغ.
   @override
-  Widget build(BuildContext context) => ListenableBuilder(listenable: app, builder: (context, _) => _build(context));
-
-  Widget _build(BuildContext context) {
-    final taxi = _cat('taxi');
-    final food = _cat('restaurants');
-    final parcel = _cat('parcel');
-    final shops = _shopCategories;
-    final cards = <Widget>[
-      if (taxi != null)
-        _ServiceCard(
-          id: 'taxi',
-          index: 0,
-          title: 'تكسي',
-          sub: 'تكسي أو تكتك',
-          asset: 'assets/illustrations/taxi.png',
-          featured: true,
-          bg: WColors.lime,
-          onTap: () => openCategory(context, taxi),
-        ),
-      if (food != null)
-        _ServiceCard(
-          id: 'food',
-          index: 1,
-          title: 'طعام',
-          sub: 'مطاعم منطقتك',
-          asset: 'assets/illustrations/food.png',
-          bg: WColors.isDark ? const Color(0xFF3A1F1A) : const Color(0xFFFFE8E2),
-          accent: WColors.coral,
-          onTap: () => openCategory(context, food),
-        ),
-      if (parcel != null)
-        _ServiceCard(
-          id: 'parcel',
-          index: 2,
-          title: 'ودّي أغراضك',
-          sub: 'بأمان، من باب لباب',
-          asset: 'assets/illustrations/parcel.png',
-          bg: WColors.isDark ? const Color(0xFF0F2E27) : const Color(0xFFDDF4EC),
-          accent: WColors.mint,
-          onTap: () => openCategory(context, parcel),
-        ),
-      if (shops.isNotEmpty)
-        _ServiceCard(
-          id: 'shops',
-          index: 3,
-          title: 'المحلات',
-          sub: shops.take(2).map((c) => c.name).join('، '),
-          asset: 'assets/illustrations/shops.png',
-          bg: WColors.blueSoft,
-          accent: WColors.blue,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopsHubScreen())),
-        ),
-    ];
-    if (cards.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(WSpace.page, 14, WSpace.page, 0),
-      child: LayoutBuilder(builder: (context, box) {
-        const gap = 12.0;
-        final side = (box.maxWidth - gap) / 2;
-        return Wrap(spacing: gap, runSpacing: gap, children: [for (final c in cards) SizedBox(width: side, height: side, child: c)]);
-      }),
-    );
-  }
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: () async {
+          final mid = promo.merchantId;
+          if (mid == null) return;
+          final m = await catalogApi.merchant(mid).catchError((_) => null);
+          if (m != null && context.mounted) openMerchant(context, m);
+        },
+        child: Stack(fit: StackFit.expand, children: [
+          if ((promo.imageUrl ?? '').isNotEmpty)
+            WImage(promo.imageUrl, radius: 0, fallbackColor: const Color(0xFF2A1D14))
+          else
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF3B2A1D), Color(0xFF1C140F), Color(0xFF0B0807)]),
+              ),
+            ),
+          const DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xB3000000)])),
+          ),
+          PositionedDirectional(
+            start: 16,
+            end: 16,
+            bottom: 30,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(promo.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: _t(20, w: FontWeight.w800, color: Colors.white)),
+              if (promo.description.isNotEmpty)
+                Text(promo.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: _t(13, w: FontWeight.w500, color: _R.yellow)),
+            ]),
+          ),
+        ]),
+      );
 }
 
-class _ServiceCard extends StatefulWidget {
-  const _ServiceCard({required this.id, required this.title, required this.sub, required this.asset, required this.bg, required this.onTap, this.accent, this.featured = false, this.index = 0});
-  final String id;
+// ---------------------------------------------------------------------
+// البحث
+// ---------------------------------------------------------------------
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({required this.onTap});
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: Semantics(
+          button: true,
+          label: 'ابحث عن مطعم أو وجبة',
+          excludeSemantics: true,
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: _R.line), boxShadow: _R.shadow),
+              child: Row(children: [
+                const Icon(Icons.search_rounded, size: 24, color: _R.ink),
+                const SizedBox(width: 12),
+                Text('ابحث عن مطعم أو وجبة ...', style: _t(13.5, w: FontWeight.w500, color: _R.muted)),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------
+// الخدمتان: المطاعم وتاكسي (فقط)
+// ---------------------------------------------------------------------
+class _Services extends StatelessWidget {
+  const _Services({required this.onRestaurants, required this.onTaxi});
+  final VoidCallback onRestaurants;
+  final VoidCallback onTaxi;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: SizedBox(
+          height: 138,
+          child: Row(children: [
+            Expanded(child: _ServiceTile(title: 'المطاعم', sub: 'اكتشف المطاعم', asset: 'assets/home/restaurant.png', bg: _R.peachFood, onTap: onRestaurants)),
+            const SizedBox(width: 12),
+            Expanded(child: _ServiceTile(title: 'تاكسي', sub: 'اطلب سيارة الآن', asset: 'assets/home/taxi.png', bg: _R.peachTaxi, onTap: onTaxi)),
+          ]),
+        ),
+      );
+}
+
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile({required this.title, required this.sub, required this.asset, required this.bg, required this.onTap});
   final String title;
   final String sub;
   final String asset;
   final Color bg;
-  final Color? accent;
-  final bool featured;
-  final int index;
   final VoidCallback onTap;
+
   @override
-  State<_ServiceCard> createState() => _ServiceCardState();
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: '$title، $sub',
+        excludeSemantics: true,
+        child: Pressable(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), boxShadow: _R.shadow),
+            child: Column(children: [
+              Expanded(child: Image.asset(asset, fit: BoxFit.contain, filterQuality: FilterQuality.high)),
+              const SizedBox(height: 2),
+              Text(title, style: _t(16.5, w: FontWeight.w800, height: 1.15)),
+              const SizedBox(height: 4),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(
+                  width: 25,
+                  height: 25,
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))]),
+                  alignment: Alignment.center,
+                  child: _chevron(Icons.chevron_right_rounded, 20, _R.ink),
+                ),
+                const SizedBox(width: 8),
+                Flexible(child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: _t(12, w: FontWeight.w500, color: _R.sub))),
+              ]),
+            ]),
+          ),
+        ),
+      );
 }
 
-class _ServiceCardState extends State<_ServiceCard> with TickerProviderStateMixin {
-  bool _down = false;
-  // دخول بنابض (متتابع حسب ترتيب البطاقة)
-  late final AnimationController _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 820));
-  // حركة مستمرة هادئة: طفو الرسم، وخطوط سرعة التكسي
-  late final AnimationController _loop = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat();
-  Timer? _start;
-
-  @override
-  void initState() {
-    super.initState();
-    _start = Timer(Duration(milliseconds: 120 + widget.index * 110), () {
-      if (mounted) _enter.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _start?.cancel();
-    _enter.dispose();
-    _loop.dispose();
-    super.dispose();
-  }
+// ---------------------------------------------------------------------
+// عروض خاصة: منتجات حقيقية سعرها أقل من سعرها قبل الخصم
+// ---------------------------------------------------------------------
+class _OffersSection extends StatelessWidget {
+  const _OffersSection({required this.offers, required this.error});
+  final List<(Product, Merchant)>? offers;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
-    final f = widget.featured;
-    final titleColor = f ? WColors.ink : WColors.fg;
-    final subColor = f ? WColors.ink.withValues(alpha: 0.72) : WColors.inkMuted;
-    final phase = widget.index * 0.23; // كل رسم يطفو بتوقيت مختلف
+    final list = offers;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(children: [
+          const Icon(Icons.star_rounded, size: 24, color: _R.red),
+          const SizedBox(width: 6),
+          Text('عروض خاصة', style: _t(17, w: FontWeight.w800)),
+          const Spacer(),
+          Semantics(
+            button: true,
+            label: 'عرض كل العروض',
+            excludeSemantics: true,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OffersScreen())),
+              child: Container(
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 11),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: _R.line)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('عرض الكل', style: _t(12.5, w: FontWeight.w600)),
+                  const SizedBox(width: 4),
+                  _chevron(Icons.chevron_left_rounded, 20, _R.red),
+                ]),
+              ),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, box) {
+        final cardW = (box.maxWidth - 26 - 12) / 2;
+        final cardH = cardW * 199 / 385 + 50;
+        if (list == null && !error) {
+          return SizedBox(
+            height: cardH,
+            child: Row(children: [
+              const SizedBox(width: 13),
+              SkeletonBox(height: cardH, width: cardW, radius: 16),
+              const SizedBox(width: 12),
+              SkeletonBox(height: cardH, width: cardW, radius: 16),
+            ]),
+          );
+        }
+        if (list == null || list.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: _R.line)),
+              child: Row(children: [
+                const Icon(Icons.local_offer_outlined, color: _R.red),
+                const SizedBox(width: 10),
+                Expanded(child: Text('ما اكو عروض حالياً. العروض تظهر هنا لما المطاعم تضيف خصم على وجباتها.', style: _t(13.5, w: FontWeight.w500, color: _R.sub))),
+              ]),
+            ),
+          );
+        }
+        return SizedBox(
+          height: cardH,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            itemCount: list.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, i) => SizedBox(width: cardW, child: OfferCard(product: list[i].$1, merchant: list[i].$2)),
+          ),
+        );
+      }),
+    ]);
+  }
+}
+
+/// صورة الوجبة: صورة المنتج الحقيقية، وإلا صورة من المرجع تناسب نوع الوجبة، وإلا أيقونة
+String? _offerAsset(String name) {
+  final n = name;
+  if (n.contains('بيتزا')) return 'assets/home/offer_pizza.jpg';
+  if (n.contains('دجاج') || n.contains('كرسبي') || n.contains('بروستد')) return 'assets/home/offer_chicken.jpg';
+  if (n.contains('شاورما')) return 'assets/home/cat_shawarma.jpg';
+  if (n.contains('برغر') || n.contains('بركر')) return 'assets/home/cat_burger.jpg';
+  if (n.contains('مشويات') || n.contains('كباب') || n.contains('تكة')) return 'assets/home/cat_grills.jpg';
+  return null;
+}
+
+/// بطاقة عرض (تُستخدم بالرئيسية وبشاشة كل العروض)
+class OfferCard extends StatelessWidget {
+  const OfferCard({super.key, required this.product, required this.merchant});
+  final Product product;
+  final Merchant merchant;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = product;
+    final asset = _offerAsset(p.name);
+    final Widget img = p.images.isNotEmpty
+        ? WImage(p.images.first, radius: 0)
+        : asset != null
+            ? Image.asset(asset, fit: BoxFit.cover, filterQuality: FilterQuality.high)
+            : Container(color: _R.tile, alignment: Alignment.center, child: const Icon(Icons.restaurant_rounded, color: _R.red, size: 34));
     return Semantics(
       button: true,
-      label: '${widget.title}، ${widget.sub}',
-      onTap: widget.onTap,
+      label: '${p.name}، خصم ${p.discountPercent}٪، ${iqd(p.price)} بدل ${iqd(p.compareAtPrice!)}، ${merchant.name}',
       excludeSemantics: true,
-      child: AnimatedBuilder(
-        animation: _enter,
-        builder: (context, child) {
-          final t = _enter.value;
-          final pop = Curves.easeOutBack.transform(t);
-          return Opacity(
-            opacity: Curves.easeOut.transform(t.clamp(0, 1)),
-            child: Transform.translate(offset: Offset(0, 28 * (1 - Curves.easeOutCubic.transform(t))), child: Transform.scale(scale: 0.86 + 0.14 * pop, child: child)),
-          );
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _down = true),
-          onTapCancel: () => setState(() => _down = false),
-          onTapUp: (_) {
-            setState(() => _down = false);
-            HapticFeedback.lightImpact();
-            widget.onTap();
-          },
-          child: AnimatedScale(
-            scale: _down ? 0.94 : 1,
-            duration: Duration(milliseconds: _down ? 90 : 420),
-            curve: _down ? Curves.easeOut : Curves.elasticOut,
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: widget.bg,
-                borderRadius: WRadius.all(26),
-                boxShadow: WColors.isDark
-                    ? null
-                    : [BoxShadow(color: (f ? WColors.lime : WColors.ink).withValues(alpha: f ? 0.5 : 0.08), blurRadius: f ? 24 : 18, offset: const Offset(0, 10))],
-              ),
-              child: LayoutBuilder(builder: (context, box) {
-                final s = box.maxWidth;
-                return Stack(children: [
-                  // الرسم بالنص السفلي، يطفو بهدوء؛ التكسي يدخل من الجانب
-                  PositionedDirectional(
-                    end: f ? -s * 0.03 : -s * 0.06,
-                    bottom: -s * 0.03,
-                    width: s * (f ? 0.86 : 0.8),
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([_enter, _loop]),
-                      builder: (context, child) {
-                        final wave = math.sin((_loop.value + phase) * 2 * math.pi);
-                        final drive = f ? (1 - Curves.easeOutCubic.transform(((_enter.value - 0.15) / 0.85).clamp(0.0, 1.0))) : 0.0;
-                        // RTL: السيارة تتجه يسار، فتدخل من اليمين
-                        final dx = drive * s * 0.7 * (Directionality.of(context) == TextDirection.rtl ? 1 : -1);
-                        return Transform.translate(
-                          offset: Offset(dx, (f ? 2.5 : 4) * wave),
-                          child: Transform.rotate(angle: f ? 0 : 0.025 * wave, child: child),
-                        );
-                      },
-                      child: Image.asset(widget.asset, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
-                    ),
-                  ),
-                  // خطوط السرعة خلف التكسي (تتحرك باستمرار)
-                  if (f)
-                    PositionedDirectional(
-                      start: s * 0.04,
-                      bottom: s * 0.26,
-                      child: AnimatedBuilder(
-                        animation: _loop,
-                        builder: (context, _) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          for (var k = 0; k < 3; k++)
-                            Builder(builder: (context) {
-                              final v = (_loop.value * 2 + k * 0.33) % 1.0;
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: s * 0.03),
-                                child: Opacity(
-                                  opacity: (1 - v) * 0.9,
-                                  child: Transform.translate(
-                                    offset: Offset((Directionality.of(context) == TextDirection.rtl ? -1 : 1) * v * s * 0.08, 0),
-                                    child: Container(width: s * (0.10 + 0.05 * ((k + 1) % 2)), height: 5, decoration: BoxDecoration(color: WColors.ink.withValues(alpha: 0.55), borderRadius: WRadius.all(3))),
-                                  ),
-                                ),
-                              );
-                            }),
+      child: Pressable(
+        onTap: () => showProductSheet(context, merchant, p),
+        child: Container(
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: _R.shadow),
+          clipBehavior: Clip.antiAlias,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            AspectRatio(
+              aspectRatio: 385 / 199,
+              child: LayoutBuilder(builder: (context, b) {
+                // الشارة بنفس مكان شارة المرجع وأكبر قليلاً منها (تغطيها بالكامل في صورتي المرجع)
+                final d = b.maxWidth * 0.30;
+                return Stack(fit: StackFit.expand, children: [
+                  img,
+                  Positioned(
+                    left: b.maxWidth * 0.8416 - d / 2,
+                    top: b.maxHeight * 0.3116 - d / 2,
+                    width: d,
+                    height: d,
+                    child: Container(
+                      decoration: const BoxDecoration(color: _R.red, shape: BoxShape.circle),
+                      padding: EdgeInsets.all(d * 0.12),
+                      child: FittedBox(
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Text('خصم', style: _t(15, w: FontWeight.w800, color: Colors.white, height: 1.05)),
+                          Directionality(textDirection: TextDirection.ltr, child: Text('${p.discountPercent}%', style: _t(19, w: FontWeight.w800, color: Colors.white, height: 1.05))),
                         ]),
                       ),
                     ),
-                  Padding(
-                    padding: EdgeInsets.all(s * 0.085),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                        Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Text(widget.title, style: WText.display.copyWith(fontSize: f ? 30 : 23, height: 1.05, color: titleColor)),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        f && s >= 150
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-                                decoration: BoxDecoration(color: WColors.ink, borderRadius: WRadius.all(13)),
-                                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Text('اطلب', style: WText.label.copyWith(color: WColors.lime, fontWeight: FontWeight.w700, fontSize: 13)),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.arrow_back_rounded, size: 15, color: WColors.lime),
-                                ]),
-                              )
-                            : Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(color: f ? WColors.ink : (widget.accent ?? WColors.blue), borderRadius: WRadius.all(11)),
-                                child: Icon(Icons.arrow_back_rounded, size: 17, color: f ? WColors.lime : WColors.white),
-                              ),
-                      ]),
-                      const SizedBox(height: 3),
-                      Text(widget.sub, style: WText.caption.copyWith(color: subColor, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ]),
                   ),
                 ]);
               }),
             ),
-          ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 5),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _t(13.5, w: FontWeight.w800, height: 1.25)),
+                  // السعر القديم مشطوب (يمين) والسعر الحالي بالأحمر (يسار) كما في المرجع؛ يتقلص ولا يُقص
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(iqd(p.compareAtPrice!),
+                          style: _t(12, w: FontWeight.w600, color: _R.muted, height: 1.2).copyWith(decoration: TextDecoration.lineThrough, decorationColor: _R.muted)),
+                      const SizedBox(width: 14),
+                      Text(iqd(p.price), style: _t(13, w: FontWeight.w800, color: _R.red, height: 1.2)),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
-/// خدمات ثانية (حتى ما تضيع أي خدمة): مندوب، تكتك، الأعمال المنزلية
-class _MoreServices extends StatelessWidget {
-  const _MoreServices();
-  // يستمع لبيانات التطبيق مباشرة: الأقسام توصل من الخادم بعد أول رسم،
-  // ولأن الودجت ثابت (const) ما ينعاد رسمه من الأب — بدون هذا كان يبقى فارغ.
+/// كل العروض الحقيقية
+class OffersScreen extends StatelessWidget {
+  const OffersScreen({super.key});
   @override
-  Widget build(BuildContext context) => ListenableBuilder(listenable: app, builder: (context, _) => _build(context));
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('عروض خاصة')),
+        bottomNavigationBar: const CartBar(),
+        body: AsyncView<List<(Product, Merchant)>>(
+          load: () => catalogApi.offers(areaId: app.selectedAreaId, limit: 100),
+          builder: (context, list, reload) => list.isEmpty
+              ? const EmptyView(icon: Icons.local_offer_outlined, title: 'ما اكو عروض حالياً', message: 'العروض تظهر هنا لما المطاعم تضيف خصم على وجباتها.')
+              : RefreshIndicator(
+                  onRefresh: reload,
+                  child: LayoutBuilder(builder: (context, box) {
+                    final w = (box.maxWidth - 26 - 12) / 2;
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(13),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: w / (w * 199 / 385 + 50)),
+                      itemCount: list.length,
+                      itemBuilder: (context, i) => OfferCard(product: list[i].$1, merchant: list[i].$2),
+                    );
+                  }),
+                ),
+        ),
+      );
+}
 
-  Widget _build(BuildContext context) {
-    final items = <(MerchantCategory, String, IconData)>[
-      if (_cat('courier') case final c?) (c, 'مندوب يشتري لك', Icons.directions_bike_rounded),
-      if (_cat('tuktuk') case final c?) (c, 'تكتك', Icons.electric_rickshaw_rounded),
-      for (final c in app.categories.where((c) => c.kind == CategoryKind.homeService)) (c, c.name, Icons.handyman_rounded),
-    ];
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: SizedBox(
-        height: 46,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, i) {
-            final (c, label, icon) = items[i];
-            return Semantics(
-              button: true,
-              label: label,
-              onTap: () => openCategory(context, c),
-              excludeSemantics: true,
-              child: Material(
-                color: WColors.surface,
-                borderRadius: WRadius.all(14),
-                child: InkWell(
-                  borderRadius: WRadius.all(14),
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    openCategory(context, c);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(borderRadius: WRadius.all(14), border: Border.all(color: WColors.line)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(icon, size: 20, color: WColors.link),
-                      const SizedBox(width: 8),
-                      Text(label, style: WText.bodyStrong.copyWith(fontWeight: FontWeight.w600)),
-                    ]),
+// ---------------------------------------------------------------------
+// أقسام المطاعم: كل قسم يفتح البحث الحقيقي بكلمته
+// ---------------------------------------------------------------------
+class _Categories extends StatelessWidget {
+  const _Categories({required this.onMore});
+  final VoidCallback onMore;
+
+  static const _items = [
+    ('شاورما', 'assets/home/cat_shawarma.jpg'),
+    ('مشويات', 'assets/home/cat_grills.jpg'),
+    ('برغر', 'assets/home/cat_burger.jpg'),
+    ('بيتزا', 'assets/home/cat_pizza.jpg'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(children: [
+            const Icon(Icons.restaurant_rounded, size: 22, color: _R.red),
+            const SizedBox(width: 6),
+            Text('أقسام المطاعم', style: _t(17, w: FontWeight.w800)),
+          ]),
+        ),
+        const SizedBox(height: 11),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          child: LayoutBuilder(builder: (context, box) {
+            const gap = 6.5;
+            final w = (box.maxWidth - gap * 4) / 5;
+            final photoH = w * 101 / 149;
+            final h = photoH + 20;
+            return Row(children: [
+              for (final (label, asset) in _items) ...[
+                SizedBox(
+                  width: w,
+                  height: h,
+                  child: Semantics(
+                    button: true,
+                    label: label,
+                    excludeSemantics: true,
+                    child: Pressable(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: label))),
+                      child: Container(
+                        decoration: BoxDecoration(color: _R.tile, borderRadius: BorderRadius.circular(13), boxShadow: _R.shadow),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(children: [
+                          SizedBox(height: photoH, width: w, child: Image.asset(asset, fit: BoxFit.cover, filterQuality: FilterQuality.high)),
+                          Expanded(child: Center(child: Text(label, maxLines: 1, style: _t(12, w: FontWeight.w800, height: 1)))),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: gap),
+              ],
+              SizedBox(
+                width: w,
+                height: h,
+                child: Semantics(
+                  button: true,
+                  label: 'المزيد',
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: onMore,
+                    child: Container(
+                      decoration: BoxDecoration(color: _R.redDeep, borderRadius: BorderRadius.circular(15), boxShadow: const [BoxShadow(color: Color(0x40D60103), blurRadius: 10, offset: Offset(0, 4))]),
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const _GridGlyph(size: 22),
+                        const SizedBox(height: 6),
+                        Text('المزيد', style: _t(12, w: FontWeight.w800, color: Colors.white, height: 1)),
+                      ]),
+                    ),
                   ),
                 ),
               ),
-            );
-          },
+            ]);
+          }),
         ),
-      ),
+      ]);
+}
+
+/// أيقونة "المزيد": أربعة مربعات بيضاء بحواف دائرية
+class _GridGlyph extends StatelessWidget {
+  const _GridGlyph({required this.size});
+  final double size;
+  @override
+  Widget build(BuildContext context) {
+    final s = size * 0.44;
+    Widget sq() => Container(width: s, height: s, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(s * 0.32)));
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [sq(), sq()]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [sq(), sq()]),
+      ]),
     );
   }
 }
 
-/// شاشة "المحلات": كل أقسام المحلات (غير المطاعم) من قاعدة البيانات
+
+// ---------------------------------------------------------------------
+// طلبك الشغّال: شريط صغير (يظهر فقط إذا عندك طلب جاري) حتى لا يغيّر ترتيب الصفحة
+// ---------------------------------------------------------------------
+class _LiveOrderStrip extends StatelessWidget {
+  const _LiveOrderStrip({required this.order, required this.onClosed});
+  final Order order;
+  final VoidCallback onClosed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(13, 10, 13, 0),
+        child: Semantics(
+          button: true,
+          label: 'تتبّع طلبك: ${order.status.label}',
+          excludeSemantics: true,
+          child: GestureDetector(
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: order.id)));
+              onClosed();
+            },
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: _R.line)),
+              child: Row(children: [
+                Container(width: 8, height: 8, decoration: const BoxDecoration(color: _R.red, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('طلبك الحالي: ${order.status.label}${(order.merchantName ?? '').isEmpty ? '' : ' · ${order.merchantName}'}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: _t(12.5, w: FontWeight.w600)),
+                ),
+                const SizedBox(width: 10),
+                Text('تتبّع', style: _t(13, w: FontWeight.w800, color: _R.red)),
+                _chevron(Icons.chevron_left_rounded, 20, _R.red),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
+MerchantCategory? _cat(String id) => app.categories.where((c) => c.id == id).firstOrNull;
+List<MerchantCategory> get _shopCategories => app.categories.where((c) => c.kind == CategoryKind.store && c.id != 'restaurants').toList();
+
 class ShopsHubScreen extends StatelessWidget {
   const ShopsHubScreen({super.key});
   @override
@@ -1070,286 +926,3 @@ class ShopsHubScreen extends StatelessWidget {
   }
 }
 
-// =====================================================================
-// 8) مقترح لك — بطاقات محلات كبيرة
-// =====================================================================
-class _Picks extends StatelessWidget {
-  const _Picks({required this.merchants, required this.nearby, required this.onArea});
-  final List<Merchant> merchants;
-  final bool nearby;
-  final ValueChanged<String?> onArea;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _SectionHead(nearby ? 'مطاعم ومحلات قريبة' : 'مطاعم ومحلات مقترحة', sub: nearby ? 'المفتوح والأقرب أولاً' : 'المفتوح أولاً'),
-        _AreaTabs(onSelect: onArea),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 252,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-            itemCount: merchants.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (context, i) => _StoreCard(m: merchants[i]),
-          ),
-        ),
-      ]);
-}
-
-class _StoreCard extends StatelessWidget {
-  const _StoreCard({required this.m});
-  final Merchant m;
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        width: 270,
-        child: Semantics(
-          button: true,
-          label: m.name,
-          child: Pressable(
-            onTap: () => openMerchant(context, m),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(
-                height: 160,
-                child: Stack(clipBehavior: Clip.none, children: [
-                  Positioned.fill(child: WImage(m.coverUrl, radius: WRadius.xl, fallbackIcon: categoryIcon(m.categoryId), fallbackColor: WColors.surfaceAlt)),
-                  if (!m.isOpenNow) Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: WColors.paper.withValues(alpha: 0.5), borderRadius: WRadius.all(WRadius.xl)))),
-                  PositionedDirectional(top: 12, start: 12, child: m.isOpenNow ? _Tag('مفتوح', bg: WColors.ink, fg: WColors.lime) : _Tag('مسكّر', bg: WColors.surface, fg: WColors.fg)),
-                  if (m.deliveryFee == 0) PositionedDirectional(top: 12, end: 12, child: _Tag('توصيل مجاني', bg: WColors.lime, fg: WColors.ink)),
-                  PositionedDirectional(
-                    bottom: -18,
-                    start: 14,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(color: WColors.paper, borderRadius: WRadius.all(16)),
-                      child: MerchantLogo(name: m.name, url: m.logoUrl, size: 46),
-                    ),
-                  ),
-                  PositionedDirectional(bottom: 10, end: 10, child: _FavButton(merchantId: m.id)),
-                ]),
-              ),
-              const SizedBox(height: 24),
-              Text(m.name, style: WText.h3.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              MerchantMeta(m),
-            ]),
-          ),
-        ),
-      );
-}
-
-class _FavButton extends StatelessWidget {
-  const _FavButton({required this.merchantId});
-  final String merchantId;
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-        listenable: app,
-        builder: (context, _) {
-          final fav = app.favorites.contains(merchantId);
-          return Semantics(
-            button: true,
-            label: fav ? 'شيل من المفضلة' : 'أضف للمفضلة',
-            child: Material(
-              color: fav ? WColors.lime : WColors.surface,
-              borderRadius: WRadius.all(12),
-              child: InkWell(
-                borderRadius: WRadius.all(12),
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  runAction(context, () => app.toggleFavorite(merchantId));
-                },
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: AnimatedSwitcher(
-                    duration: WDurations.base,
-                    transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-                    child: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(fav), size: 19, color: fav ? WColors.ink : WColors.fg),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      );
-}
-
-// =====================================================================
-// 9) الأكثر طلباً — لوحة ترتيب (الأول بطاقة كبيرة، الباقي صفوف)
-// =====================================================================
-class _Leaderboard extends StatelessWidget {
-  const _Leaderboard({required this.merchants});
-  final List<Merchant> merchants;
-  @override
-  Widget build(BuildContext context) {
-    final top = merchants.first;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _SectionHead('الأكثر طلباً', sub: 'حسب عدد الطلبات على واصل'),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-        child: Semantics(
-          button: true,
-          label: 'الأول: ${top.name}',
-          child: Pressable(
-            onTap: () => openMerchant(context, top),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-              decoration: BoxDecoration(color: WColors.lime, borderRadius: WRadius.all(WRadius.xl)),
-              child: Row(children: [
-                Text('1', style: WText.number.copyWith(fontSize: 64, height: 1, color: WColors.ink)),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    _Tag('الأكثر طلباً', bg: WColors.ink, fg: WColors.lime),
-                    const SizedBox(height: 6),
-                    Text(top.name, style: WText.h2.copyWith(color: WColors.ink, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('${top.orderCount} طلب${top.ratingCount > 0 ? ' · ★ ${top.ratingAvg.toStringAsFixed(1)}' : ''}', style: WText.small.copyWith(color: const Color(0xFF3B4A12))),
-                  ]),
-                ),
-                MerchantLogo(name: top.name, url: top.logoUrl, size: 58),
-              ]),
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(height: 6),
-      for (var i = 1; i < merchants.length; i++) MerchantRow(merchants[i], rank: i + 1, onTap: () => openMerchant(context, merchants[i])),
-    ]);
-  }
-}
-
-// =====================================================================
-// 10) توصيل مجاني قريب منك (من أجور التوصيل الحقيقية)
-// =====================================================================
-class _FreeDelivery extends StatelessWidget {
-  const _FreeDelivery({required this.merchants});
-  final List<Merchant> merchants;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const _SectionHead('توصيل مجاني', sub: 'محلات مفتوحة هسه وما تاخذ أجرة توصيل'),
-        SizedBox(
-          height: 84,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-            itemCount: merchants.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, i) {
-              final m = merchants[i];
-              final d = distanceTo(m);
-              return Semantics(
-                button: true,
-                label: m.name,
-                child: Pressable(
-                  onTap: () => openMerchant(context, m),
-                  child: Container(
-                    width: 236,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.lg), border: Border.all(color: WColors.line)),
-                    child: Row(children: [
-                      MerchantLogo(name: m.name, url: m.logoUrl, size: 54),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Text(m.name, style: WText.bodyStrong.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            _Tag('مجاني', bg: WColors.lime, fg: WColors.ink),
-                            const SizedBox(width: 6),
-                            Flexible(child: Text('${m.etaMinutes(d ?? 2)} د${d == null ? '' : ' · ${kmAr(d)}'}', style: WText.caption, maxLines: 1)),
-                          ]),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ]);
-}
-
-// =====================================================================
-// 11) اطلب مرة ثانية
-// =====================================================================
-class _Reorder extends StatelessWidget {
-  const _Reorder({required this.orders});
-  final List<Order> orders;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const _SectionHead('طلباتك السابقة', sub: 'افتح الطلب وشوف تفاصيله'),
-        SizedBox(
-          height: 112,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: WSpace.page),
-            itemCount: orders.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, i) {
-              final o = orders[i];
-              final ok = o.status == OrderStatus.delivered;
-              return Semantics(
-                button: true,
-                label: 'طلب ${o.merchantName ?? ''}',
-                child: Pressable(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: o.id))),
-                  child: Container(
-                    width: 200,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: WColors.surface, borderRadius: WRadius.all(WRadius.lg), border: Border.all(color: WColors.line)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        MerchantLogo(name: o.merchantName ?? '', url: o.merchantLogo, size: 36),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(o.merchantName ?? '', style: WText.bodyStrong.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      ]),
-                      const Spacer(),
-                      Row(children: [
-                        Expanded(child: Text(iqd(o.total), style: WText.price.copyWith(fontSize: 14))),
-                        _Tag(ok ? 'وصل' : o.status.label, bg: ok ? WColors.paper : WColors.dangerSoft, fg: ok ? WColors.fg : WColors.danger),
-                      ]),
-                      Text(dateTimeAr(o.createdAt), style: WText.caption.copyWith(fontSize: 11)),
-                    ]),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ]);
-}
-
-// =====================================================================
-// التحميل والذيل
-// =====================================================================
-class _Loading extends StatelessWidget {
-  const _Loading();
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(WSpace.page, 18, WSpace.page, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SkeletonBox(height: 176, radius: WRadius.xl),
-          const SizedBox(height: 24),
-          SkeletonBox(height: 96, radius: WRadius.xl),
-          const SizedBox(height: 24),
-          Row(children: [
-            Expanded(flex: 3, child: SkeletonBox(height: 190, radius: WRadius.xl)),
-            const SizedBox(width: 10),
-            Expanded(flex: 2, child: SkeletonBox(height: 190, radius: WRadius.xl)),
-          ]),
-        ]),
-      );
-}
-
-class _Footer extends StatelessWidget {
-  const _Footer();
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(WSpace.page, 40, WSpace.page, 36),
-        child: Column(children: [
-          WaselMark(size: 34, route: WColors.inkFaint),
-          const SizedBox(height: 6),
-          Text('واصل · كل احتياجاتك أقرب', style: WText.caption),
-        ]),
-      );
-}
