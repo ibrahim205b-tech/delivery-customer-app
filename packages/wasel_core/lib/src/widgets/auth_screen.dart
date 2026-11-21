@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import '../services/auth.dart';
 import '../theme/tokens.dart';
 import 'basics.dart';
+import 'otp_screen.dart';
 
 /// شاشة الدخول/التسجيل برقم الهاتف وكلمة المرور (مشتركة بين التطبيقات).
+/// كل عملية (دخول، حساب جديد، نسيت كلمة المرور) تنتهي برمز تحقق على الواتساب.
 class PhoneAuthScreen extends StatefulWidget {
   const PhoneAuthScreen({super.key, required this.auth, required this.headline, required this.subline, this.allowSignUp = true, this.badge});
   final AuthController auth;
@@ -23,19 +25,49 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _pass = TextEditingController();
-  bool _signUp = false;
+  _Mode _mode = _Mode.login;
   bool _busy = false;
   bool _showPass = false;
 
+  bool get _signUp => _mode == _Mode.signup;
+  bool get _reset => _mode == _Mode.reset;
+
+  void _setMode(_Mode m) => setState(() {
+        _mode = m;
+        _pass.clear();
+      });
+
   Future<void> _submit() async {
-    if (!_form.currentState!.validate()) return;
+    if (_busy || !_form.currentState!.validate()) return;
     setState(() => _busy = true);
+    final auth = widget.auth;
+    // نثبّت القيم: المستخدم قد يعدّل الحقول بعد فتح شاشة الرمز
+    final name = _name.text, phone = _phone.text, pass = _pass.text;
     try {
-      if (_signUp) {
-        await widget.auth.signUp(fullName: _name.text, phone: _phone.text, password: _pass.text);
-      } else {
-        await widget.auth.signIn(phone: _phone.text, password: _pass.text);
+      final Future<int> Function() start;
+      final Future<void> Function(String) verify;
+      switch (_mode) {
+        case _Mode.login:
+          start = () => auth.startLogin(phone: phone, password: pass);
+          verify = (c) => auth.verifyLogin(phone: phone, code: c);
+        case _Mode.signup:
+          start = () => auth.startSignUp(fullName: name, phone: phone, password: pass);
+          verify = (c) => auth.verifySignUp(phone: phone, code: c);
+        case _Mode.reset:
+          start = () => auth.startReset(phone: phone);
+          verify = (c) => auth.verifyReset(phone: phone, code: c, newPassword: pass);
       }
+      final wait = await start();
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => OtpScreen(
+          phone: normalizeIraqiPhone(phone) ?? phone,
+          title: _reset ? 'استعادة كلمة المرور' : 'رمز التحقق',
+          resendIn: wait,
+          onVerify: verify,
+          onResend: start,
+        ),
+      ));
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -86,10 +118,18 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                             AnimatedSwitcher(
                               duration: WDurations.base,
-                              child: Text(_signUp ? 'حساب جديد' : 'أهلاً بيك', key: ValueKey(_signUp), style: WText.h1),
+                              child: Text(switch (_mode) { _Mode.signup => 'حساب جديد', _Mode.reset => 'نسيت كلمة المرور', _Mode.login => 'أهلاً بيك' },
+                                  key: ValueKey(_mode), style: WText.h1),
                             ),
                             const SizedBox(height: 4),
-                            Text(_signUp ? 'رقمك هو اسم المستخدم' : 'سجّل دخولك برقم هاتفك', style: WText.small),
+                            Text(
+                              switch (_mode) {
+                                _Mode.signup => 'رقمك هو اسم المستخدم، ونرسل لك رمز تحقق على الواتساب',
+                                _Mode.reset => 'اكتب رقمك وكلمة مرور جديدة، ونرسل لك رمز تحقق على الواتساب',
+                                _Mode.login => 'سجّل دخولك برقم هاتفك',
+                              },
+                              style: WText.small,
+                            ),
                             const SizedBox(height: 20),
                             AnimatedSize(
                               duration: WDurations.base,
@@ -125,10 +165,10 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                               obscureText: !_showPass,
                               textDirection: TextDirection.ltr,
                               textAlign: TextAlign.right,
-                              autofillHints: [_signUp ? AutofillHints.newPassword : AutofillHints.password],
+                              autofillHints: [_mode == _Mode.login ? AutofillHints.password : AutofillHints.newPassword],
                               onFieldSubmitted: (_) => _submit(),
                               decoration: InputDecoration(
-                                labelText: 'كلمة المرور',
+                                labelText: _reset ? 'كلمة المرور الجديدة' : 'كلمة المرور',
                                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
                                   tooltip: _showPass ? 'إخفاء' : 'إظهار',
@@ -136,16 +176,37 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                   onPressed: () => setState(() => _showPass = !_showPass),
                                 ),
                               ),
-                              validator: (v) => (v ?? '').length < 6 ? '6 أحرف على الأقل' : null,
+                              validator: (v) => (v ?? '').length < 6
+                                  ? '6 أحرف على الأقل'
+                                  : (v ?? '').length > 72
+                                      ? '72 حرفاً كحد أقصى'
+                                      : null,
                             ),
-                            const SizedBox(height: 22),
-                            WButton(_signUp ? 'إنشاء الحساب' : 'دخول', onPressed: _submit, loading: _busy, icon: Icons.arrow_back_rounded),
-                            if (widget.allowSignUp) ...[
+                            if (_mode == _Mode.login)
+                              Align(
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: TextButton(
+                                  onPressed: _busy ? null : () => _setMode(_Mode.reset),
+                                  child: Text('نسيت كلمة المرور؟', style: WText.label.copyWith(color: WColors.link)),
+                                ),
+                              )
+                            else
+                              const SizedBox(height: 22),
+                            WButton(
+                              switch (_mode) { _Mode.signup => 'إنشاء الحساب', _Mode.reset => 'إرسال الرمز', _Mode.login => 'دخول' },
+                              onPressed: _submit,
+                              loading: _busy,
+                              icon: Icons.arrow_back_rounded,
+                            ),
+                            if (_reset) ...[
+                              const SizedBox(height: 8),
+                              WButton('رجوع لتسجيل الدخول', kind: WButtonKind.ghost, onPressed: _busy ? null : () => _setMode(_Mode.login)),
+                            ] else if (widget.allowSignUp) ...[
                               const SizedBox(height: 8),
                               WButton(
                                 _signUp ? 'عندي حساب، سجّل دخول' : 'ما عندي حساب، سجّل هسه',
                                 kind: WButtonKind.ghost,
-                                onPressed: _busy ? null : () => setState(() => _signUp = !_signUp),
+                                onPressed: _busy ? null : () => _setMode(_signUp ? _Mode.login : _Mode.signup),
                               ),
                             ],
                           ]),
@@ -160,6 +221,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         ),
       );
 }
+
+enum _Mode { login, signup, reset }
 
 /// خط مسار متموّج ينتهي بحلقة — نفس روح العلامة، بعرض الشاشة
 class _RouteLinePainter extends CustomPainter {

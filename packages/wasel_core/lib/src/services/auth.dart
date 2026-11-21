@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,9 +19,21 @@ String? normalizeIraqiPhone(String input) {
   return null;
 }
 
-/// الحساب يعتمد رقم الهاتف + كلمة مرور. داخلياً يتحوّل الرقم لبريد ثابت
-/// (بدون إرسال رسائل) حتى نستغني عن مزوّد SMS مدفوع بالنسخة التجريبية.
+/// الحساب يعتمد رقم الهاتف + كلمة مرور + رمز تحقق بالواتساب. داخلياً يتحوّل الرقم
+/// لبريد ثابت تستخدمه دالة الخادم wasel-auth لإصدار الجلسة.
 String phoneToAuthEmail(String phone07) => '964${phone07.substring(1)}@${WaselConfig.authEmailDomain}';
+
+/// خطأ من دالة الخادم wasel-auth (رمز الخطأ + معلومات إضافية للواجهة)
+class AuthFlowException implements Exception {
+  const AuthFlowException(this.code, {this.remaining, this.retryIn});
+  final String code;
+  final int? remaining;
+  final int? retryIn;
+
+  /// الصيغة code:arg تفهمها friendlyError
+  @override
+  String toString() => retryIn != null ? '$code:$retryIn' : remaining != null ? '$code:$remaining' : code;
+}
 
 /// حالة الجلسة والملف والأدوار. التطبيقات تستمع لها لتبديل الشاشات.
 class AuthController extends ChangeNotifier {
@@ -76,21 +89,73 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> signUp({required String fullName, required String phone, required String password}) async {
-    final p = normalizeIraqiPhone(phone);
-    if (p == null) throw const AuthException('invalid phone');
-    await db.auth.signUp(
-      email: phoneToAuthEmail(p),
-      password: password,
-      data: {'full_name': fullName.trim(), 'phone': p},
-    );
-    await refresh();
+  // -------------------------------------------------------------------
+  // الدخول برمز التحقق (OTP) عبر الواتساب — كل العمليات تمر بدالة الخادم wasel-auth.
+  // التطبيق لا يحمل مفتاح المزوّد، ولا يفتح جلسة إلا بعد تحقق الخادم من الرمز.
+  // -------------------------------------------------------------------
+
+  /// يرسل رمز الدخول بعد التحقق من كلمة المرور. يرجع ثواني الانتظار قبل إعادة الإرسال.
+  Future<int> startLogin({required String phone, required String password}) async {
+    final r = await _call('login_start', {'phone': _phone(phone), 'password': password});
+    return (r['resend_in'] as num?)?.toInt() ?? 60;
   }
 
-  Future<void> signIn({required String phone, required String password}) async {
-    final p = normalizeIraqiPhone(phone);
-    if (p == null) throw const AuthException('Invalid login credentials');
-    await db.auth.signInWithPassword(email: phoneToAuthEmail(p), password: password);
+  Future<void> verifyLogin({required String phone, required String code}) async =>
+      _applySession(await _call('login_verify', {'phone': _phone(phone), 'code': code}));
+
+  /// يرسل رمز التسجيل. الحساب لا يُنشأ إلا بعد التحقق.
+  Future<int> startSignUp({required String fullName, required String phone, required String password}) async {
+    final r = await _call('signup_start', {'full_name': fullName.trim(), 'phone': _phone(phone), 'password': password});
+    return (r['resend_in'] as num?)?.toInt() ?? 60;
+  }
+
+  Future<void> verifySignUp({required String phone, required String code}) async =>
+      _applySession(await _call('signup_verify', {'phone': _phone(phone), 'code': code}));
+
+  /// يرسل رمز استعادة كلمة المرور.
+  Future<int> startReset({required String phone}) async {
+    final r = await _call('reset_start', {'phone': _phone(phone)});
+    return (r['resend_in'] as num?)?.toInt() ?? 60;
+  }
+
+  Future<void> verifyReset({required String phone, required String code, required String newPassword}) async =>
+      _applySession(await _call('reset_verify', {'phone': _phone(phone), 'code': code, 'new_password': newPassword}));
+
+  String _phone(String input) {
+    final p = normalizeIraqiPhone(input);
+    if (p == null) throw const AuthFlowException('phone_invalid');
+    return p;
+  }
+
+  Future<Map<String, dynamic>> _call(String action, Map<String, dynamic> body) async {
+    dynamic data;
+    try {
+      final res = await db.functions.invoke('wasel-auth', body: {'action': action, ...body});
+      data = res.data;
+    } on FunctionException catch (e) {
+      data = e.details;
+    }
+    if (data is String) {
+      try {
+        data = jsonDecode(data);
+      } catch (_) {}
+    }
+    if (data is! Map) throw const AuthFlowException('server_error');
+    final m = Map<String, dynamic>.from(data);
+    if (m['ok'] != true) {
+      throw AuthFlowException(
+        (m['error'] as String?) ?? 'server_error',
+        remaining: (m['remaining'] as num?)?.toInt(),
+        retryIn: (m['retry_in'] as num?)?.toInt(),
+      );
+    }
+    return m;
+  }
+
+  Future<void> _applySession(Map<String, dynamic> r) async {
+    final s = r['session'];
+    if (s is! Map || s['refresh_token'] is! String) throw const AuthFlowException('server_error');
+    await db.auth.setSession(s['refresh_token'] as String);
     await refresh();
   }
 
@@ -99,7 +164,10 @@ class AuthController extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> changePassword(String password) => db.auth.updateUser(UserAttributes(password: password));
+  /// تغيير كلمة المرور من داخل التطبيق (يتطلب كلمة المرور الحالية)
+  Future<void> changePassword({required String current, required String next}) async {
+    await _call('change_password', {'current_password': current, 'new_password': next});
+  }
 
   Future<void> signOut() => db.auth.signOut();
 

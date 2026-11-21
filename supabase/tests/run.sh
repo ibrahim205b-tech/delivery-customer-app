@@ -15,7 +15,7 @@ trap 'run "$PG/pg_ctl -D $DIR/data stop -m fast >/dev/null"; rm -rf "$DIR"' EXIT
 sleep 2
 P="psql -h $DIR -p $PORT -U postgres -v ON_ERROR_STOP=1 -q"
 FAILED=0
-TESTS="business_activities super_app_foundation activity_requests service_engine_pitch service_area_dispatch map_places captain_ledger driver_realtime ride_cancellation e2e_flow"
+TESTS="business_activities super_app_foundation activity_requests service_engine_pitch service_area_dispatch map_places captain_ledger driver_realtime ride_cancellation phone_otp e2e_flow"
 for t in $TESTS; do
   db="t_$t"
   $P -c "create database $db" >/dev/null || { echo "FAIL: create db $db"; FAILED=1; continue; }

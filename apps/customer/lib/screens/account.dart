@@ -49,10 +49,12 @@ class AccountScreen extends StatelessWidget {
               _group([
                 const ThemeModeTile(),
                 _tile(context, Icons.lock_outline_rounded, 'تغيير كلمة المرور', null, () async {
+                  final current = await promptText(context, title: 'كلمة المرور الحالية', confirm: 'التالي');
+                  if (current == null || current.isEmpty || !context.mounted) return;
                   final pw = await promptText(context, title: 'كلمة مرور جديدة', hint: '6 أحرف على الأقل');
                   if (pw == null || !context.mounted) return;
                   if (pw.length < 6) return showError(context, 'كلمة المرور لازم تكون 6 أحرف على الأقل.');
-                  await runAction(context, () => auth.changePassword(pw), success: 'تم تغيير كلمة المرور');
+                  await runAction(context, () => auth.changePassword(current: current, next: pw), success: 'تم تغيير كلمة المرور');
                 }),
                 _tile(context, Icons.info_outline_rounded, 'عن واصل', 'كل احتياجاتك أقرب · نسخة تجريبية', () {
                   showAboutDialog(context: context, applicationName: 'واصل', applicationVersion: '1.0.0', applicationIcon: const WaselMark(size: 40));

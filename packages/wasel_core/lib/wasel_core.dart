@@ -26,5 +26,6 @@ export 'src/widgets/basics.dart';
 export 'src/widgets/cancel_ride.dart';
 export 'src/widgets/format.dart';
 export 'src/widgets/map.dart';
+export 'src/widgets/otp_screen.dart';
 export 'src/widgets/support.dart';
 export 'src/widgets/theme_toggle.dart';

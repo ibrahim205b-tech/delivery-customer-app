@@ -77,19 +77,16 @@ void main() {
   });
 
   test('1) التسجيل برقم الهاتف عبر AuthController', () async {
+    // الدخول الحقيقي يمر برمز واتساب عبر دالة wasel-auth (لا يُختبر هنا لأنه يرسل رسائل فعلية).
+    // هنا نتأكد أن الحساب المنشأ يُقرأ صحيحاً بـ AuthController.
+    ids['cust'] = await signUp(custC, 'زبون التكامل', phone(3));
     useClientForTesting(custC);
     final auth = AuthController();
-    await auth.signUp(fullName: 'زبون التكامل', phone: phone(3), password: 'secret123');
+    await auth.refresh();
     expect(auth.isSignedIn, isTrue);
     expect(auth.profile?.phone, phone(3));
     expect(auth.hasRole(AppRole.customer), isTrue);
-    ids['cust'] = auth.userId!;
-
-    // تسجيل خروج ودخول من جديد بنفس الرقم بصيغة دولية
-    await auth.signOut();
-    expect(auth.isSignedIn, isFalse);
-    await auth.signIn(phone: '+964 ${phone(3).substring(1)}', password: 'secret123');
-    expect(auth.isSignedIn, isTrue);
+    expect(auth.userId, ids['cust']);
     auth.dispose();
 
     ids['admin'] = await signUp(adminC, 'مدير التكامل', phone(1));
