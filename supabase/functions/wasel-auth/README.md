@@ -16,7 +16,7 @@
    | الاسم | القيمة |
    |---|---|
    | `VERIFYWAY_API_KEY` | المفتاح **الجديد** بعد إعادة توليده من لوحة VerifyWay |
-   | `VERIFYWAY_SENDER_ID` | `Wasel` |
+   | `VERIFYWAY_SENDER_ID` | `WaselApp` (كما يظهر في صفحة "معرف المرسل" باللوحة) |
    | `OTP_PEPPER` | نص عشوائي طويل (32 حرفاً أو أكثر)، لا تغيّره بعد التفعيل |
    | `VERIFYWAY_LANG` | اختياري: `ar` (الافتراضي) أو `en` |
 5. **Authentication ← Sign In / Providers**: أطفئ **Allow new users to sign up**

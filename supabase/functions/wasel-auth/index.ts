@@ -14,7 +14,7 @@
 //
 // الأسرار المطلوبة (Supabase → Edge Functions → Secrets):
 //   VERIFYWAY_API_KEY    مفتاح VerifyWay (لا يوضع بالتطبيق أبداً)
-//   VERIFYWAY_SENDER_ID  اسم المرسل المعتمد بحسابك (مثلاً Wasel)
+//   VERIFYWAY_SENDER_ID  اسم المرسل المعتمد بحسابك (WaselApp)
 //   OTP_PEPPER           نص عشوائي طويل لتشفير الرموز (32 حرفاً أو أكثر)
 // متوفرة تلقائياً من Supabase: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 // اختياري: AUTH_EMAIL_DOMAIN (الافتراضي phone.wasel.app)، VERIFYWAY_LANG (الافتراضي ar)
